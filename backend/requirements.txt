@@ -1,0 +1,7 @@
+# Runtime dependencies (pinned to compatible ranges; lock with pip-tools when CI is added)
+Django>=5.2,<5.3            # LTS
+djangorestframework>=3.16,<3.19
+djangorestframework-simplejwt>=5.5,<6
+psycopg[binary]>=3.2,<4
+dj-database-url>=2.3,<3
+django-cors-headers>=4.6,<5

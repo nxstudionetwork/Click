@@ -1,0 +1,66 @@
+from rest_framework import serializers
+
+from apps.payments.models import PaymentMethod
+from apps.payments.serializers import PaymentSerializer
+
+from .models import CUSTOMER_CANCELLABLE, Order, OrderItem, OrderStatusEvent
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ["id", "product_id", "product_name", "unit_price", "quantity", "line_total", "note"]
+
+
+class OrderStatusEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderStatusEvent
+        fields = ["from_status", "to_status", "note", "created_at"]
+
+
+class OrderStoreSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    slug = serializers.SlugField()
+    name = serializers.CharField()
+    image_url = serializers.URLField()
+
+
+class OrderSummarySerializer(serializers.ModelSerializer):
+    store = OrderStoreSerializer(read_only=True)
+    item_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ["id", "number", "status", "store", "total", "currency", "item_count", "created_at"]
+
+    def get_item_count(self, order) -> int:
+        return sum(i.quantity for i in order.items.all())
+
+
+class OrderDetailSerializer(OrderSummarySerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    events = OrderStatusEventSerializer(many=True, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
+    can_cancel = serializers.SerializerMethodField()
+
+    class Meta(OrderSummarySerializer.Meta):
+        fields = OrderSummarySerializer.Meta.fields + [
+            "items", "events", "payments", "delivery_address", "customer_note", "subtotal", "delivery_fee",
+            "tax", "discount", "estimated_delivery_at", "cancelled_at", "delivered_at", "can_cancel",
+        ]
+
+    def get_can_cancel(self, order) -> bool:
+        return order.status in CUSTOMER_CANCELLABLE
+
+
+class PlaceOrderSerializer(serializers.Serializer):
+    address_id = serializers.UUIDField()
+    payment_method = serializers.ChoiceField(choices=PaymentMethod.choices)
+    idempotency_key = serializers.UUIDField()
+    customer_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+
+
+class CancelOrderSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
