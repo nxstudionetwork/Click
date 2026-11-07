@@ -1,7 +1,8 @@
 import type { HttpClient } from './http';
 import type {
-  Address, AddressInput, Cart, OrderDetail, OrderSummary, Paginated, PlaceOrderInput, Session, Store,
-  StoreCategory, StoreMenu, StoreQuery, StoreType, User,
+  Address, AddressInput, AssistantMessage, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
 /** Auth is shared across every Click app. */
@@ -13,6 +14,15 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
+  updateMe: (input: Partial<Pick<User, 'fullName' | 'phone'>>) => http.request<User>('/me', { method: 'PATCH', body: input }),
+});
+
+/** Public catalogue endpoints beyond store discovery. */
+export const catalogApi = (http: HttpClient) => ({
+  product: (id: string) => http.request<ProductDetail>(`/products/${encodeURIComponent(id)}`, { auth: false }),
+  search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
+    http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
+  offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
 });
 
 /** Public discovery. The customer app may swap this for a mock source (same interface). */
@@ -49,10 +59,38 @@ export const customerApi = (http: HttpClient) => ({
     removeItem: (id: string) => http.request<Cart>(`/customer/cart/items/${id}`, { method: 'DELETE' }),
   },
   orders: {
-    list: (page = 1) => http.request<Paginated<OrderSummary>>('/customer/orders', { query: { page } }),
+    list: (opts: { page?: number; type?: StoreType } = {}) =>
+      http.request<Paginated<OrderSummary>>('/customer/orders', { query: { page: opts.page, type: opts.type } }),
+    reorder: (id: string) => http.request<ReorderResult>(`/customer/orders/${id}/reorder`, { method: 'POST' }),
     get: (id: string) => http.request<OrderDetail>(`/customer/orders/${id}`),
     place: (input: PlaceOrderInput) => http.request<OrderDetail>('/customer/orders', { method: 'POST', body: input }),
     cancel: (id: string, reason = '') =>
       http.request<OrderDetail>(`/customer/orders/${id}/cancel`, { method: 'POST', body: { reason } }),
+  },
+  wishlist: {
+    list: () => http.request<WishlistItem[]>('/customer/wishlist'),
+    add: (target: { storeId: string } | { productId: string }) =>
+      http.request<WishlistItem>('/customer/wishlist', { method: 'POST', body: target }),
+    remove: (id: string) => http.request<void>(`/customer/wishlist/${id}`, { method: 'DELETE' }),
+  },
+  notifications: {
+    list: (opts: { page?: number; category?: NotificationCategory; unread?: boolean } = {}) =>
+      http.request<Paginated<Notification>>('/customer/notifications', {
+        query: { page: opts.page, category: opts.category, unread: opts.unread ? 'true' : undefined },
+      }),
+    summary: () => http.request<{ unread: number }>('/customer/notifications/summary'),
+    markRead: (id: string) => http.request<Notification>(`/customer/notifications/${id}/read`, { method: 'POST' }),
+    markAllRead: () => http.request<{ updated: number }>('/customer/notifications/read-all', { method: 'POST' }),
+  },
+  rewards: () => http.request<RewardsSummary>('/customer/rewards'),
+  support: {
+    list: () => http.request<Paginated<SupportTicket>>('/customer/support/tickets'),
+    get: (id: string) => http.request<SupportTicket>(`/customer/support/tickets/${id}`),
+    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null }) =>
+      http.request<SupportTicket>('/customer/support/tickets', { method: 'POST', body: input }),
+  },
+  assistant: {
+    send: (messages: AssistantMessage[]) =>
+      http.request<{ message: AssistantMessage }>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
   },
 });

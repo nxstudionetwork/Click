@@ -1,9 +1,10 @@
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type OrderDetail } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, Skeleton, useToast } from '../components/ui';
 import { Totals } from '../features/cart/Totals';
-import { isTerminal, PROGRESS, STATUS_LABEL, statusTone } from '../features/orders/status';
+import { cartKey } from '../features/cart/useCart';
+import { isTerminal, PAYMENT_LABEL, PROGRESS, STATUS_LABEL, statusTone } from '../features/orders/status';
 import { api } from '../lib/api';
 import { formatDateTime, formatMoney, formatTime } from '../lib/format';
 
@@ -18,6 +19,16 @@ export function OrderPage() {
     queryFn: () => api.customer.orders.get(id),
     // Poll while the order is in progress. (Realtime push replaces this in Phase 3.)
     refetchInterval: (q) => (q.state.data && !isTerminal(q.state.data.status) ? 15_000 : false),
+  });
+  const navigate = useNavigate();
+  const reorder = useMutation({
+    mutationFn: () => api.customer.orders.reorder(id),
+    onSuccess: (r) => {
+      qc.setQueryData(cartKey, r.cart);
+      if (r.skipped.length) toast(`Not available anymore: ${r.skipped.join(', ')}`);
+      navigate('/cart');
+    },
+    onError: (e) => toast(e instanceof Error ? e.message : 'Could not reorder.', 'error'),
   });
   const cancel = useMutation({
     mutationFn: () => api.customer.orders.cancel(id),
@@ -67,12 +78,18 @@ export function OrderPage() {
               </ol>
             </>
           )}
-          {o.canCancel && (
-            <Button variant="danger" size="sm" style={{ alignSelf: 'flex-start' }} loading={cancel.isPending}
-              onClick={() => window.confirm('Cancel this order?') && cancel.mutate()}>
-              Cancel order
-            </Button>
-          )}
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            {o.canCancel && (
+              <Button variant="danger" size="sm" loading={cancel.isPending}
+                onClick={() => window.confirm('Cancel this order?') && cancel.mutate()}>
+                Cancel order
+              </Button>
+            )}
+            {isTerminal(o.status) && (
+              <Button variant="secondary" size="sm" loading={reorder.isPending} onClick={() => reorder.mutate()}>Reorder</Button>
+            )}
+            <Link to={`/help/new?orderId=${o.id}&category=order`} className="btn btn--outline btn--sm">Get help</Link>
+          </div>
         </section>
 
         <section className="card card--pad stack">
@@ -92,7 +109,7 @@ export function OrderPage() {
           <h3>Bill</h3>
           <Totals totals={{ subtotal: o.subtotal, deliveryFee: o.deliveryFee, tax: o.tax, total: o.total }} currency={o.currency} discount={o.discount} />
           {o.payments[0] && (
-            <p className="small muted">Payment: {o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : o.payments[0].method} · {o.payments[0].status}</p>
+            <p className="small muted">Payment: {o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : o.payments[0].method} · {PAYMENT_LABEL[o.payments[0].status]}</p>
           )}
         </div>
         <div className="card card--pad stack" style={{ gap: 4 }}>

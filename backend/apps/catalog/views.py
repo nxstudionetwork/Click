@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from apps.stores.models import Store
 
 from .models import MenuCategory, Product
-from .serializers import MenuCategorySerializer
+from .serializers import MenuCategorySerializer, ProductWithStoreSerializer
 
 
 class StoreMenuView(APIView):
@@ -24,3 +24,22 @@ class StoreMenuView(APIView):
         )
         data = [c for c in MenuCategorySerializer(categories, many=True).data if c["products"]]
         return Response({"store_id": str(store.id), "categories": data})
+
+
+def public_products():
+    return Product.objects.filter(is_active=True, store__status=Store.Status.ACTIVE).select_related("store", "category")
+
+
+class ProductDetailView(APIView):
+    """GET /api/v1/products/<id> -> product with store info and related products."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        product = get_object_or_404(public_products(), pk=pk)
+        related = public_products().filter(store=product.store).exclude(pk=product.pk)
+        if product.category_id:
+            related = related.filter(category=product.category)
+        data = ProductWithStoreSerializer(product).data
+        data["related"] = ProductWithStoreSerializer(related.order_by("-is_featured", "position")[:8], many=True).data
+        return Response(data)

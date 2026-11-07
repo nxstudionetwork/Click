@@ -12,7 +12,22 @@ class StoreCategorySerializer(serializers.ModelSerializer):
 class StoreOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoreOffer
-        fields = ["id", "title", "description"]
+        fields = ["id", "title", "description", "ends_at"]
+
+
+class OfferStoreSerializer(serializers.ModelSerializer):
+    is_open = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Store
+        fields = ["id", "slug", "name", "store_type", "image_url", "is_open"]
+
+
+class OfferWithStoreSerializer(StoreOfferSerializer):
+    store = OfferStoreSerializer(read_only=True)
+
+    class Meta(StoreOfferSerializer.Meta):
+        fields = StoreOfferSerializer.Meta.fields + ["store"]
 
 
 class StoreSerializer(serializers.ModelSerializer):

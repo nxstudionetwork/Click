@@ -6,12 +6,14 @@ Click is a platform that brings everyday services (food, groceries, rides, deliv
 
 ```
 apps/
-  customer/        React + TypeScript Customer App (Vite)        ← active (Phase 2)
-  partner/         Partner App                                    ← Phase 5
-  business-os/     Internal Click Business OS                     ← Phase 6
+  customer/        Customer App (React + TypeScript, Vite)       ← active
+  partner/         Partner App                                    ← Phase 5 (boundary README only)
+  business-os/     Internal Click Business OS                     ← Phase 6 (boundary README only)
 packages/
   api/             @click/api: shared typed API contract + HTTP client for all apps
 backend/           Django + DRF shared API (PostgreSQL)
+docs/              Architecture notes (see docs/architecture.md)
+infrastructure/    Local dev infrastructure (Postgres via docker compose)
   config/          settings (env-driven), urls
   apps/core        base models (UUID + timestamps), camelCase API contract, error envelope, permissions
   apps/users       single identity for every actor, JWT auth (refresh in httpOnly cookie)
@@ -21,6 +23,11 @@ backend/           Django + DRF shared API (PostgreSQL)
   apps/carts       server-side single-store cart
   apps/orders      transactional, idempotent order placement; status state machine + audit trail
   apps/payments    payment records (cash on delivery today; gateways plug in later)
+  apps/wishlists   saved stores/products per customer
+  apps/notifications in-app notification centre (order, rewards, support events)
+  apps/rewards     append-only points ledger (earned on delivered orders)
+  apps/support     customer support tickets
+  apps/ai          provider-agnostic Click AI layer (disabled until a provider is configured)
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
@@ -31,7 +38,7 @@ backend/           Django + DRF shared API (PostgreSQL)
 Requirements: Python 3.12+, Node 22+, PostgreSQL 16.
 
 ```bash
-# Database
+# Database (or: docker compose -f infrastructure/docker-compose.yml up -d)
 createuser click -P   # password: click (dev only)
 createdb click -O click
 
@@ -41,7 +48,7 @@ python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
-python manage.py seed_dev_data      # 10 development restaurants with menus
+python manage.py seed_dev_data      # dev data: 10 restaurants, 4 grocery stores, 4 shops
 python manage.py runserver
 
 # Frontend (http://localhost:5173, proxies /api to Django)

@@ -1,4 +1,4 @@
-import { authApi, createHttpClient, customerApi, storesApi, type Session } from '@click/api';
+import { authApi, catalogApi, createHttpClient, customerApi, storesApi, type Session } from '@click/api';
 
 /**
  * Access token lives in memory only (never localStorage) to limit XSS impact.
@@ -32,6 +32,7 @@ export const http = createHttpClient({
 export const api = {
   auth: authApi(http),
   stores: storesApi(http),
+  catalog: catalogApi(http),
   customer: customerApi(http),
 };
 

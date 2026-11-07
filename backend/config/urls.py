@@ -12,8 +12,14 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
+from apps.ai.views import CustomerAssistantView
 from apps.carts import views as cart_views
-from apps.catalog.views import StoreMenuView
+from apps.catalog.search import SearchView
+from apps.catalog.views import ProductDetailView, StoreMenuView
+from apps.notifications import views as notification_views
+from apps.rewards.views import RewardsView
+from apps.support import views as support_views
+from apps.wishlists import views as wishlist_views
 from apps.core.views import health
 from apps.customers.views import AddressViewSet
 from apps.orders import views as order_views
@@ -29,6 +35,17 @@ customer_urls = [
     path("orders", order_views.OrderListCreateView.as_view(), name="orders"),
     path("orders/<uuid:pk>", order_views.OrderDetailView.as_view(), name="order-detail"),
     path("orders/<uuid:pk>/cancel", order_views.OrderCancelView.as_view(), name="order-cancel"),
+    path("orders/<uuid:pk>/reorder", order_views.OrderReorderView.as_view(), name="order-reorder"),
+    path("wishlist", wishlist_views.WishlistView.as_view(), name="wishlist"),
+    path("wishlist/<uuid:pk>", wishlist_views.WishlistItemView.as_view(), name="wishlist-item"),
+    path("notifications", notification_views.NotificationListView.as_view(), name="notifications"),
+    path("notifications/summary", notification_views.NotificationSummaryView.as_view(), name="notifications-summary"),
+    path("notifications/read-all", notification_views.NotificationReadAllView.as_view(), name="notifications-read-all"),
+    path("notifications/<uuid:pk>/read", notification_views.NotificationReadView.as_view(), name="notification-read"),
+    path("rewards", RewardsView.as_view(), name="rewards"),
+    path("support/tickets", support_views.SupportTicketListCreateView.as_view(), name="support-tickets"),
+    path("support/tickets/<uuid:pk>", support_views.SupportTicketDetailView.as_view(), name="support-ticket"),
+    path("assistant/messages", CustomerAssistantView.as_view(), name="assistant"),
     *customer_router.urls,
 ]
 
@@ -37,6 +54,9 @@ api_v1 = [
     path("stores", store_views.StoreListView.as_view(), name="store-list"),
     path("stores/<slug:slug>", store_views.StoreDetailView.as_view(), name="store-detail"),
     path("stores/<slug:slug>/menu", StoreMenuView.as_view(), name="store-menu"),
+    path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
+    path("search", SearchView.as_view(), name="search"),
+    path("offers", store_views.OfferListView.as_view(), name="offers"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
 ]

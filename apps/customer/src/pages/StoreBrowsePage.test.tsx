@@ -11,10 +11,11 @@ vi.mock('../data/stores-source', async () => {
   return { usingMockData: true, get storesSource() { return source.current; } };
 });
 
-const { FoodPage } = await import('./FoodPage');
+const { StoreBrowsePage } = await import('./StoreBrowsePage');
+const FoodPage = () => <StoreBrowsePage storeType="restaurant" />;
 const { mockStoresSource } = await import('../mock/mock-stores-source');
 
-describe('FoodPage', () => {
+describe('StoreBrowsePage (food)', () => {
   beforeEach(() => { source.current = { ...mockStoresSource }; });
 
   it('shows skeletons while loading, then all restaurants', async () => {

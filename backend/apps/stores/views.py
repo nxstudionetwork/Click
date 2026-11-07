@@ -3,17 +3,20 @@ from django.utils import timezone
 from rest_framework import generics, permissions
 
 from .models import Store, StoreCategory, StoreOffer, StoreType
-from .serializers import StoreCategorySerializer, StoreSerializer
+from .serializers import OfferWithStoreSerializer, StoreCategorySerializer, StoreSerializer
+
+
+def active_offers():
+    now = timezone.now()
+    return StoreOffer.objects.filter(is_active=True).filter(
+        Q(starts_at__isnull=True) | Q(starts_at__lte=now), Q(ends_at__isnull=True) | Q(ends_at__gte=now)
+    )
 
 
 def public_stores():
-    now = timezone.now()
-    active_offers = StoreOffer.objects.filter(is_active=True).filter(
-        Q(starts_at__isnull=True) | Q(starts_at__lte=now), Q(ends_at__isnull=True) | Q(ends_at__gte=now)
-    )
     return (
         Store.objects.filter(status=Store.Status.ACTIVE)
-        .prefetch_related("categories", Prefetch("offers", queryset=active_offers, to_attr="active_offers"))
+        .prefetch_related("categories", Prefetch("offers", queryset=active_offers(), to_attr="active_offers"))
     )
 
 
@@ -61,3 +64,16 @@ class StoreCategoryListView(generics.ListAPIView):
         if (store_type := self.request.query_params.get("type")) in StoreType.values:
             qs = qs.filter(store_type=store_type)
         return qs
+
+
+class OfferListView(generics.ListAPIView):
+    """GET /api/v1/offers?type=restaurant — active offers at active stores."""
+
+    serializer_class = OfferWithStoreSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = active_offers().filter(store__status=Store.Status.ACTIVE).select_related("store")
+        if (store_type := self.request.query_params.get("type")) in StoreType.values:
+            qs = qs.filter(store__store_type=store_type)
+        return qs.order_by("-store__is_accepting_orders", "-created_at")

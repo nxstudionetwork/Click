@@ -28,3 +28,6 @@ img { display: block; max-width: 100%; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .dot-sep::before { content: '•'; margin: 0 6px; color: var(--c-ink-3); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
+.page-head p { color: var(--c-ink-3); }

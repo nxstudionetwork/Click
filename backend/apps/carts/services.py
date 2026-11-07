@@ -40,7 +40,7 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
         product = Product.objects.select_related("store").get(pk=product_id, is_active=True)
     except Product.DoesNotExist:
         raise DomainError("This item is no longer available.", code="product_not_found", status_code=404)
-    if not product.is_available or not product.store.is_open:
+    if not product.is_orderable or not product.store.is_open:
         raise DomainError("This item can't be ordered right now.", code="product_unavailable")
 
     if cart.store_id and cart.store_id != product.store_id and cart.items.exists():
@@ -53,16 +53,30 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
         cart.store = product.store
         cart.save(update_fields=["store", "updated_at"])
 
-    item, created = CartItem.objects.get_or_create(cart=cart, product=product, defaults={"quantity": quantity, "note": note})
-    if not created:
-        item.quantity = min(item.quantity + quantity, MAX_ITEM_QUANTITY)
-        item.note = note or item.note
-        item.save(update_fields=["quantity", "note", "updated_at"])
-    return item
+    existing = CartItem.objects.filter(cart=cart, product=product).first()
+    new_quantity = min((existing.quantity if existing else 0) + quantity, MAX_ITEM_QUANTITY)
+    ensure_stock(product, new_quantity)
+    if existing:
+        existing.quantity = new_quantity
+        existing.note = note or existing.note
+        existing.save(update_fields=["quantity", "note", "updated_at"])
+        return existing
+    return CartItem.objects.create(cart=cart, product=product, quantity=new_quantity, note=note)
+
+
+def ensure_stock(product: Product, quantity: int) -> None:
+    if product.stock_quantity is not None and quantity > product.stock_quantity:
+        raise DomainError(
+            f"Only {product.stock_quantity} left in stock." if product.stock_quantity else "This item is out of stock.",
+            code="insufficient_stock",
+            details={"available": product.stock_quantity},
+        )
 
 
 @transaction.atomic
 def update_item(item: CartItem, quantity: int, note: str | None = None) -> CartItem:
+    if quantity > item.quantity:
+        ensure_stock(item.product, quantity)
     item.quantity = quantity
     if note is not None:
         item.note = note

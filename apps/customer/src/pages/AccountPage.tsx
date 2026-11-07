@@ -1,52 +1,42 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
-import { Button, ErrorState, Skeleton, useToast } from '../components/ui';
-import { AddressForm } from '../features/addresses/AddressForm';
-import { addressesKey, useAddresses } from '../features/addresses/useAddresses';
-import { api } from '../lib/api';
+import { Icon, type IconName } from '../components/ui';
+
+const LINKS: { to: string; label: string; icon: IconName; hint: string }[] = [
+  { to: '/orders', label: 'Orders', icon: 'receipt', hint: 'Track and manage orders' },
+  { to: '/account/addresses', label: 'Addresses', icon: 'pin', hint: 'Home, work and other places' },
+  { to: '/account/payments', label: 'Payments', icon: 'card', hint: 'Methods and payment history' },
+  { to: '/wishlist', label: 'Wishlist', icon: 'heart', hint: 'Saved stores and products' },
+  { to: '/rewards', label: 'Rewards', icon: 'gift', hint: 'Click points' },
+  { to: '/offers', label: 'Offers', icon: 'tag', hint: 'Current deals' },
+  { to: '/notifications', label: 'Notifications', icon: 'bell', hint: 'Updates and alerts' },
+  { to: '/help', label: 'Help & Support', icon: 'help', hint: 'FAQs and support requests' },
+  { to: '/settings', label: 'Settings', icon: 'settings', hint: 'Profile and sign out' },
+];
 
 export function AccountPage() {
-  const { user, logout } = useAuth();
-  const addresses = useAddresses();
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [adding, setAdding] = useState(false);
-  const onError = (e: unknown) => toast(e instanceof Error ? e.message : 'Something went wrong.', 'error');
-  const invalidate = () => qc.invalidateQueries({ queryKey: addressesKey });
-  const remove = useMutation({ mutationFn: api.customer.addresses.remove, onSuccess: invalidate, onError });
-  const makeDefault = useMutation({ mutationFn: (id: string) => api.customer.addresses.update(id, { isDefault: true }), onSuccess: invalidate, onError });
-
+  const { user } = useAuth();
+  const initial = (user?.fullName || user?.email || '?').trim()[0]!.toUpperCase();
   return (
     <div className="stack">
-      <h1>Account</h1>
-      <section className="card card--pad spread">
-        <div>
-          <strong>{user?.fullName || 'Click member'}</strong>
-          <div className="muted small">{user?.email}</div>
+      <section className="card card--pad row" style={{ gap: 'var(--s-4)' }}>
+        <span className="avatar avatar--lg" aria-hidden="true">{initial}</span>
+        <div style={{ minWidth: 0 }}>
+          <h2 className="truncate">{user?.fullName || 'Click member'}</h2>
+          <div className="muted small truncate">{user?.email}{user?.phone ? ` · ${user.phone}` : ''}</div>
+          <div className="muted small">Customer ID {user?.id.slice(0, 8).toUpperCase()}</div>
         </div>
-        <Button variant="outline" size="sm" onClick={logout}>Sign out</Button>
+        <Link to="/settings" className="btn btn--outline btn--sm" style={{ marginLeft: 'auto' }}>Edit</Link>
       </section>
-
-      <section className="card card--pad stack">
-        <div className="spread"><h3>Saved addresses</h3>{!adding && <Button variant="ghost" size="sm" onClick={() => setAdding(true)}>+ Add</Button>}</div>
-        {adding && <AddressForm defaultName={user?.fullName} onSaved={() => setAdding(false)} onCancel={() => setAdding(false)} />}
-        {addresses.isError ? <ErrorState error={addresses.error} onRetry={() => addresses.refetch()} />
-          : addresses.isPending ? <Skeleton height={64} />
-          : addresses.data.length === 0 && !adding ? <p className="muted small">No saved addresses yet.</p>
-          : addresses.data.map((a) => (
-            <div key={a.id} className="spread" style={{ borderTop: '1px solid var(--c-line)', paddingTop: 12 }}>
-              <div>
-                <strong style={{ textTransform: 'capitalize' }}>{a.label}</strong> {a.isDefault && <span className="badge badge--accent">Default</span>}
-                <div className="muted small">{[a.line1, a.city, a.postalCode].filter(Boolean).join(', ')}</div>
-              </div>
-              <div className="row">
-                {!a.isDefault && <Button variant="ghost" size="sm" onClick={() => makeDefault.mutate(a.id)}>Make default</Button>}
-                <Button variant="ghost" size="sm" onClick={() => window.confirm('Delete this address?') && remove.mutate(a.id)}>Delete</Button>
-              </div>
-            </div>
-          ))}
-      </section>
+      <nav className="card list" aria-label="Account">
+        {LINKS.map((l) => (
+          <Link key={l.to} to={l.to} className="list-row">
+            <span className="list-row__icon"><Icon name={l.icon} size={18} /></span>
+            <span style={{ flex: 1 }}><span style={{ display: 'block', fontWeight: 600 }}>{l.label}</span><span className="small muted">{l.hint}</span></span>
+            <Icon name="right" size={18} />
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

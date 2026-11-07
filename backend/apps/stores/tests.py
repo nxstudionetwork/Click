@@ -41,3 +41,5 @@ def test_seed_dev_data_is_idempotent(api):
     call_command("seed_dev_data")
     call_command("seed_dev_data")
     assert api.get("/api/v1/stores?type=restaurant").json()["count"] == 10
+    assert api.get("/api/v1/stores?type=grocery").json()["count"] == 4
+    assert api.get("/api/v1/stores?type=retail").json()["count"] == 4

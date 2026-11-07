@@ -6,3 +6,4 @@ export * from './SmartImage';
 export * from './States';
 export * from './TextField';
 export * from './Toast';
+export * from './PriceTag';

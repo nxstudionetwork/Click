@@ -19,3 +19,12 @@ export function statusTone(s: OrderStatus): string {
   if (s === 'delivered') return 'badge--accent';
   return 'badge--brand';
 }
+
+export const PAYMENT_LABEL: Record<import('@click/api').PaymentStatus, string> = {
+  pending: 'Payment pending',
+  authorized: 'Payment processing',
+  captured: 'Paid',
+  failed: 'Payment failed',
+  cancelled: 'Payment cancelled',
+  refunded: 'Refunded',
+};

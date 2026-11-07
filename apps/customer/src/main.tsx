@@ -6,6 +6,7 @@ import { ApiError } from '@click/api';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import { ToastProvider } from './components/ui';
+import { LocationProvider } from './location/LocationProvider';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/ui.css';
@@ -27,9 +28,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
+          <LocationProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </LocationProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

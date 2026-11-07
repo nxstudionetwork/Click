@@ -42,7 +42,7 @@ class CartItemDetailView(APIView):
 
     def _get_item(self, request, item_id) -> CartItem:
         # Scoped to the requester's cart: other customers' items are a 404.
-        return get_object_or_404(CartItem.objects.select_related("cart"), pk=item_id, cart__customer=request.user.customer_profile)
+        return get_object_or_404(CartItem.objects.select_related("cart", "product"), pk=item_id, cart__customer=request.user.customer_profile)
 
     def patch(self, request, item_id):
         s = UpdateCartItemSerializer(data=request.data)

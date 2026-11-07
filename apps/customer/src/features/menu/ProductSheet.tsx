@@ -28,7 +28,7 @@ function Body({ product, currency, canOrder, busy, onClose, onAdd }: {
   return (
     <>
       <div style={{ position: 'relative' }}>
-        <SmartImage src={product.imageUrl} alt={product.name} className="" />
+        <SmartImage src={product.imageUrl} alt={product.name} className="thumb" />
         <button className="icon-btn" onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 8, right: 8, background: '#fff' }}>
           <Icon name="close" />
         </button>

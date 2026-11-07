@@ -54,6 +54,11 @@ export interface StoreOffer {
   id: UUID;
   title: string;
   description: string;
+  endsAt: ISODateTime | null;
+}
+
+export interface OfferWithStore extends StoreOffer {
+  store: { id: UUID; slug: string; name: string; storeType: StoreType; imageUrl: string; isOpen: boolean };
 }
 
 export interface Store {
@@ -95,9 +100,44 @@ export interface Product {
   description: string;
   imageUrl: string;
   price: Money;
+  compareAtPrice: Money | null;
+  discountPercent: number | null;
+  brand: string;
+  unitLabel: string;
   dietary: Dietary;
+  /** False when switched off by the store or out of stock. */
   isAvailable: boolean;
+  lowStock: boolean;
   isFeatured: boolean;
+}
+
+export interface ProductStore {
+  id: UUID;
+  slug: string;
+  name: string;
+  storeType: StoreType;
+  imageUrl: string;
+  isOpen: boolean;
+  currency: string;
+  deliveryTimeMin: number;
+  deliveryTimeMax: number;
+}
+
+export interface ProductWithStore extends Product {
+  store: ProductStore;
+  categoryName: string | null;
+}
+
+export interface ProductDetail extends ProductWithStore {
+  related: ProductWithStore[];
+}
+
+export type SearchScope = 'all' | StoreType | 'products';
+
+export interface SearchResults {
+  query: string;
+  stores: Store[];
+  products: ProductWithStore[];
 }
 
 export interface MenuCategory {
@@ -188,10 +228,12 @@ export interface OrderSummary {
   id: UUID;
   number: string;
   status: OrderStatus;
-  store: { id: UUID; slug: string; name: string; imageUrl: string };
+  store: { id: UUID; slug: string; name: string; storeType: StoreType; imageUrl: string };
   total: Money;
   currency: string;
   itemCount: number;
+  itemNames: string[];
+  paymentStatus: PaymentStatus | null;
   createdAt: ISODateTime;
 }
 
@@ -242,4 +284,70 @@ export interface PlaceOrderInput {
   paymentMethod: PaymentMethod;
   idempotencyKey: UUID;
   customerNote?: string;
+}
+
+export interface ReorderResult {
+  cart: Cart;
+  skipped: string[];
+}
+
+// --- Engagement -------------------------------------------------------------
+export interface WishlistItem {
+  id: UUID;
+  kind: 'store' | 'product';
+  store: Store | null;
+  product: ProductWithStore | null;
+  createdAt: ISODateTime;
+}
+
+export type NotificationCategory =
+  | 'orders' | 'rides' | 'deliveries' | 'payments' | 'offers' | 'rewards' | 'support' | 'system';
+
+export interface Notification {
+  id: UUID;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  linkPath: string;
+  isRead: boolean;
+  createdAt: ISODateTime;
+}
+
+export interface RewardTransaction {
+  id: UUID;
+  kind: 'earn' | 'redeem' | 'expire' | 'adjust';
+  points: number;
+  description: string;
+  orderId: UUID | null;
+  expiresAt: ISODateTime | null;
+  createdAt: ISODateTime;
+}
+
+export interface RewardsSummary {
+  balance: number;
+  earned: number;
+  used: number;
+  history: RewardTransaction[];
+  rules: { pointsPer100: number; expiryDays: number; redemptionAvailable: boolean };
+}
+
+export type SupportCategory = 'order' | 'payment' | 'delivery' | 'ride' | 'account' | 'service' | 'other';
+export type SupportStatus = 'open' | 'in_progress' | 'awaiting_customer' | 'resolved' | 'closed';
+
+export interface SupportTicket {
+  id: UUID;
+  reference: string;
+  category: SupportCategory;
+  subject: string;
+  message: string;
+  status: SupportStatus;
+  orderId: UUID | null;
+  orderNumber: string | null;
+  createdAt: ISODateTime;
+  resolvedAt: ISODateTime | null;
+}
+
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }

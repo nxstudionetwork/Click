@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Product } from '@click/api';
 import { ApiError } from '@click/api';
@@ -9,6 +9,9 @@ import { ProductRow } from '../features/menu/ProductRow';
 import { ProductSheet } from '../features/menu/ProductSheet';
 import { useAddToCart } from '../features/menu/useAddToCart';
 import { useMenu, useStore } from '../features/stores/hooks';
+import { ProductCard } from '../features/stores/ProductCard';
+import { WishlistButton } from '../features/wishlist/WishlistButton';
+import { serviceForStoreType } from '../config/services';
 import { etaLabel, formatMoney, priceLevelLabel } from '../lib/format';
 
 export function StorePage() {
@@ -20,6 +23,15 @@ export function StorePage() {
   const { addToCart, isAdding } = useAddToCart();
   const toast = useToast();
   const [selected, setSelected] = useState<Product | null>(null);
+  const [menuQuery, setMenuQuery] = useState('');
+  const categories = useMemo(() => {
+    const term = menuQuery.trim().toLowerCase();
+    const all = menu.data?.categories ?? [];
+    if (!term) return all;
+    return all
+      .map((c) => ({ ...c, products: c.products.filter((p) => `${p.name} ${p.brand} ${p.description}`.toLowerCase().includes(term)) }))
+      .filter((c) => c.products.length > 0);
+  }, [menu.data, menuQuery]);
 
   if (store.isError) {
     return store.error instanceof ApiError && store.error.status === 404 ? (
@@ -31,6 +43,8 @@ export function StorePage() {
   if (store.isPending) return <div className="stack"><Skeleton height={200} radius={22} /><Skeleton height={28} width="60%" /><Skeleton height={60} /></div>;
 
   const s = store.data;
+  const service = serviceForStoreType(s.storeType);
+  const isRestaurant = s.storeType === 'restaurant';
   const qtyFor = (productId: string) => cart?.items.find((i) => i.product.id === productId);
   const busy = isAdding || update.isPending || remove.isPending;
 
@@ -44,19 +58,19 @@ export function StorePage() {
 
   return (
     <>
-      <Link to="/food" className="btn btn--ghost btn--sm" style={{ marginBottom: 12, paddingLeft: 4 }}><Icon name="back" size={18} /> Food</Link>
+      <Link to={service.path} className="btn btn--ghost btn--sm" style={{ marginBottom: 12, paddingLeft: 4 }}><Icon name="back" size={18} /> {service.name}</Link>
       <section className="store-hero">
         <SmartImage src={s.imageUrl} alt={s.name} className="store-hero__media" />
         <div className="stack" style={{ gap: 'var(--s-3)' }}>
           <div className="stack" style={{ gap: 4 }}>
-            <h1>{s.name}</h1>
+            <div className="spread" style={{ alignItems: 'flex-start' }}><h1>{s.name}</h1><WishlistButton target={{ storeId: s.id }} name={s.name} /></div>
             <span className="muted">{s.categories.map((c) => c.name).join(' · ')} {s.locality && <span className="dot-sep">{s.locality}</span>}</span>
           </div>
           {!s.isOpen && <div className="badge badge--danger" style={{ alignSelf: 'flex-start', padding: '6px 12px' }}>Closed — not accepting orders right now</div>}
           <div className="store-facts">
             <div><strong><Rating value={s.ratingAverage} /></strong><span>{s.ratingCount.toLocaleString('en-IN')} ratings</span></div>
             <div><strong>{etaLabel(s.deliveryTimeMin, s.deliveryTimeMax)}</strong><span>Delivery</span></div>
-            <div><strong>{priceLevelLabel(s.priceLevel)}</strong><span>Min {formatMoney(s.minOrderAmount, s.currency)}</span></div>
+            <div><strong>{priceLevelLabel(s.priceLevel)}</strong><span>{Number(s.minOrderAmount) ? `Min ${formatMoney(s.minOrderAmount, s.currency)}` : "No minimum"}</span></div>
           </div>
           {s.offers.length > 0 && (
             <div className="row" style={{ flexWrap: 'wrap' }}>
@@ -71,17 +85,38 @@ export function StorePage() {
       ) : menu.isPending ? (
         <div className="stack" style={{ marginTop: 24 }}>{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={96} />)}</div>
       ) : menu.data.categories.length === 0 ? (
-        <EmptyState title="Menu coming soon" message="This store hasn’t published its menu yet." />
+        <EmptyState title={isRestaurant ? 'Menu coming soon' : 'No products yet'} message="This store hasn’t published its catalogue yet." />
       ) : (
         <>
+          <div className="search" role="search" style={{ marginTop: 'var(--s-5)' }}>
+            <Icon name="search" />
+            <input value={menuQuery} onChange={(e) => setMenuQuery(e.target.value)} placeholder={`Search in ${s.name}`} aria-label={`Search in ${s.name}`} />
+          </div>
           <nav className="menu-nav chips" aria-label="Menu sections">
-            {menu.data.categories.map((c) => (
+            {categories.map((c) => (
               <a key={c.id} className="chip" href={`#menu-${c.id}`} style={{ display: 'inline-flex', alignItems: 'center' }}>{c.name}</a>
             ))}
           </nav>
-          {menu.data.categories.map((c) => (
+          {categories.length === 0 && <EmptyState title="No matching items" message="Try another search term." />}
+          {categories.map((c) => (
             <section key={c.id} id={`menu-${c.id}`} className="menu-section section" style={{ marginTop: 'var(--s-4)' }}>
               <h2>{c.name} <span className="muted small">({c.products.length})</span></h2>
+              {!isRestaurant ? (
+                <div className="product-grid">
+                  {c.products.map((p) => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      currency={s.currency}
+                      quantity={qtyFor(p.id)?.quantity ?? 0}
+                      canOrder={s.isOpen}
+                      busy={busy}
+                      onAdd={() => addToCart(p)}
+                      onChangeQuantity={(n) => changeQty(p.id, n)}
+                    />
+                  ))}
+                </div>
+              ) : (
               <div className="product-list">
                 {c.products.map((p) => (
                   <ProductRow
@@ -97,6 +132,7 @@ export function StorePage() {
                   />
                 ))}
               </div>
+              )}
             </section>
           ))}
         </>

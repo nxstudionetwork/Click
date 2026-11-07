@@ -72,6 +72,11 @@ INSTALLED_APPS = [
     "apps.carts",
     "apps.orders",
     "apps.payments",
+    "apps.wishlists",
+    "apps.notifications",
+    "apps.rewards",
+    "apps.support",
+    "apps.ai",
 ]
 
 MIDDLEWARE = [
@@ -152,6 +157,7 @@ REST_FRAMEWORK = {
         "user": os.environ.get("THROTTLE_USER", "600/min"),
         "auth": os.environ.get("THROTTLE_AUTH", "10/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
+        "ai": os.environ.get("THROTTLE_AI", "20/min"),
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -199,6 +205,10 @@ X_FRAME_OPTIONS = "DENY"
 # --- Click business configuration ------------------------------------
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
+CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
+# Dotted path to an apps.ai.providers.AIProvider implementation. Empty = AI disabled.
+CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "")
 
 LOGGING = {
     "version": 1,

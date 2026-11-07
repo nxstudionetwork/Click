@@ -11,6 +11,8 @@ interface AuthValue {
   login: (email: string, password: string) => Promise<void>;
   register: (input: { email: string; password: string; fullName: string }) => Promise<void>;
   logout: () => Promise<void>;
+  /** Replace the cached user after a profile update. */
+  refreshUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apply(null);
       queryClient.removeQueries({ queryKey: ['customer'] });
     },
+    refreshUser: setUser,
   }), [status, user, apply, queryClient]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

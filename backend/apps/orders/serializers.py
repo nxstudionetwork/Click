@@ -24,19 +24,29 @@ class OrderStoreSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     slug = serializers.SlugField()
     name = serializers.CharField()
-    image_url = serializers.URLField()
+    store_type = serializers.CharField()
+    image_url = serializers.CharField()
 
 
 class OrderSummarySerializer(serializers.ModelSerializer):
     store = OrderStoreSerializer(read_only=True)
     item_count = serializers.SerializerMethodField()
+    item_names = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ["id", "number", "status", "store", "total", "currency", "item_count", "created_at"]
+        fields = ["id", "number", "status", "store", "total", "currency", "item_count", "item_names", "payment_status", "created_at"]
 
     def get_item_count(self, order) -> int:
         return sum(i.quantity for i in order.items.all())
+
+    def get_item_names(self, order) -> list[str]:
+        return [i.product_name for i in order.items.all()][:3]
+
+    def get_payment_status(self, order) -> str | None:
+        payments = list(order.payments.all())
+        return payments[0].status if payments else None
 
 
 class OrderDetailSerializer(OrderSummarySerializer):

@@ -9,6 +9,7 @@ import { useAddresses } from '../features/addresses/useAddresses';
 import { Totals } from '../features/cart/Totals';
 import { cartKey, useCart } from '../features/cart/useCart';
 import { api } from '../lib/api';
+import { useDeliveryLocation } from '../location/LocationProvider';
 import { formatMoney } from '../lib/format';
 
 export function CheckoutPage() {
@@ -17,6 +18,7 @@ export function CheckoutPage() {
   const qc = useQueryClient();
   const cart = useCart();
   const addresses = useAddresses();
+  const { selected: selectedLocation, select: selectLocation } = useDeliveryLocation();
   const [addressId, setAddressId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [payment, setPayment] = useState<PaymentMethod>('cash_on_delivery');
@@ -25,8 +27,8 @@ export function CheckoutPage() {
   const idempotencyKey = useRef(crypto.randomUUID());
 
   useEffect(() => {
-    if (!addressId && addresses.data?.length) setAddressId((addresses.data.find((a) => a.isDefault) ?? addresses.data[0]!).id);
-  }, [addresses.data, addressId]);
+    if (!addressId && addresses.data?.length) setAddressId((selectedLocation ?? addresses.data.find((a) => a.isDefault) ?? addresses.data[0]!).id);
+  }, [addresses.data, addressId, selectedLocation]);
 
   const place = useMutation({
     mutationFn: api.customer.orders.place,
@@ -69,14 +71,14 @@ export function CheckoutPage() {
           {showForm ? (
             <AddressForm
               defaultName={user?.fullName}
-              onSaved={(a) => { setAddressId(a.id); setAdding(false); }}
+              onSaved={(a) => { setAddressId(a.id); selectLocation(a.id); setAdding(false); }}
               onCancel={list.length ? () => setAdding(false) : undefined}
             />
           ) : (
             <div className="stack" style={{ gap: 'var(--s-2)' }} role="radiogroup" aria-label="Delivery address">
               {list.map((a) => (
                 <label key={a.id} className="option">
-                  <input type="radio" name="address" checked={addressId === a.id} onChange={() => setAddressId(a.id)} />
+                  <input type="radio" name="address" checked={addressId === a.id} onChange={() => { setAddressId(a.id); selectLocation(a.id); }} />
                   <div>
                     <strong style={{ textTransform: 'capitalize' }}>{a.label}</strong>
                     <div className="small">{a.recipientName} · {a.phone}</div>

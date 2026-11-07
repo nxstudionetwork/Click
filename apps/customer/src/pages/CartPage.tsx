@@ -27,7 +27,7 @@ export function CartPage() {
         <h1>Your cart</h1>
         <div className="card card--pad">
           <Link to={`/stores/${c.store.slug}`} className="row" style={{ marginBottom: 8 }}>
-            <SmartImage src={c.store.imageUrl} alt={c.store.name} className="" />
+            <SmartImage src={c.store.imageUrl} alt={c.store.name} className="thumb" />
             <strong>{c.store.name}</strong>
           </Link>
           {c.items.map((i) => (
