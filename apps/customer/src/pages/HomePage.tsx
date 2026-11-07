@@ -4,6 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
 import { ErrorState, Icon, Skeleton } from '../components/ui';
 import { SERVICES } from '../config/services';
+import { EventCard } from '../features/bookings/EventCard';
+import { useWallet } from '../features/wallet/useWallet';
+import { formatMoney } from '../lib/format';
 import { OfferCard } from '../features/offers/OfferCard';
 import { OrderCard } from '../features/orders/OrderCard';
 import { ServiceCard } from '../features/services/ServiceCard';
@@ -28,6 +31,8 @@ export function HomePage() {
   const offers = useQuery({ queryKey: ['offers', 'all'], queryFn: () => api.catalog.offers() });
   const recent = useQuery({ queryKey: ['customer', 'orders', 'list', 'recent'], queryFn: () => api.customer.orders.list(), enabled: authed });
   const rewards = useQuery({ queryKey: ['customer', 'rewards'], queryFn: api.customer.rewards, enabled: authed });
+  const wallet = useWallet();
+  const movies = useQuery({ queryKey: ['events', 'home'], queryFn: () => api.events.list({ status: 'now_showing' }) });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -43,13 +48,14 @@ export function HomePage() {
         </div>
         <form className="search" onSubmit={submit} role="search">
           <Icon name="search" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search restaurants, groceries, products…" aria-label="Search Click" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try “biryani”, “earbuds” or “movies tonight”" aria-label="Search Click from home" />
+          <button type="button" className="gsearch__tool gsearch__tool--ai" aria-label="Ask Buddy" onClick={() => navigate(q.trim() ? `/buddy?q=${encodeURIComponent(q.trim())}` : '/buddy')}><Icon name="sparkle" size={18} /></button>
         </form>
       </section>
 
       <section className="section" aria-labelledby="services-h">
         <div className="section__head"><h2 id="services-h">Services</h2><Link to="/explore">Explore all</Link></div>
-        <div className="services">{SERVICES.slice(0, 6).map((s) => <ServiceCard key={s.id} service={s} />)}</div>
+        <div className="services">{SERVICES.map((s) => <ServiceCard key={s.id} service={s} />)}</div>
       </section>
 
       <section className="section dash-grid" aria-label="Your Click">
@@ -67,10 +73,19 @@ export function HomePage() {
             <span className="stack" style={{ gap: 0 }}><strong>Sign in to Click</strong><span className="small muted">Track orders, save favourites, earn rewards</span></span>
           </Link>
         )}
-        <Link to="/assistant" className="dash-tile dash-tile--ai">
+        <Link to="/buddy" className="dash-tile dash-tile--ai">
           <span className="dash-tile__icon"><Icon name="sparkle" /></span>
-          <span className="stack" style={{ gap: 0 }}><strong>Ask Click AI</strong><span className="small muted">Find things, get help with orders</span></span>
+          <span className="stack" style={{ gap: 0 }}><strong>Ask Buddy</strong><span className="small muted">Find, compare and plan across Click</span></span>
         </Link>
+        {authed && (
+          <Link to="/wallet" className="dash-tile">
+            <span className="dash-tile__icon"><Icon name="wallet" /></span>
+            <span className="stack" style={{ gap: 0 }}>
+              <strong>{wallet.isPending ? '…' : wallet.isError ? 'Click Wallet' : `${formatMoney(wallet.data.balance, wallet.data.currency)} in wallet`}</strong>
+              <span className="small muted">Refunds and credits, ready at checkout</span>
+            </span>
+          </Link>
+        )}
       </section>
 
       {authed && (recent.isPending || (recent.data?.results.length ?? 0) > 0) && (
@@ -92,6 +107,14 @@ export function HomePage() {
       )}
 
       <StoreRail title="Top restaurants" to="/food" query={restaurants} />
+      {(movies.isPending || (movies.data?.results.length ?? 0) > 0) && (
+        <section className="section" aria-label="Movies and events" data-theme="movies">
+          <div className="section__head"><h2>Movies & events near you</h2><Link to="/movies">See all</Link></div>
+          {movies.isPending ? <Skeleton height={240} radius={16} /> : (
+            <div className="store-rail store-rail--posters">{movies.data!.results.slice(0, 8).map((e) => <EventCard key={e.id} event={e} />)}</div>
+          )}
+        </section>
+      )}
       <StoreRail title="Groceries" to="/groceries" query={grocery} />
       <StoreRail title="Shops" to="/shopping" query={shops} />
 

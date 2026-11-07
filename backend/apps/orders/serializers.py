@@ -67,7 +67,7 @@ class OrderDetailSerializer(OrderSummarySerializer):
 
 class PlaceOrderSerializer(serializers.Serializer):
     address_id = serializers.UUIDField()
-    payment_method = serializers.ChoiceField(choices=PaymentMethod.choices)
+    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET])
     idempotency_key = serializers.UUIDField()
     customer_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
 

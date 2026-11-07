@@ -84,6 +84,63 @@ SHOPS = [
 ]
 
 
+# Movies & live events (DEVELOPMENT ONLY): title, kind, status, genres, languages, cert, minutes, rating, count, tagline, cast
+EVENTS = [
+    ("Monsoon Protocol", "movie", "now_showing", "Thriller, Action", "Hindi, English", "UA", 142, "4.4", 18200, "One city. One storm. Twelve hours.", "Aarav Sen, Meera Kulkarni"),
+    ("The Last Lighthouse", "movie", "now_showing", "Drama", "English", "U", 118, "4.6", 9400, "Some lights never go out.", "Nora Ellis, Dev Malhotra"),
+    ("Chai & Chaos", "movie", "now_showing", "Comedy, Family", "Hindi", "U", 126, "4.1", 12700, "Two cafes. One street. Zero peace.", "Ritika Rao, Kabir Shah"),
+    ("Orbit 9", "movie", "now_showing", "Sci-Fi, Adventure", "English, Tamil", "UA", 155, "4.3", 21500, "Beyond the edge of the map.", "Ishaan Varma, Lena Park"),
+    ("Kaveri Nights", "movie", "coming_soon", "Romance, Musical", "Kannada, Hindi", "U", 134, "0.0", 0, "Coming to cinemas soon.", "Anika Hegde, Rohan Gowda"),
+    ("Indie Sundown Live", "event", "now_showing", "Music, Live", "English", "A", 180, "4.7", 860, "Five indie bands. One rooftop.", "The Paper Boats, Lowtide"),
+]
+VENUES = [
+    ("Click Cineplex Indiranagar", "cinema", "Indiranagar", "100 Feet Road"),
+    ("Starline Cinemas Koramangala", "cinema", "Koramangala", "80 Feet Road"),
+    ("Skydeck Arena", "arena", "MG Road", "Church Street"),
+]
+
+
+def seed_bookings(stdout):
+    from datetime import datetime, time as dtime, timedelta
+
+    from django.utils import timezone
+
+    from apps.bookings.models import Event, Show, Venue
+
+    venues = []
+    for name, kind, locality, address in VENUES:
+        v, _ = Venue.objects.get_or_create(slug=slugify(name), defaults=dict(name=name, kind=kind, city="Bengaluru", locality=locality, address=address))
+        venues.append(v)
+    tz = timezone.get_current_timezone()
+    today = timezone.localdate()
+    created = 0
+    for title, kind, status, genres, langs, cert, minutes, rating, count, tagline, cast in EVENTS:
+        event, was_created = Event.objects.get_or_create(slug=slugify(title), defaults=dict(
+            title=title, kind=kind, status=status, genres=genres, languages=langs, certification=cert, duration_minutes=minutes,
+            rating_average=Decimal(rating), rating_count=count, tagline=tagline, cast=cast,
+            description=f"{tagline} A {genres.lower()} {'film' if kind == 'movie' else 'experience'} in {langs}.",
+            release_date=today + timedelta(days=21) if status == "coming_soon" else today - timedelta(days=10),
+        ))
+        if not was_created or status != "now_showing":
+            continue
+        created += 1
+        lang = langs.split(",")[0].strip()
+        for day in range(3):
+            if kind == "event":
+                Show.objects.create(event=event, venue=venues[2], starts_at=datetime.combine(today + timedelta(days=day + 1), dtime(19, 30), tz),
+                                    language=lang, format="Live", rows=8, seats_per_row=16, premium_rows=2, price=Decimal("999"), premium_price=Decimal("1999"))
+                continue
+            for vi, venue in enumerate(venues[:2]):
+                for hour in (13, 17, 21):
+                    starts = datetime.combine(today + timedelta(days=day), dtime(hour + vi, 15 * (vi + 1)), tz)
+                    if starts <= timezone.now() + timedelta(minutes=30):
+                        continue
+                    Show.objects.create(event=event, venue=venue, starts_at=starts, language=lang, format="IMAX" if hour == 21 and vi == 0 else "2D",
+                                        screen=f"Screen {vi + hour % 3 + 1}", rows=10, seats_per_row=14, premium_rows=3,
+                                        price=Decimal("220" if vi else "250"), premium_price=Decimal("380" if vi else "420"))
+    stdout.write(f"Seeded {created} new bookable events with shows over the next 3 days.")
+
+
 class Command(BaseCommand):
     help = "Seed development data (restaurants, grocery and retail stores). DEVELOPMENT ONLY."
 
@@ -160,4 +217,5 @@ class Command(BaseCommand):
                         stock_quantity=stock, description=f"{brand + ' ' if brand else ''}{item}, {unit}.",
                         position=i, is_featured=(i == 0),
                     )
+        seed_bookings(self.stdout)
         self.stdout.write(self.style.SUCCESS(f"Seeded {created} new stores ({len(RESTAURANTS) + len(SHOPS)} total defined)."))

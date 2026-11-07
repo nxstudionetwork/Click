@@ -10,6 +10,8 @@ class NotificationCategory(models.TextChoices):
     RIDES = "rides", "Rides"
     DELIVERIES = "deliveries", "Deliveries"
     PAYMENTS = "payments", "Payments"
+    WALLET = "wallet", "Wallet"
+    BOOKINGS = "bookings", "Bookings"
     OFFERS = "offers", "Offers"
     REWARDS = "rewards", "Rewards"
     SUPPORT = "support", "Support"

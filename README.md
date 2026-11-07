@@ -27,7 +27,9 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/notifications in-app notification centre (order, rewards, support events)
   apps/rewards     append-only points ledger (earned on delivered orders)
   apps/support     customer support tickets
-  apps/ai          provider-agnostic Click AI layer (disabled until a provider is configured)
+  apps/wallet      Click Wallet (append-only ledger; pay + refunds)
+  apps/bookings    movies & live events: venues, shows, seat-safe bookings
+  apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
@@ -42,13 +44,13 @@ Requirements: Python 3.12+, Node 22+, PostgreSQL 16.
 createuser click -P   # password: click (dev only)
 createdb click -O click
 
-# Backend (http://localhost:8000)
+# Backend API (http://localhost:4000)
 cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
-python manage.py seed_dev_data      # dev data: 10 restaurants, 4 grocery stores, 4 shops
+python manage.py seed_dev_data      # dev data: restaurants, grocery stores, shops, movies/events with shows
 python manage.py runserver
 
 # Frontend (http://localhost:5173, proxies /api to Django)

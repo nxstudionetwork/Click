@@ -12,11 +12,13 @@ import { useMenu, useStore } from '../features/stores/hooks';
 import { ProductCard } from '../features/stores/ProductCard';
 import { WishlistButton } from '../features/wishlist/WishlistButton';
 import { serviceForStoreType } from '../config/services';
+import { useThemeOverride } from '../components/layout/AppShell';
 import { etaLabel, formatMoney, priceLevelLabel } from '../lib/format';
 
 export function StorePage() {
   const { slug = '' } = useParams();
   const store = useStore(slug);
+  useThemeOverride(store.data ? serviceForStoreType(store.data.storeType).theme : null);
   const menu = useMenu(slug);
   const { data: cart } = useCart();
   const { update, remove } = useCartActions();

@@ -77,6 +77,8 @@ INSTALLED_APPS = [
     "apps.rewards",
     "apps.support",
     "apps.ai",
+    "apps.wallet",
+    "apps.bookings",
 ]
 
 MIDDLEWARE = [
@@ -203,12 +205,16 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # --- Click business configuration ------------------------------------
+CLICK_DEV_PORT = os.environ.get("CLICK_DEV_PORT", "4000")
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# GST on platform convenience fees (bookings).
+CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
-# Dotted path to an apps.ai.providers.AIProvider implementation. Empty = AI disabled.
-CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "")
+# Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
+# (built-in, answers only from real Click data). Set to empty to disable AI.
+CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")
 
 LOGGING = {
     "version": 1,

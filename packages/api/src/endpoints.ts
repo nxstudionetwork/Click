@@ -1,6 +1,6 @@
 import type { HttpClient } from './http';
 import type {
-  Address, AddressInput, AssistantMessage, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
@@ -23,6 +23,14 @@ export const catalogApi = (http: HttpClient) => ({
   search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
+});
+
+/** Movies & live events (public discovery). */
+export const eventsApi = (http: HttpClient) => ({
+  list: (q: { kind?: 'movie' | 'event'; status?: 'now_showing' | 'coming_soon'; city?: string; search?: string } = {}) =>
+    http.request<Paginated<ClickEvent>>('/events', { query: q, auth: false }),
+  get: (slug: string, city?: string) => http.request<EventDetail>(`/events/${encodeURIComponent(slug)}`, { query: { city }, auth: false }),
+  seatMap: (showId: string) => http.request<ShowSeatMap>(`/shows/${showId}`, { auth: false }),
 });
 
 /** Public discovery. The customer app may swap this for a mock source (same interface). */
@@ -91,6 +99,14 @@ export const customerApi = (http: HttpClient) => ({
   },
   assistant: {
     send: (messages: AssistantMessage[]) =>
-      http.request<{ message: AssistantMessage }>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+      http.request<BuddyReply>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+  },
+  wallet: () => http.request<WalletSummary>('/customer/wallet'),
+  bookings: {
+    list: (when?: 'upcoming' | 'past') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
+    get: (id: string) => http.request<Booking>(`/customer/bookings/${id}`),
+    create: (input: { showId: string; seats: string[]; paymentMethod: 'pay_at_venue' | 'wallet'; idempotencyKey: string }) =>
+      http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
+    cancel: (id: string) => http.request<Booking>(`/customer/bookings/${id}/cancel`, { method: 'POST' }),
   },
 });

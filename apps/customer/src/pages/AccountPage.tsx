@@ -4,6 +4,9 @@ import { Icon, type IconName } from '../components/ui';
 
 const LINKS: { to: string; label: string; icon: IconName; hint: string }[] = [
   { to: '/orders', label: 'Orders', icon: 'receipt', hint: 'Track and manage orders' },
+  { to: '/bookings', label: 'Bookings', icon: 'ticket', hint: 'Movie and event tickets' },
+  { to: '/activity', label: 'Activity', icon: 'history', hint: 'Everything you’ve done on Click' },
+  { to: '/wallet', label: 'Click Wallet', icon: 'wallet', hint: 'Balance, refunds and credits' },
   { to: '/account/addresses', label: 'Addresses', icon: 'pin', hint: 'Home, work and other places' },
   { to: '/account/payments', label: 'Payments', icon: 'card', hint: 'Methods and payment history' },
   { to: '/wishlist', label: 'Wishlist', icon: 'heart', hint: 'Saved stores and products' },
@@ -11,7 +14,7 @@ const LINKS: { to: string; label: string; icon: IconName; hint: string }[] = [
   { to: '/offers', label: 'Offers', icon: 'tag', hint: 'Current deals' },
   { to: '/notifications', label: 'Notifications', icon: 'bell', hint: 'Updates and alerts' },
   { to: '/help', label: 'Help & Support', icon: 'help', hint: 'FAQs and support requests' },
-  { to: '/settings', label: 'Settings', icon: 'settings', hint: 'Profile and sign out' },
+  { to: '/settings', label: 'Settings & privacy', icon: 'shield', hint: 'Profile, privacy and sign out' },
 ];
 
 export function AccountPage() {

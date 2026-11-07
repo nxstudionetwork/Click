@@ -7,9 +7,9 @@
 }
 .btn:active:not(:disabled) { transform: scale(0.98); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn--primary { background: var(--c-brand); color: #fff; }
-.btn--primary:hover:not(:disabled) { background: var(--c-brand-strong); }
-.btn--secondary { background: var(--c-brand-soft); color: var(--c-brand-strong); }
+.btn--primary { background: var(--c-theme); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: var(--c-theme-strong); }
+.btn--secondary { background: var(--c-theme-soft); color: var(--c-theme-strong); }
 .btn--ghost { background: transparent; color: var(--c-ink-2); }
 .btn--ghost:hover:not(:disabled) { background: var(--c-surface-2); }
 .btn--outline { background: var(--c-surface); border-color: var(--c-line); color: var(--c-ink); }
@@ -56,7 +56,7 @@ textarea.field__input { padding: var(--s-3); min-height: 80px; resize: vertical;
   flex: none; min-height: 36px; padding: 0 var(--s-4); border-radius: var(--r-pill); border: 1px solid var(--c-line);
   background: var(--c-surface); font-size: var(--fs-sm); font-weight: var(--fw-medium); cursor: pointer;
 }
-.chip[aria-pressed='true'] { background: var(--c-ink); border-color: var(--c-ink); color: #fff; }
+.chip[aria-pressed='true'] { background: var(--c-theme); border-color: var(--c-theme); color: #fff; }
 
 /* ---- Rating ---- */
 .rating { display: inline-flex; align-items: center; gap: 3px; font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
@@ -89,7 +89,7 @@ textarea.field__input { padding: var(--s-3); min-height: 80px; resize: vertical;
 
 /* ---- Stepper ---- */
 .stepper {
-  display: inline-flex; align-items: center; border-radius: var(--r-sm); background: var(--c-brand); color: #fff;
+  display: inline-flex; align-items: center; border-radius: var(--r-sm); background: var(--c-theme); color: #fff;
   font-weight: var(--fw-bold); min-height: 34px;
 }
 .stepper button { width: 34px; height: 34px; border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; }
@@ -110,6 +110,8 @@ textarea.field__input { padding: var(--s-3); min-height: 80px; resize: vertical;
   .sheet-backdrop { align-items: center; }
   .sheet { border-radius: var(--r-xl); }
 }
+.sheet--full { max-width: 920px; height: min(92vh, 900px); }
+@media (min-width: 720px) { .sheet-backdrop:has(.sheet--full) { align-items: flex-end; } .sheet--full { border-radius: var(--r-xl) var(--r-xl) 0 0; } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(24px); opacity: 0.6; } }
 

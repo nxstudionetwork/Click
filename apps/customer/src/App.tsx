@@ -1,10 +1,17 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppShell } from './components/layout/AppShell';
 import { EmptyState } from './components/ui';
 import { AccountPage } from './pages/AccountPage';
 import { AddressesPage } from './pages/AddressesPage';
-import { AssistantPage } from './pages/AssistantPage';
+import { ActivityPage } from './pages/ActivityPage';
+import { BookingPage } from './pages/BookingPage';
+import { BookingsPage } from './pages/BookingsPage';
+import { BuddyPage } from './pages/BuddyPage';
+import { EventPage } from './pages/EventPage';
+import { MoviesPage } from './pages/MoviesPage';
+import { ShowPage } from './pages/ShowPage';
+import { WalletPage } from './pages/WalletPage';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
@@ -43,12 +50,19 @@ export function App() {
         <Route path="stores/:slug" element={<StorePage />} />
         <Route path="products/:id" element={<ProductPage />} />
         <Route path="offers" element={<OffersPage />} />
-        <Route path="rides" element={<ServiceComingSoonPage serviceId="rides" />} />
-        <Route path="deliveries" element={<ServiceComingSoonPage serviceId="deliveries" />} />
-        <Route path="tickets" element={<ServiceComingSoonPage serviceId="tickets" />} />
-        <Route path="services" element={<ServiceComingSoonPage serviceId="services" />} />
+        <Route path="movies" element={<MoviesPage />} />
+        <Route path="movies/:slug" element={<EventPage />} />
+        <Route path="shows/:id" element={<ShowPage />} />
+        <Route path="rides" element={<ServiceComingSoonPage key="rides" serviceId="rides" />} />
+        <Route path="parcels" element={<ServiceComingSoonPage key="parcels" serviceId="parcels" />} />
+        <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
+        <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
+        <Route path="buzz" element={<ServiceComingSoonPage key="buzz" serviceId="buzz" />} />
+        <Route path="tickets" element={<Navigate to="/movies" replace />} />
+        <Route path="deliveries" element={<Navigate to="/parcels" replace />} />
         <Route path="help" element={<HelpPage />} />
-        <Route path="assistant" element={<AssistantPage />} />
+        <Route path="buddy" element={<BuddyPage />} />
+        <Route path="assistant" element={<Navigate to="/buddy" replace />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
 
@@ -64,6 +78,10 @@ export function App() {
         <Route path="account/addresses" element={guard(<AddressesPage />)} />
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
+        <Route path="wallet" element={guard(<WalletPage />)} />
+        <Route path="bookings" element={guard(<BookingsPage />)} />
+        <Route path="bookings/:id" element={guard(<BookingPage />)} />
+        <Route path="activity" element={guard(<ActivityPage />)} />
         <Route path="help/new" element={guard(<NewTicketPage />)} />
         <Route path="help/tickets/:id" element={guard(<TicketPage />)} />
         <Route path="*" element={<EmptyState icon="alert" title="Page not found" action={<Link to="/" className="btn btn--outline">Go home</Link>} />} />

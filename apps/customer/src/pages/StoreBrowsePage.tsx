@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { StoreType } from '@click/api';
 import { serviceForStoreType, STORE_TYPE_LABEL } from '../config/services';
+import { PageHeader } from '../components/shell/PageHeader';
 import { EmptyState, ErrorState, Icon } from '../components/ui';
 import { useStoreCategories, useStores } from '../features/stores/hooks';
 import { StoreCard, StoreCardSkeleton } from '../features/stores/StoreCard';
@@ -40,7 +41,7 @@ export function StoreBrowsePage({ storeType }: { storeType: StoreType }) {
 
   return (
     <div className="stack">
-      <div className="page-head"><div><h1>{service.name}</h1><p>{service.tagline}</p></div></div>
+      <PageHeader band title={service.name} subtitle={service.tagline} back={{ to: '/', label: 'Home' }} />
       <div className="search" role="search">
         <Icon name="search" />
         <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`Search ${label.plural}`} aria-label={`Search ${service.name}`} />
