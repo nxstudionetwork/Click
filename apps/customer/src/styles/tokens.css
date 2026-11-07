@@ -1,0 +1,65 @@
+/* Click design tokens. Components consume these variables only. */
+:root {
+  /* Brand */
+  --c-brand: #5b3df5;
+  --c-brand-strong: #4527d9;
+  --c-brand-soft: #efebff;
+  --c-accent: #14c8a0;
+  --c-accent-soft: #e3f8f2;
+
+  /* Neutrals */
+  --c-ink: #14121f;
+  --c-ink-2: #4a4760;
+  --c-ink-3: #7d7a92;
+  --c-line: #e7e5ef;
+  --c-surface: #ffffff;
+  --c-surface-2: #f6f5fb;
+  --c-bg: #fbfbfe;
+
+  /* Semantic */
+  --c-danger: #d93a4a;
+  --c-danger-soft: #fdecee;
+  --c-warning: #b7791f;
+  --c-warning-soft: #fdf4e3;
+  --c-success: #0f9f7f;
+  --c-veg: #1e9e5a;
+  --c-nonveg: #c2412d;
+
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Space (4px scale) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Shape & depth */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(20 18 31 / 6%), 0 1px 1px rgb(20 18 31 / 4%);
+  --shadow-2: 0 6px 24px rgb(20 18 31 / 10%);
+  --shadow-3: 0 18px 48px rgb(20 18 31 / 18%);
+
+  /* Layout */
+  --header-h: 60px;
+  --bottom-nav-h: 64px;
+  --content-max: 1120px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
