@@ -13,6 +13,8 @@ from apps.payments.services import settle_on_cancel, start_booking_payment
 
 from .models import BookedSeat, Booking, Show
 
+from apps.activity.services import record
+
 audit = logging.getLogger("click.audit")
 MAX_SEATS = 10
 CONVENIENCE_FEE_PER_SEAT = Decimal("20.00")
@@ -59,6 +61,7 @@ def create_booking(*, customer, show_id, seats: list[str], payment_method: str, 
     start_booking_payment(booking, payment_method)
     notify(customer, NotificationCategory.BOOKINGS, f"Booked: {show.event.title}",
            f"{booking.reference} · {', '.join(labels)} · {show.venue.name}", f"/bookings/{booking.id}")
+    record(customer, "booking.created", {"show": str(show.id), "seats": len(labels)}, obj=booking)
     audit.info("booking.created", extra={"booking": booking.reference})
     return booking, True
 

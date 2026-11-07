@@ -79,6 +79,8 @@ INSTALLED_APPS = [
     "apps.ai",
     "apps.wallet",
     "apps.bookings",
+    "apps.identity",
+    "apps.activity",
 ]
 
 MIDDLEWARE = [
@@ -138,6 +140,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# User uploads (profile photos). Local disk in development; object storage in production.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 # --- API ---------------------------------------------------------------
 REST_FRAMEWORK = {
@@ -211,6 +217,20 @@ CLICK_DEV_PORT = os.environ.get("CLICK_DEV_PORT", "4000")
 # so it cannot be enabled in production even if the env var is set.
 CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
 CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
+
+# --- Customer identity ------------------------------------------------
+# Phone sign-in is verified by a pluggable identity provider; Click then issues its own session.
+# To change provider later: add a verifier in apps/identity and point this mapping at it.
+CLICK_IDENTITY_PROVIDERS = {
+    "firebase": "apps.identity.firebase.FirebaseIdTokenVerifier",
+}
+# Firebase project whose ID tokens are accepted (public identifier, not a secret). No service-account key is needed:
+# tokens are verified against Google's public certificates.
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "clickstartup26")
+# Local Firebase Auth Emulator (e.g. "127.0.0.1:9099"). Honoured ONLY when DEBUG is on.
+FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") if DEBUG else ""
+# Legacy email/password endpoints: development/test accounts only. Customers sign in with phone OTP.
+CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
 # GST on platform convenience fees (bookings).

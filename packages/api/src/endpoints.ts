@@ -1,6 +1,6 @@
 import type { HttpClient } from './http';
 import type {
-  DevLoginInfo,
+  DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
@@ -15,6 +15,16 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
+  /** Exchange a phone-OTP provider credential (e.g. Firebase ID token) for a Click session or a signup token. */
+  exchangeIdentity: (input: { provider: string; token: string }) =>
+    http.request<IdentityExchangeResult>('/auth/identity/exchange', { method: 'POST', body: input, auth: false }),
+  completeSignup: (input: SignupInput) =>
+    http.request<Session & { status: 'authenticated' }>('/auth/identity/signup', { method: 'POST', body: input, auth: false }),
+  uploadAvatar: (file: Blob) => {
+    const form = new FormData();
+    form.append('image', file, 'avatar');
+    return http.request<User>('/me/avatar', { method: 'POST', body: form });
+  },
   /** DEVELOPMENT ONLY: 404 unless the backend runs with DEBUG. */
   devLoginInfo: () => http.request<DevLoginInfo>('/auth/dev-login', { auth: false }),
   devLogin: () => http.request<Session>('/auth/dev-login', { method: 'POST', auth: false }),

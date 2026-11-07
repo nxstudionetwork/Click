@@ -36,6 +36,8 @@ export interface User {
   roles: Role[];
   /** Public Click Customer ID, e.g. CLK-CS-7K2QXM (null for non-customers). */
   customerCode: string | null;
+  phoneVerified: boolean;
+  avatarUrl: string | null;
   createdAt: ISODateTime;
 }
 
@@ -43,6 +45,17 @@ export interface DevLoginInfo {
   enabled: boolean;
   customer: { name: string; email: string; customerCode: string } | null;
   hint?: string;
+}
+
+export type IdentityExchangeResult =
+  | ({ status: 'authenticated' } & Session)
+  | { status: 'profile_required'; signupToken: string; phoneNumber: string; expiresIn: number };
+
+export interface SignupInput {
+  signupToken: string;
+  fullName: string;
+  email: string;
+  addresses: AddressInput[];
 }
 
 export interface Session {
@@ -161,7 +174,7 @@ export interface StoreMenu {
 }
 
 // --- Customer -------------------------------------------------------------
-export type AddressLabel = 'home' | 'work' | 'other';
+export type AddressLabel = 'home' | 'work' | 'college' | 'family' | 'other';
 
 export interface Address {
   id: UUID;
@@ -177,12 +190,13 @@ export interface Address {
   country: string;
   latitude: string | null;
   longitude: string | null;
+  deliveryInstructions: string;
   isDefault: boolean;
   createdAt: ISODateTime;
 }
 
-export type AddressInput = Omit<Address, 'id' | 'createdAt' | 'latitude' | 'longitude'> &
-  Partial<Pick<Address, 'latitude' | 'longitude'>>;
+export type AddressInput = Omit<Address, 'id' | 'createdAt' | 'latitude' | 'longitude' | 'deliveryInstructions'> &
+  Partial<Pick<Address, 'latitude' | 'longitude' | 'deliveryInstructions'>>;
 
 export interface CartTotals {
   subtotal: Money;

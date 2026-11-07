@@ -13,6 +13,8 @@ interface AuthValue {
   logout: () => Promise<void>;
   /** DEVELOPMENT ONLY. */
   devLogin: () => Promise<void>;
+  /** Starts a Click session returned by phone sign-in (identity exchange/signup). */
+  startSession: (session: Session) => void;
   /** Replace the cached user after a profile update. */
   refreshUser: (user: User) => void;
 }
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     refreshUser: setUser,
     devLogin: async () => apply(await api.auth.devLogin()),
+    startSession: (s) => apply(s),
   }), [status, user, apply, queryClient]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

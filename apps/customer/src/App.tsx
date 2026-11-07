@@ -1,4 +1,10 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense, useState } from 'react';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from './auth/AuthProvider';
+import { LoginPage } from './onboarding/LoginPage';
+import { SignupPage } from './onboarding/SignupPage';
+import { Splash, splashAlreadyShown } from './onboarding/Splash';
+import { VerifyPage } from './onboarding/VerifyPage';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppShell } from './components/layout/AppShell';
 import { EmptyState } from './components/ui';
@@ -12,7 +18,6 @@ import { EventPage } from './pages/EventPage';
 import { MoviesPage } from './pages/MoviesPage';
 import { ShowPage } from './pages/ShowPage';
 import { WalletPage } from './pages/WalletPage';
-import { LoginPage, RegisterPage } from './pages/AuthPages';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ExplorePage } from './pages/ExplorePage';
@@ -35,10 +40,37 @@ import { TicketPage } from './pages/TicketPage';
 import { WishlistPage } from './pages/WishlistPage';
 
 const guard = (el: React.ReactNode) => <RequireAuth>{el}</RequireAuth>;
+// The Click card (QR rendering) is only needed after signup / from Account, so it loads on demand.
+const CardPage = lazy(() => import('./onboarding/CardPage').then((m) => ({ default: m.CardPage })));
+const lazyCard = (onboardingStep: boolean) => <Suspense fallback={<div className="state"><div className="skeleton" style={{ width: 320, height: 200, borderRadius: 26 }} /></div>}><CardPage onboardingStep={onboardingStep} /></Suspense>;
 
 export function App() {
+  const [splash, setSplash] = useState(() => !splashAlreadyShown());
+  const { status } = useAuth();
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  const finishSplash = () => {
+    setSplash(false);
+    // First open of Click, not signed in, landing on Home: go to sign in (guests can still explore).
+    if (status !== 'authenticated' && pathname === '/' && !search.includes('guest')) navigate('/login', { replace: true });
+  };
+  return (
+    <>
+      {splash && <Splash onDone={finishSplash} />}
+      <AppRoutes />
+    </>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
+      {/* Onboarding & sign-in: full-screen, outside the app shell */}
+      <Route path="login" element={<LoginPage />} />
+      <Route path="login/verify" element={<VerifyPage />} />
+      <Route path="signup" element={<SignupPage />} />
+      <Route path="welcome/card" element={guard(lazyCard(true))} />
+      <Route path="register" element={<Navigate to="/login" replace />} />
       <Route element={<AppShell />}>
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
@@ -63,8 +95,6 @@ export function App() {
         <Route path="help" element={<HelpPage />} />
         <Route path="buddy" element={<BuddyPage />} />
         <Route path="assistant" element={<Navigate to="/buddy" replace />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
 
         {/* Customer-owned data (authenticated; API enforces ownership) */}
         <Route path="cart" element={guard(<CartPage />)} />
@@ -76,6 +106,7 @@ export function App() {
         <Route path="notifications" element={guard(<NotificationsPage />)} />
         <Route path="account" element={guard(<AccountPage />)} />
         <Route path="account/addresses" element={guard(<AddressesPage />)} />
+        <Route path="account/card" element={guard(lazyCard(false))} />
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />

@@ -59,12 +59,13 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 
   async function send(path: string, opts: RequestOptions, token: string | null): Promise<Response> {
     const headers: Record<string, string> = { Accept: 'application/json', 'X-Click-Client': clientId };
-    if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+    if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(buildUrl(baseUrl, path, opts.query), {
       method: opts.method ?? 'GET',
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
       credentials: 'include',
       signal: opts.signal,
     });

@@ -23,13 +23,16 @@ export function AccountPage() {
   return (
     <div className="stack">
       <section className="card card--pad row" style={{ gap: 'var(--s-4)' }}>
-        <span className="avatar avatar--lg" aria-hidden="true">{initial}</span>
+        <span className="avatar avatar--lg" aria-hidden="true">{user?.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : initial}</span>
         <div style={{ minWidth: 0 }}>
           <h2 className="truncate">{user?.fullName || 'Click member'}</h2>
           <div className="muted small truncate">{user?.email}{user?.phone ? ` · ${user.phone}` : ''}</div>
           <div className="muted small">Customer ID {user?.customerCode ?? '—'}</div>
         </div>
-        <Link to="/settings" className="btn btn--outline btn--sm" style={{ marginLeft: 'auto' }}>Edit</Link>
+        <div className="row" style={{ marginLeft: 'auto' }}>
+          <Link to="/account/card" className="btn btn--secondary btn--sm">Click card</Link>
+          <Link to="/settings" className="btn btn--outline btn--sm">Edit</Link>
+        </div>
       </section>
       <nav className="card list" aria-label="Account">
         {LINKS.map((l) => (

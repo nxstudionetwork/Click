@@ -9,6 +9,8 @@ One shared API for all Click products, versioned under /api/v1/.
   business os /api/v1/os/...                  Phase 6
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
@@ -76,3 +78,5 @@ urlpatterns = [
     path("api/health", health, name="health"),
     path("api/v1/", include(api_v1)),
 ]
+if settings.DEBUG:  # development only; production serves uploads from object storage/CDN
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

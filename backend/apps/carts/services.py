@@ -53,6 +53,9 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
         cart.store = product.store
         cart.save(update_fields=["store", "updated_at"])
 
+    from apps.activity.services import record
+
+    record(customer, "cart.added", {"quantity": quantity}, obj=product)
     existing = CartItem.objects.filter(cart=cart, product=product).first()
     new_quantity = min((existing.quantity if existing else 0) + quantity, MAX_ITEM_QUANTITY)
     ensure_stock(product, new_quantity)

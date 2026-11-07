@@ -58,10 +58,16 @@ npm install
 npm run dev:customer
 ```
 
+## Customer sign-in
+
+Phone OTP via Firebase Phone Auth, verified by the Click backend, which issues Click's own session.
+Setup and provider swapping: [docs/authentication.md](docs/authentication.md). Put the Firebase web config in
+`apps/customer/.env.local` (see `apps/customer/.env.example`).
+
 ## Development test login
 
 After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
-with `test.customer@click.local` / `ClickDev@2026`. Details: [docs/development-data.md](docs/development-data.md).
+with the Firebase test number `+1 650 555 0101` (see docs). Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

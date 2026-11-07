@@ -27,20 +27,22 @@ python manage.py seed_dev_data --catalog-only
 | Name | Click Test User |
 | Click Customer ID | `CLK-CS-TEST001` |
 | Email | `test.customer@click.local` (the reserved `.local` domain can't be a real inbox) |
-| Phone | `+91 00000 00001` (not an allocatable Indian mobile number) |
+| Phone (verified) | `+1 650-555-0101` (US 555-01xx numbers are reserved for fiction); add it as a Firebase test phone number (see docs/authentication.md) |
 | Password (dev only) | `ClickDev@2026` |
 
-**Ways to sign in (development only):**
-1. **One click:** on the Sign in screen, the dashed **Development mode** box has **Login as Test Customer**.
-2. **Normal form:** sign in with the email and password above.
+**Ways to sign in:**
+1. **Phone OTP (the real flow):** sign in with `+1 650 555 0101`, using the code you configured for that test
+   number in Firebase Console.
+2. **One click (development builds only):** on the sign-in screen, the dashed **Development mode** box has
+   **Login as Test Customer**.
 
 **Safety:**
 - **Backend:** `POST /api/v1/auth/dev-login` exists only when `DEBUG` is on (`CLICK_DEV_LOGIN_ENABLED` is forced off
   otherwise) and returns 404 in production.
 - **Frontend:** the panel is behind `import.meta.env.DEV`, so Vite removes it from production builds.
 
-**OTP:** Click's authentication is currently email + password. When OTP login is added, the test customer's phone
-number will be configured as the provider's sandbox number.
+**OTP:** Click signs customers in with Firebase Phone Auth. There is no fake OTP in Click's code: the test code
+lives in Firebase Console and only works for the test number.
 
 ## What gets seeded
 

@@ -10,8 +10,20 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "phone", "roles", "customer_code", "created_at"]
-        read_only_fields = ["id", "email", "roles", "customer_code", "created_at"]
+        fields = ["id", "email", "full_name", "phone", "phone_verified", "roles", "customer_code", "avatar_url", "created_at"]
+        read_only_fields = ["id", "email", "phone", "phone_verified", "roles", "customer_code", "avatar_url", "created_at"]
+
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, user) -> str | None:
+        profile = getattr(user, "customer_profile", None)
+        return profile.avatar.url if profile and profile.avatar else None
+
+    def validate_full_name(self, v):
+        v = " ".join(v.split())
+        if len(v) < 2:
+            raise serializers.ValidationError("Enter your name.")
+        return v
 
     def get_customer_code(self, user) -> str | None:
         profile = getattr(user, "customer_profile", None)

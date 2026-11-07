@@ -32,7 +32,9 @@ from apps.wishlists.models import WishlistItem
 TEST_CUSTOMER = {
     "email": "test.customer@click.local",  # reserved .local domain: can never be a real inbox
     "full_name": "Click Test User",
-    "phone": "+91 00000 00001",  # not an allocatable Indian mobile number (mobiles start with 6–9)
+    # US 555-01xx numbers are reserved for fiction. Add this number + a code of your choice as a
+    # *test phone number* in Firebase Console → Authentication → Sign-in method → Phone.
+    "phone": "+16505550101",
     "customer_code": "CLK-CS-TEST001",
     "password": "ClickDev@2026",  # development-only password; also usable via the normal login form
 }
@@ -108,9 +110,10 @@ def _key(label: str) -> uuid.UUID:
 def ensure_test_customer(log) -> CustomerProfile:
     user = User.objects.filter(email=TEST_CUSTOMER["email"]).first()
     if not user:
-        user = User.objects.create_user(TEST_CUSTOMER["email"], TEST_CUSTOMER["password"], full_name=TEST_CUSTOMER["full_name"], phone=TEST_CUSTOMER["phone"])
+        user = User.objects.create_user(TEST_CUSTOMER["email"], TEST_CUSTOMER["password"], full_name=TEST_CUSTOMER["full_name"],
+                                        phone=TEST_CUSTOMER["phone"], phone_verified=True)
     else:
-        user.full_name, user.phone, user.is_active = TEST_CUSTOMER["full_name"], TEST_CUSTOMER["phone"], True
+        user.full_name, user.phone, user.phone_verified, user.is_active = TEST_CUSTOMER["full_name"], TEST_CUSTOMER["phone"], True, True
         user.set_password(TEST_CUSTOMER["password"])
         user.save()
     profile, _ = CustomerProfile.objects.get_or_create(user=user)

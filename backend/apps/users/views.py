@@ -65,8 +65,16 @@ class AuthView(APIView):
     throttle_scope = "auth"
 
 
+def _require_password_auth():
+    if not settings.CLICK_PASSWORD_AUTH_ENABLED:
+        raise DomainError("Not found.", code="not_found", status_code=404)
+
+
 class RegisterView(AuthView):
+    """Development/test only. Customers sign up with phone OTP (apps.identity)."""
+
     def post(self, request):
+        _require_password_auth()
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -78,7 +86,10 @@ class RegisterView(AuthView):
 
 
 class LoginView(AuthView):
+    """Development/test only (password). Customers sign in with phone OTP (apps.identity)."""
+
     def post(self, request):
+        _require_password_auth()
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = authenticate(
@@ -166,3 +177,48 @@ class DevLoginView(AuthView):
             raise DomainError("Test customer not found. Run `python manage.py seed_dev_data`.", code="dev_customer_missing", status_code=409)
         audit.warning("auth.dev_login", extra={"user_id": str(user.id)})
         return _session_response(user)
+
+
+class AvatarView(APIView):
+    """POST /me/avatar (multipart `image`) stores a re-encoded square WebP; DELETE removes it."""
+
+    from rest_framework.parsers import MultiPartParser
+
+    parser_classes = [MultiPartParser]
+    MAX_BYTES = 5 * 1024 * 1024
+
+    def post(self, request):
+        import uuid
+        from io import BytesIO
+
+        from django.core.files.base import ContentFile
+        from PIL import Image, ImageOps, UnidentifiedImageError
+
+        profile = getattr(request.user, "customer_profile", None)
+        upload = request.FILES.get("image")
+        if profile is None or upload is None:
+            raise DomainError("Choose an image to upload.", code="image_required")
+        if upload.size > self.MAX_BYTES:
+            raise DomainError("Images must be 5 MB or smaller.", code="image_too_large")
+        try:
+            img = Image.open(upload)
+            if img.format not in {"JPEG", "PNG", "WEBP"}:
+                raise DomainError("Use a JPG, PNG or WebP image.", code="image_type")
+            if img.width * img.height > 40_000_000:
+                raise DomainError("That image is too large.", code="image_too_large")
+            img = ImageOps.exif_transpose(img).convert("RGB")  # re-encoding drops EXIF (location etc.)
+        except (UnidentifiedImageError, OSError):
+            raise DomainError("That file isn’t a valid image.", code="image_invalid")
+        img = ImageOps.fit(img, (512, 512), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, "WEBP", quality=82)
+        if profile.avatar:
+            profile.avatar.delete(save=False)
+        profile.avatar.save(f"{uuid.uuid4().hex}.webp", ContentFile(buf.getvalue()), save=True)
+        return Response(UserSerializer(request.user).data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request):
+        profile = getattr(request.user, "customer_profile", None)
+        if profile and profile.avatar:
+            profile.avatar.delete(save=True)
+        return Response(UserSerializer(request.user).data)
