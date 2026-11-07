@@ -1,5 +1,6 @@
 import type { HttpClient } from './http';
 import type {
+  DevLoginInfo,
   Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
@@ -14,6 +15,9 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
+  /** DEVELOPMENT ONLY: 404 unless the backend runs with DEBUG. */
+  devLoginInfo: () => http.request<DevLoginInfo>('/auth/dev-login', { auth: false }),
+  devLogin: () => http.request<Session>('/auth/dev-login', { method: 'POST', auth: false }),
   updateMe: (input: Partial<Pick<User, 'fullName' | 'phone'>>) => http.request<User>('/me', { method: 'PATCH', body: input }),
 });
 

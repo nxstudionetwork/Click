@@ -11,6 +11,8 @@ interface AuthValue {
   login: (email: string, password: string) => Promise<void>;
   register: (input: { email: string; password: string; fullName: string }) => Promise<void>;
   logout: () => Promise<void>;
+  /** DEVELOPMENT ONLY. */
+  devLogin: () => Promise<void>;
   /** Replace the cached user after a profile update. */
   refreshUser: (user: User) => void;
 }
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.removeQueries({ queryKey: ['customer'] });
     },
     refreshUser: setUser,
+    devLogin: async () => apply(await api.auth.devLogin()),
   }), [status, user, apply, queryClient]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

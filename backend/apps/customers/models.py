@@ -3,11 +3,21 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
+import secrets
+
 from apps.core.models import BaseModel
+
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def generate_customer_code() -> str:
+    """Public, non-sequential Click Customer ID shown to customers and support, e.g. CLK-CS-7K2QXM."""
+    return "CLK-CS-" + "".join(secrets.choice(_CODE_ALPHABET) for _ in range(6))
 
 
 class CustomerProfile(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="customer_profile")
+    customer_code = models.CharField(max_length=16, unique=True, default=generate_customer_code, editable=False)
 
     def __str__(self) -> str:
         return f"Customer<{self.user.email}>"

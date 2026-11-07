@@ -50,13 +50,18 @@ python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
-python manage.py seed_dev_data      # dev data: restaurants, grocery stores, shops, movies/events with shows
+python manage.py seed_dev_data      # DEVELOPMENT MOCK DATA + test customer (see docs/development-data.md)
 python manage.py runserver
 
 # Frontend (http://localhost:5173, proxies /api to Django)
 npm install
 npm run dev:customer
 ```
+
+## Development test login
+
+After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
+with `test.customer@click.local` / `ClickDev@2026`. Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

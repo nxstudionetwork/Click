@@ -27,7 +27,7 @@ export function AccountPage() {
         <div style={{ minWidth: 0 }}>
           <h2 className="truncate">{user?.fullName || 'Click member'}</h2>
           <div className="muted small truncate">{user?.email}{user?.phone ? ` · ${user.phone}` : ''}</div>
-          <div className="muted small">Customer ID {user?.id.slice(0, 8).toUpperCase()}</div>
+          <div className="muted small">Customer ID {user?.customerCode ?? '—'}</div>
         </div>
         <Link to="/settings" className="btn btn--outline btn--sm" style={{ marginLeft: 'auto' }}>Edit</Link>
       </section>

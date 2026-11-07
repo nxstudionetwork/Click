@@ -57,6 +57,7 @@ export function AppShell() {
       <div className="shell" data-theme={theme}>
         <a href="#main" className="skip-link">Skip to content</a>
         {usingMockData && <div className="mock-banner">Showing TEMPORARY MOCK DATA for discovery — not real stores</div>}
+        {import.meta.env.DEV && !usingMockData && <div className="mock-banner">Development build · records shown are DEVELOPMENT MOCK DATA, not real stores or customers</div>}
         <header className="header" ref={headerRef}>
           <div className="header__bar">
             <Link to="/" aria-label="Click home" className="header__logo"><Logo /></Link>

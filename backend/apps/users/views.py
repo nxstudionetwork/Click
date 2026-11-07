@@ -91,6 +91,8 @@ class LoginView(AuthView):
 
 
 class RefreshView(AuthView):
+    throttle_scope = "auth_session"
+
     def post(self, request):
         _require_client_header(request)
         raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE["name"])
@@ -111,6 +113,8 @@ class RefreshView(AuthView):
 
 
 class LogoutView(AuthView):
+    throttle_scope = "auth_session"
+
     def post(self, request):
         _require_client_header(request)
         raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE["name"])
@@ -133,3 +137,32 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class DevLoginView(AuthView):
+    throttle_scope = "auth_session"
+
+    """
+    DEVELOPMENT ONLY. GET reports whether dev login is available; POST signs in the seeded
+    test customer (see `python manage.py seed_dev_data`). Returns 404 unless DEBUG is on and
+    CLICK_DEV_LOGIN is enabled, so it does not exist in production.
+    """
+
+    def _test_user(self):
+        if not (settings.DEBUG and settings.CLICK_DEV_LOGIN_ENABLED):
+            raise DomainError("Not found.", code="not_found", status_code=404)
+        return User.objects.filter(email=settings.CLICK_DEV_TEST_CUSTOMER_EMAIL, is_active=True).select_related("customer_profile").first()
+
+    def get(self, request):
+        user = self._test_user()
+        if not user:
+            return Response({"enabled": True, "customer": None, "hint": "Run `python manage.py seed_dev_data` first."})
+        return Response({"enabled": True, "customer": {"name": user.full_name, "email": user.email,
+                                                       "customer_code": user.customer_profile.customer_code}})
+
+    def post(self, request):
+        user = self._test_user()
+        if not user:
+            raise DomainError("Test customer not found. Run `python manage.py seed_dev_data`.", code="dev_customer_missing", status_code=409)
+        audit.warning("auth.dev_login", extra={"user_id": str(user.id)})
+        return _session_response(user)

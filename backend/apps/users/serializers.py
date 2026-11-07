@@ -6,11 +6,16 @@ from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    customer_code = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "phone", "roles", "created_at"]
-        read_only_fields = ["id", "email", "roles", "created_at"]
+        fields = ["id", "email", "full_name", "phone", "roles", "customer_code", "created_at"]
+        read_only_fields = ["id", "email", "roles", "customer_code", "created_at"]
+
+    def get_customer_code(self, user) -> str | None:
+        profile = getattr(user, "customer_profile", None)
+        return profile.customer_code if profile else None
 
     def get_roles(self, user) -> list[str]:
         roles = []

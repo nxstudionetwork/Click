@@ -10,7 +10,7 @@ vi.mock('../features/menu/useAddToCart', () => ({ useAddToCart: () => ({ addToCa
 const { BuddyPage } = await import('./BuddyPage');
 
 const order = { id: 'o1', number: 'CLK-ABC', status: 'preparing', store: { id: 's', slug: 's', name: 'Dosa District', storeType: 'restaurant', imageUrl: '' },
-  total: '200.00', currency: 'INR', itemCount: 1, itemNames: ['Dosa'], paymentStatus: 'pending', createdAt: '2026-11-07T10:00:00Z' };
+  total: '200.00', currency: 'INR', itemCount: 1, itemNames: ['Dosa'], lineCount: 1, paymentStatus: 'pending', createdAt: '2026-11-07T10:00:00Z' };
 
 describe('BuddyPage', () => {
   it('renders the backend reply with real cards and follow-up actions', async () => {

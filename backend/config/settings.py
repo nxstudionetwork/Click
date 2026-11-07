@@ -157,7 +157,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": os.environ.get("THROTTLE_ANON", "120/min"),
         "user": os.environ.get("THROTTLE_USER", "600/min"),
-        "auth": os.environ.get("THROTTLE_AUTH", "10/min"),
+        "auth": os.environ.get("THROTTLE_AUTH", "10/min"),  # login / register (credential guessing)
+        "auth_session": os.environ.get("THROTTLE_AUTH_SESSION", "120/min"),  # refresh / logout run on every page load
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
     },
@@ -206,6 +207,10 @@ X_FRAME_OPTIONS = "DENY"
 
 # --- Click business configuration ------------------------------------
 CLICK_DEV_PORT = os.environ.get("CLICK_DEV_PORT", "4000")
+# DEVELOPMENT-ONLY one-click login as the seeded test customer. Hard-wired off unless DEBUG is on,
+# so it cannot be enabled in production even if the env var is set.
+CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
+CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
 # GST on platform convenience fees (bookings).

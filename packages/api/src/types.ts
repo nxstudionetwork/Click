@@ -34,7 +34,15 @@ export interface User {
   fullName: string;
   phone: string;
   roles: Role[];
+  /** Public Click Customer ID, e.g. CLK-CS-7K2QXM (null for non-customers). */
+  customerCode: string | null;
   createdAt: ISODateTime;
+}
+
+export interface DevLoginInfo {
+  enabled: boolean;
+  customer: { name: string; email: string; customerCode: string } | null;
+  hint?: string;
 }
 
 export interface Session {
@@ -234,6 +242,8 @@ export interface OrderSummary {
   currency: string;
   itemCount: number;
   itemNames: string[];
+  /** Number of distinct products (itemCount is total quantity). */
+  lineCount: number;
   paymentStatus: PaymentStatus | null;
   createdAt: ISODateTime;
 }

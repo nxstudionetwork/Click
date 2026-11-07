@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, TextField } from '../components/ui';
+import { DevLoginPanel } from '../dev/DevLoginPanel';
 
 function safeNext(next: string | null) {
   // Only allow same-app relative paths (prevents open redirects).
@@ -44,6 +45,7 @@ export function LoginPage() {
       <TextField label="Password" type="password" autoComplete="current-password" value={f.values.password} onChange={f.set('password')} error={f.errors.password} required />
       {f.errors._ && <p className="field__error" role="alert">{f.errors._}</p>}
       <Button type="submit" block loading={f.pending}>Sign in</Button>
+      {import.meta.env.DEV && <DevLoginPanel next={safeNext(f.next)} />}
       <p className="small muted">New to Click? <Link to={`/register${f.next ? `?next=${encodeURIComponent(f.next)}` : ''}`} style={{ color: 'var(--c-brand)', fontWeight: 600 }}>Create an account</Link></p>
     </form>
   );

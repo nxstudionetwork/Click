@@ -311,3 +311,7 @@ details.faq p { margin-top: var(--s-2); color: var(--c-ink-2); font-size: var(--
 .ticket__body .badge { justify-self: start; }
 .buddy__cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .buddy__cards .event-card__poster { aspect-ratio: 4 / 5; }
+
+/* ---- Development-only UI ---- */
+.dev-panel { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); border: 1.5px dashed var(--c-warning); border-radius: var(--r-md); background: var(--c-warning-soft); }
+.dev-panel__tag { align-self: flex-start; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-warning); }
