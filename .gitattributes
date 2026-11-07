@@ -1,0 +1,6 @@
+# Keep LF line endings in the repo on every OS (Windows clones stay clean in git status).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
