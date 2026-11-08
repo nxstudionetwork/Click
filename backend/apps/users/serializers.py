@@ -16,6 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
         roles = []
         if hasattr(user, "customer_profile"):
             roles.append("customer")
+        if user.partner_memberships.filter(is_active=True).exists():
+            roles.append("partner")
         if user.is_staff:
             roles.append("staff")
         return roles
@@ -40,3 +42,7 @@ class RegisterSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+
+class FirebaseSessionSerializer(serializers.Serializer):
+    id_token = serializers.CharField(max_length=4096, trim_whitespace=True)

@@ -5,9 +5,9 @@
 | Responsibility          | Location                                | Notes |
 |-------------------------|-----------------------------------------|-------|
 | Customer App            | `apps/customer`                         | React + TypeScript (Vite) |
-| Partner App             | `apps/partner`                          | Phase 5 |
+| Partner App             | `apps/partner`                          | React + TypeScript (Vite); Firebase phone sign-in |
 | Business OS             | `apps/business-os`                      | Phase 6 (internal) |
-| Shared code             | `packages/api`                          | `@click/api`: typed API contract + HTTP client for all apps |
+| Shared code             | `packages/api`, `packages/ui`           | `@click/api`: contract, HTTP + session client; `@click/ui`: primitives + logo |
 | Backend                 | `backend/`                              | Django + DRF, one shared API |
 | Database                | PostgreSQL; migrations in `backend/apps/*/migrations` | Django owns the schema |
 | Infrastructure          | `infrastructure/`                       | Local dev compose; deployment config later |
@@ -33,7 +33,9 @@ launch, because their lifecycles differ.
 - **Public discovery:** `stores`, `stores/<slug>`, `stores/<slug>/menu`, `store-categories`, `products/<id>`, `search`, `offers`
 - **Shared identity:** `auth/register|login|refresh|logout`, `me`
 - **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, support/tickets, assistant/messages}`
-- **Partner:** `partner/*` (Phase 5) · **Business OS:** `os/*` (Phase 6)
+- **Partner identity:** `auth/firebase` exchanges a server-verified Firebase ID token for a Click session
+- **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
+- **Business OS:** `os/*` (Phase 6)
 
 Rules:
 - JSON is camelCase.
@@ -64,3 +66,23 @@ and support tickets. Frontend route guards are UX only.
 `apps/ai/providers.py` defines the provider interface. `CLICK_AI_PROVIDER` selects an implementation, and none is
 configured by default (the API returns `ai_unavailable`). The backend builds context per surface with permission
 filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio are intentionally not used.
+
+## Click Partner identity
+
+- **Phone identity:** Firebase Authentication verifies the phone number. Django verifies the Firebase ID token
+  (Google public keys, `aud`/`iss` for `FIREBASE_PROJECT_ID`, phone provider) and links it through
+  `users.AuthIdentity(provider="firebase", subject=<Firebase UID>)`. The UID, not the phone number, is the key, and
+  phone-only users have no email or password. No Firebase service-account key is used.
+- **Partner model:** `PartnerType` → `PartnerCategory` (catalogue with JSON configuration) · `Partner` (UUID PK,
+  public `partner_code`) · `PartnerMembership` (user ↔ partner, owner today, staff later; one owned partner per user) ·
+  `PartnerProfile` (contact + category-specific `details`) · `PartnerAddress` · `PartnerVerification` ·
+  `PartnerStatusEvent` (audit).
+- **Partner ID:** `CLK-PT-000001`, from the `partners_partner_code_seq` PostgreSQL sequence, assigned once at
+  submission and never changed or reused.
+- **Status:** `draft → profile_completed → verification_pending → verified → active`, plus `rejected`, `suspended`,
+  `inactive`. Transitions are explicit and audited. Only staff review (Django admin today) can mark a partner verified.
+- **Isolation:** no partner endpoint accepts a partner ID; every request resolves the partner from the signed-in
+  user's owner membership.
+- **Category configuration:** `apps/partners/catalog.py` defines fields, location options and Home modules per
+  type, with category overrides. The API serves the resolved configuration, and the server validates profile
+  details against it.

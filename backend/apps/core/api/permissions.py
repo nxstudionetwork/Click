@@ -2,7 +2,7 @@
 Role-based access for the three Click surfaces sharing one API:
 
   /api/v1/customer/...   -> IsCustomer   (owns a CustomerProfile)
-  /api/v1/partner/...    -> (Phase 5) membership-scoped partner permissions
+  /api/v1/partner/...    -> IsAuthenticated; partner resolved from the user's owner membership
   /api/v1/os/...         -> (Phase 6) staff + explicit Django permissions
 
 Object ownership is always enforced in querysets, never only in the UI.

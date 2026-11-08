@@ -12,7 +12,8 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import authenticate
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,8 +23,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.core.api.exceptions import DomainError
 from apps.customers.models import CustomerProfile
 
-from .models import User
-from .serializers import LoginSerializer, RegisterSerializer, UserSerializer
+from . import firebase
+from .models import AuthIdentity, User
+from .serializers import FirebaseSessionSerializer, LoginSerializer, RegisterSerializer, UserSerializer
 
 audit = logging.getLogger("click.audit")
 
@@ -88,6 +90,72 @@ class LoginView(AuthView):
             audit.info("auth.login_failed")
             raise DomainError("Incorrect email or password.", code="invalid_credentials", status_code=401)
         return _session_response(user)
+
+
+class FirebaseSessionView(AuthView):
+    """
+    Exchange a Firebase ID token (phone sign-in) for a Click session.
+
+    The token is verified server-side; the Firebase UID inside it, never a
+    client-supplied value, finds or creates the Click user. A returning
+    partner gets the same user (and therefore the same Partner) every time.
+    """
+
+    def post(self, request):
+        serializer = FirebaseSessionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            claims = firebase.verify_id_token(serializer.validated_data["id_token"])
+        except firebase.FirebaseUnavailable:
+            raise DomainError(
+                "We couldn’t verify your number right now. Please try again shortly.",
+                code="phone_auth_unavailable", status_code=503,
+            )
+        except firebase.FirebaseAuthError as exc:
+            audit.info("auth.firebase_rejected", extra={"reason": exc.code})
+            message = (
+                "Your verification expired. Please request a new code."
+                if exc.code == "token_expired"
+                else "We couldn’t verify your number. Please try again."
+            )
+            raise DomainError(message, code="phone_verification_failed", status_code=401)
+
+        user, created = _user_for_firebase(claims)
+        if not user.is_active:
+            raise DomainError("This account is disabled. Contact Click support.", code="account_disabled", status_code=403)
+        audit.info("auth.firebase_login", extra={"user_id": str(user.id), "new_user": created})
+        return _session_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+def _user_for_firebase(claims: "firebase.FirebaseClaims") -> tuple[User, bool]:
+    now = timezone.now()
+    provider = AuthIdentity.Provider.FIREBASE
+    for _ in range(2):
+        identity = (
+            AuthIdentity.objects.select_related("user").filter(provider=provider, subject=claims.uid).first()
+        )
+        if identity:
+            changes = {"last_verified_at": now}
+            if identity.phone_number != claims.phone_number:
+                changes["phone_number"] = claims.phone_number
+            AuthIdentity.objects.filter(pk=identity.pk).update(**changes)
+            user = identity.user
+            if user.phone != claims.phone_number:
+                user.phone = claims.phone_number
+                user.save(update_fields=["phone", "updated_at"])
+            return user, False
+        try:
+            with transaction.atomic():
+                user = User.objects.create_phone_user(claims.phone_number)
+                AuthIdentity.objects.create(
+                    user=user, provider=provider, subject=claims.uid,
+                    phone_number=claims.phone_number, last_verified_at=now,
+                )
+            return user, True
+        except IntegrityError:
+            # A concurrent first sign-in for the same UID won the race; load it.
+            continue
+    raise DomainError("We couldn’t sign you in. Please try again.", code="identity_conflict", status_code=409)
 
 
 class RefreshView(AuthView):

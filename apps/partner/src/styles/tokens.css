@@ -1,0 +1,75 @@
+/*
+ * Click Partner design tokens. Same variable names as the Customer App, so the
+ * shared @click/ui primitives work unchanged, with a Partner palette:
+ * deep navy surfaces, electric blue actions, cyan highlights, warm orange/yellow accents.
+ */
+:root {
+  --c-navy: #0a1633;
+  --c-navy-2: #11224a;
+  --c-navy-3: #1b3166;
+
+  --c-brand: #2563ff;          /* electric blue: primary actions */
+  --c-brand-strong: #1747d6;
+  --c-brand-soft: #e7eeff;
+  --c-accent: #12b9da;         /* cyan */
+  --c-accent-soft: #e2f7fb;
+  --c-warm: #ff8a1f;           /* warm orange */
+  --c-sun: #ffc23d;            /* warm yellow */
+  --c-warm-soft: #fff3e3;
+
+  --c-ink: #0d1530;
+  --c-ink-2: #3f4a68;
+  --c-ink-3: #66708c;
+  --c-line: #e1e6f2;
+  --c-surface: #ffffff;
+  --c-surface-2: #f3f6fc;
+  --c-bg: #f7f9fd;
+
+  --c-danger: #d93a4a;
+  --c-danger-soft: #fdecee;
+  --c-warning: #a35f00;
+  --c-warning-soft: #fff4e0;
+  --c-success: #0c8a6c;
+  --c-success-soft: #e1f6ef;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: clamp(1.9rem, 1.4rem + 2vw, 2.6rem);
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(13 21 48 / 6%), 0 1px 1px rgb(13 21 48 / 4%);
+  --shadow-2: 0 10px 30px rgb(13 21 48 / 10%);
+  --shadow-3: 0 24px 60px rgb(10 22 51 / 22%);
+  --shadow-glow: 0 10px 30px rgb(37 99 255 / 30%);
+
+  --grad-hero: radial-gradient(120% 80% at 10% 0%, #1d4bd8 0%, transparent 55%),
+    radial-gradient(90% 70% at 100% 20%, rgb(18 185 218 / 55%) 0%, transparent 60%),
+    radial-gradient(80% 60% at 60% 110%, rgb(255 138 31 / 40%) 0%, transparent 60%), var(--c-navy);
+  --grad-card: linear-gradient(135deg, #0b1b44 0%, #163a9a 52%, #0f7fa8 100%);
+
+  --bottom-nav-h: 0px;
+  --content-max: 1120px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

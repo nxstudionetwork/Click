@@ -1,7 +1,7 @@
 import type { HttpClient } from './http';
 import type {
   Address, AddressInput, AssistantMessage, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
-  OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
@@ -11,6 +11,9 @@ export const authApi = (http: HttpClient) => ({
     http.request<Session>('/auth/register', { method: 'POST', body: input, auth: false }),
   login: (input: { email: string; password: string }) =>
     http.request<Session>('/auth/login', { method: 'POST', body: input, auth: false }),
+  /** Exchange a Firebase ID token (phone sign-in) for a Click session. The server verifies it. */
+  firebase: (idToken: string) =>
+    http.request<Session>('/auth/firebase', { method: 'POST', body: { idToken }, auth: false }),
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
@@ -93,4 +96,17 @@ export const customerApi = (http: HttpClient) => ({
     send: (messages: AssistantMessage[]) =>
       http.request<{ message: AssistantMessage }>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
   },
+});
+
+/** Click Partner App. The server resolves the partner from the signed-in user; no partner IDs are sent. */
+export const partnerApi = (http: HttpClient) => ({
+  catalog: () => http.request<{ types: PartnerType[] }>('/partner/categories', { auth: false }),
+  me: () => http.request<PartnerState>('/partner/me'),
+  chooseCategory: (input: { partnerType: string; category: string }) =>
+    http.request<PartnerState>('/partner/onboarding/category', { method: 'POST', body: input }),
+  saveProfile: (input: PartnerProfileInput) =>
+    http.request<PartnerState>('/partner/onboarding/profile', { method: 'PATCH', body: input }),
+  saveLocation: (input: PartnerLocationInput) =>
+    http.request<PartnerState>('/partner/onboarding/location', { method: 'PATCH', body: input }),
+  submit: () => http.request<PartnerState>('/partner/onboarding/submit', { method: 'POST' }),
 });

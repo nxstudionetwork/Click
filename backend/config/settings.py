@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "apps.rewards",
     "apps.support",
     "apps.ai",
+    "apps.partners",
 ]
 
 MIDDLEWARE = [
@@ -156,6 +157,7 @@ REST_FRAMEWORK = {
         "anon": os.environ.get("THROTTLE_ANON", "120/min"),
         "user": os.environ.get("THROTTLE_USER", "600/min"),
         "auth": os.environ.get("THROTTLE_AUTH", "10/min"),
+        "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
     },
@@ -207,6 +209,13 @@ CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
+# Firebase Authentication (Click Partner phone sign-in). Only the public project ID
+# is needed to verify ID tokens; no service-account key is used or stored.
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
+# Local development only: accept unsigned tokens from the Firebase Auth Emulator.
+FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "")
+if FIREBASE_AUTH_EMULATOR_HOST and not (DEBUG or TESTING):
+    raise RuntimeError("FIREBASE_AUTH_EMULATOR_HOST must not be set in production.")
 # Dotted path to an apps.ai.providers.AIProvider implementation. Empty = AI disabled.
 CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "")
 
