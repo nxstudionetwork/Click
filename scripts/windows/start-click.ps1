@@ -57,12 +57,15 @@ if ($dbOk -ne 'ok') {
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'click') THEN
     CREATE ROLE click LOGIN PASSWORD 'click' CREATEDB;
+  ELSE
+    -- The role exists but Click could not sign in with it: reset it to the development credentials.
+    ALTER ROLE click WITH LOGIN CREATEDB PASSWORD 'click';
   END IF;
 END $$;
 SELECT 'CREATE DATABASE click OWNER click' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'click')\gexec
 '@ | Set-Content -Encoding ASCII $sql
   & $psql -U postgres -h localhost -p 5432 -v ON_ERROR_STOP=1 -f $sql
-  if ($LASTEXITCODE -ne 0) { Fail "Could not create the database. Check the 'postgres' password and that PostgreSQL is running (Windows Services: postgresql-x64-16)." }
+  if ($LASTEXITCODE -ne 0) { Fail "Could not create the database. Check the 'postgres' password and that PostgreSQL is running (Windows Services: postgresql-x64-16 or postgresql-x64-18)." }
 }
 
 Say 'Updating database and development data'

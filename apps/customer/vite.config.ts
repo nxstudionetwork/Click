@@ -10,7 +10,8 @@ export default defineConfig({
     proxy: {
       '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
       // Uploaded profile photos (served by Django in development; object storage/CDN in production).
-      '/media': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
+      // public/media/onboarding/* are the app's own static images, so Vite serves those itself.
+      '^/media/(?!onboarding/)': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
     },
   },
   test: {
