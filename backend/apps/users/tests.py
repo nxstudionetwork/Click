@@ -71,3 +71,11 @@ def test_email_is_case_insensitively_unique_at_db_level(customer):
 
     with pytest.raises(IntegrityError):
         User.objects.create(email="Asha@Example.com")
+
+
+def test_session_refresh_has_its_own_throttle_scope():
+    """Refresh runs on every page load; it must not share the strict login limit."""
+    from apps.users.views import LoginView, RefreshView, RegisterView
+
+    assert LoginView.throttle_scope == RegisterView.throttle_scope == "auth"
+    assert RefreshView.throttle_scope == "auth_session"

@@ -32,17 +32,21 @@ class OrderSummarySerializer(serializers.ModelSerializer):
     store = OrderStoreSerializer(read_only=True)
     item_count = serializers.SerializerMethodField()
     item_names = serializers.SerializerMethodField()
+    line_count = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ["id", "number", "status", "store", "total", "currency", "item_count", "item_names", "payment_status", "created_at"]
+        fields = ["id", "number", "status", "store", "total", "currency", "item_count", "item_names", "line_count", "payment_status", "created_at"]
 
     def get_item_count(self, order) -> int:
         return sum(i.quantity for i in order.items.all())
 
     def get_item_names(self, order) -> list[str]:
         return [i.product_name for i in order.items.all()][:3]
+
+    def get_line_count(self, order) -> int:
+        return len(order.items.all())
 
     def get_payment_status(self, order) -> str | None:
         payments = list(order.payments.all())
@@ -67,7 +71,7 @@ class OrderDetailSerializer(OrderSummarySerializer):
 
 class PlaceOrderSerializer(serializers.Serializer):
     address_id = serializers.UUIDField()
-    payment_method = serializers.ChoiceField(choices=PaymentMethod.choices)
+    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET])
     idempotency_key = serializers.UUIDField()
     customer_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
 

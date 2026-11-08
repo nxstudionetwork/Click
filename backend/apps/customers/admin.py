@@ -11,5 +11,5 @@ class AddressInline(admin.TabularInline):
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
     list_display = ["user", "created_at"]
-    search_fields = ["user__email"]
+    search_fields = ["user__email"]  # required for wallet admin autocomplete
     inlines = [AddressInline]

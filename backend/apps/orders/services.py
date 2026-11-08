@@ -16,6 +16,8 @@ from apps.payments.services import cancel_pending_payments, start_payment
 
 from .models import ALLOWED_TRANSITIONS, CUSTOMER_CANCELLABLE, Order, OrderItem, OrderStatus, OrderStatusEvent
 
+from apps.activity.services import record
+
 audit = logging.getLogger("click.audit")
 
 
@@ -99,6 +101,7 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
     clear_cart(cart)
     notify(customer, NotificationCategory.ORDERS, f"Order placed at {store.name}",
            f"{order.number} · we'll update you as it progresses.", f"/orders/{order.id}")
+    record(customer, "order.placed", {"total": str(order.total), "store": store.slug}, obj=order)
     audit.info("order.placed", extra={"order": order.number, "customer": str(customer.id)})
     return order, True
 
@@ -124,6 +127,7 @@ def transition_order(order: Order, to_status: str, *, actor=None, note: str = ""
     OrderStatusEvent.objects.create(order=order, from_status=previous, to_status=to_status, actor=actor, note=note)
     notify(order.customer, NotificationCategory.ORDERS, f"{order.store.name}: {order.get_status_display()}",
            order.number, f"/orders/{order.id}")
+    record(order.customer, f"order.{to_status}", obj=order)
     if to_status == OrderStatus.DELIVERED:
         from apps.rewards.services import award_for_delivered_order
 

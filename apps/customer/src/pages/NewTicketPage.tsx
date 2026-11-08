@@ -12,7 +12,7 @@ export function NewTicketPage() {
   const qc = useQueryClient();
   const [category, setCategory] = useState<SupportCategory>((HELP_TOPICS.find((t) => t.id === params.get('category'))?.id) ?? 'order');
   const [orderId, setOrderId] = useState(params.get('orderId') ?? '');
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState(params.get('subject') ?? '');
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const orders = useQuery({ queryKey: ['customer', 'orders', 'list', 'support'], queryFn: () => api.customer.orders.list() });

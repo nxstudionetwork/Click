@@ -1,6 +1,7 @@
 import type { HttpClient } from './http';
 import type {
-  Address, AddressInput, AssistantMessage, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  DevLoginInfo, IdentityExchangeResult, SignupInput,
+  Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
@@ -14,6 +15,19 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
+  /** Exchange a phone-OTP provider credential (e.g. Firebase ID token) for a Click session or a signup token. */
+  exchangeIdentity: (input: { provider: string; token: string }) =>
+    http.request<IdentityExchangeResult>('/auth/identity/exchange', { method: 'POST', body: input, auth: false }),
+  completeSignup: (input: SignupInput) =>
+    http.request<Session & { status: 'authenticated' }>('/auth/identity/signup', { method: 'POST', body: input, auth: false }),
+  uploadAvatar: (file: Blob) => {
+    const form = new FormData();
+    form.append('image', file, 'avatar');
+    return http.request<User>('/me/avatar', { method: 'POST', body: form });
+  },
+  /** DEVELOPMENT ONLY: 404 unless the backend runs with DEBUG. */
+  devLoginInfo: () => http.request<DevLoginInfo>('/auth/dev-login', { auth: false }),
+  devLogin: () => http.request<Session>('/auth/dev-login', { method: 'POST', auth: false }),
   updateMe: (input: Partial<Pick<User, 'fullName' | 'phone'>>) => http.request<User>('/me', { method: 'PATCH', body: input }),
 });
 
@@ -23,6 +37,14 @@ export const catalogApi = (http: HttpClient) => ({
   search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
+});
+
+/** Movies & live events (public discovery). */
+export const eventsApi = (http: HttpClient) => ({
+  list: (q: { kind?: 'movie' | 'event'; status?: 'now_showing' | 'coming_soon'; city?: string; search?: string } = {}) =>
+    http.request<Paginated<ClickEvent>>('/events', { query: q, auth: false }),
+  get: (slug: string, city?: string) => http.request<EventDetail>(`/events/${encodeURIComponent(slug)}`, { query: { city }, auth: false }),
+  seatMap: (showId: string) => http.request<ShowSeatMap>(`/shows/${showId}`, { auth: false }),
 });
 
 /** Public discovery. The customer app may swap this for a mock source (same interface). */
@@ -91,6 +113,14 @@ export const customerApi = (http: HttpClient) => ({
   },
   assistant: {
     send: (messages: AssistantMessage[]) =>
-      http.request<{ message: AssistantMessage }>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+      http.request<BuddyReply>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+  },
+  wallet: () => http.request<WalletSummary>('/customer/wallet'),
+  bookings: {
+    list: (when?: 'upcoming' | 'past') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
+    get: (id: string) => http.request<Booking>(`/customer/bookings/${id}`),
+    create: (input: { showId: string; seats: string[]; paymentMethod: 'pay_at_venue' | 'wallet'; idempotencyKey: string }) =>
+      http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
+    cancel: (id: string) => http.request<Booking>(`/customer/bookings/${id}/cancel`, { method: 'POST' }),
   },
 });

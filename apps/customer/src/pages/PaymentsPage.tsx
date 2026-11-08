@@ -17,7 +17,8 @@ export function PaymentsPage() {
       <section className="card card--pad stack" style={{ gap: 'var(--s-2)' }}>
         <h3>Payment methods</h3>
         <div className="row"><span className="list-row__icon"><Icon name="card" size={18} /></span><div><strong>Cash on delivery</strong><div className="small muted">Pay with cash or UPI when your order arrives.</div></div></div>
-        <p className="small muted">Online payments (cards, UPI, wallets) through a secure payment provider are coming soon. Click never stores your card details.</p>
+        <Link to="/wallet" className="row"><span className="list-row__icon"><Icon name="wallet" size={18} /></span><div><strong>Click Wallet</strong><div className="small muted">Pay instantly from your balance. Refunds return here.</div></div></Link>
+        <p className="small muted">Online payments (cards, UPI) through a secure payment provider are coming soon. Click never stores your card details.</p>
       </section>
       <section className="stack">
         <h2>Payment history</h2>

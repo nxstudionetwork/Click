@@ -43,7 +43,7 @@ def test_search_across_stores_and_products_with_scopes(api, products):
     grocery = api.get("/api/v1/search?q=dal&scope=grocery").json()
     assert [p["name"] for p in grocery["products"]] == ["Dal Masala"]
     assert api.get("/api/v1/search?q=fresh").json()["stores"][0]["name"] == "Fresh Mart"
-    assert api.get("/api/v1/search?q=d").json() == {"query": "d", "stores": [], "products": []}
+    assert api.get("/api/v1/search?q=d").json() == {"query": "d", "stores": [], "products": [], "events": []}
     assert api.get("/api/v1/search?q=dal&scope=nope").status_code == 400
 
 

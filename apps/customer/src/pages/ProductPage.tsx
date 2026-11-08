@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '@click/api';
 import { Button, DietMark, EmptyState, ErrorState, Icon, PriceTag, QuantityStepper, Skeleton, SmartImage } from '../components/ui';
 import { serviceForStoreType } from '../config/services';
+import { useThemeOverride } from '../components/layout/AppShell';
 import { useAddToCart } from '../features/menu/useAddToCart';
 import { ProductCard } from '../features/stores/ProductCard';
 import { WishlistButton } from '../features/wishlist/WishlistButton';
@@ -13,6 +14,7 @@ import { etaLabel, formatMoney } from '../lib/format';
 export function ProductPage() {
   const { id = '' } = useParams();
   const product = useQuery({ queryKey: ['products', id], queryFn: () => api.catalog.product(id) });
+  useThemeOverride(product.data ? serviceForStoreType(product.data.store.storeType).theme : null);
   const { addToCart, isAdding } = useAddToCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);

@@ -10,3 +10,4 @@ __pycache__/
 .pytest_cache/
 backend/staticfiles/
 .DS_Store
+backend/media/

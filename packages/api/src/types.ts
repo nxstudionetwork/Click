@@ -34,7 +34,28 @@ export interface User {
   fullName: string;
   phone: string;
   roles: Role[];
+  /** Public Click Customer ID, e.g. CLK-CS-7K2QXM (null for non-customers). */
+  customerCode: string | null;
+  phoneVerified: boolean;
+  avatarUrl: string | null;
   createdAt: ISODateTime;
+}
+
+export interface DevLoginInfo {
+  enabled: boolean;
+  customer: { name: string; email: string; customerCode: string } | null;
+  hint?: string;
+}
+
+export type IdentityExchangeResult =
+  | ({ status: 'authenticated' } & Session)
+  | { status: 'profile_required'; signupToken: string; phoneNumber: string; expiresIn: number };
+
+export interface SignupInput {
+  signupToken: string;
+  fullName: string;
+  email: string;
+  addresses: AddressInput[];
 }
 
 export interface Session {
@@ -132,12 +153,13 @@ export interface ProductDetail extends ProductWithStore {
   related: ProductWithStore[];
 }
 
-export type SearchScope = 'all' | StoreType | 'products';
+export type SearchScope = 'all' | StoreType | 'products' | 'events';
 
 export interface SearchResults {
   query: string;
   stores: Store[];
   products: ProductWithStore[];
+  events: ClickEvent[];
 }
 
 export interface MenuCategory {
@@ -152,7 +174,7 @@ export interface StoreMenu {
 }
 
 // --- Customer -------------------------------------------------------------
-export type AddressLabel = 'home' | 'work' | 'other';
+export type AddressLabel = 'home' | 'work' | 'college' | 'family' | 'other';
 
 export interface Address {
   id: UUID;
@@ -168,12 +190,13 @@ export interface Address {
   country: string;
   latitude: string | null;
   longitude: string | null;
+  deliveryInstructions: string;
   isDefault: boolean;
   createdAt: ISODateTime;
 }
 
-export type AddressInput = Omit<Address, 'id' | 'createdAt' | 'latitude' | 'longitude'> &
-  Partial<Pick<Address, 'latitude' | 'longitude'>>;
+export type AddressInput = Omit<Address, 'id' | 'createdAt' | 'latitude' | 'longitude' | 'deliveryInstructions'> &
+  Partial<Pick<Address, 'latitude' | 'longitude' | 'deliveryInstructions'>>;
 
 export interface CartTotals {
   subtotal: Money;
@@ -221,7 +244,7 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type PaymentMethod = 'cash_on_delivery';
+export type PaymentMethod = 'cash_on_delivery' | 'pay_at_venue' | 'wallet';
 export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'failed' | 'cancelled' | 'refunded';
 
 export interface OrderSummary {
@@ -233,6 +256,8 @@ export interface OrderSummary {
   currency: string;
   itemCount: number;
   itemNames: string[];
+  /** Number of distinct products (itemCount is total quantity). */
+  lineCount: number;
   paymentStatus: PaymentStatus | null;
   createdAt: ISODateTime;
 }
@@ -301,7 +326,7 @@ export interface WishlistItem {
 }
 
 export type NotificationCategory =
-  | 'orders' | 'rides' | 'deliveries' | 'payments' | 'offers' | 'rewards' | 'support' | 'system';
+  | 'orders' | 'rides' | 'deliveries' | 'payments' | 'wallet' | 'bookings' | 'offers' | 'rewards' | 'support' | 'system';
 
 export interface Notification {
   id: UUID;
@@ -350,4 +375,116 @@ export interface SupportTicket {
 export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+/** Structured results Buddy attaches to a reply — always real Click records. */
+export type BuddyCard =
+  | { type: 'store'; store: Store }
+  | { type: 'product'; product: ProductWithStore }
+  | { type: 'event'; event: ClickEvent }
+  | { type: 'order'; order: OrderSummary }
+  | { type: 'booking'; booking: Booking }
+  | { type: 'offer'; offer: OfferWithStore };
+
+export type BuddyAction = { label: string; path: string } | { label: string; prompt: string };
+
+export interface BuddyReply {
+  message: AssistantMessage;
+  cards: BuddyCard[];
+  actions: BuddyAction[];
+  mode: 'basic' | 'provider';
+}
+
+// --- Wallet -----------------------------------------------------------------
+export interface WalletTransaction {
+  id: UUID;
+  kind: 'topup' | 'refund' | 'promo' | 'payment' | 'adjustment';
+  amount: Money;
+  currency: string;
+  description: string;
+  createdAt: ISODateTime;
+}
+
+export interface WalletSummary {
+  balance: Money;
+  currency: string;
+  transactions: WalletTransaction[];
+  topUpAvailable: boolean;
+}
+
+// --- Bookings (movies & events) ------------------------------------------------
+export interface Venue {
+  id: UUID;
+  slug: string;
+  name: string;
+  kind: 'cinema' | 'theatre' | 'arena' | 'club';
+  city: string;
+  locality: string;
+  address: string;
+}
+
+export interface ClickEvent {
+  id: UUID;
+  slug: string;
+  kind: 'movie' | 'event';
+  status: 'now_showing' | 'coming_soon';
+  title: string;
+  tagline: string;
+  description: string;
+  posterUrl: string;
+  languages: string[];
+  genres: string[];
+  certification: string;
+  durationMinutes: number | null;
+  releaseDate: string | null;
+  cast: string;
+  ratingAverage: string;
+  ratingCount: number;
+  nextShowAt: ISODateTime | null;
+}
+
+export interface Show {
+  id: UUID;
+  startsAt: ISODateTime;
+  language: string;
+  format: string;
+  screen: string;
+  price: Money;
+  premiumPrice: Money;
+  currency: string;
+  venue: Venue;
+  seatsLeft: number | null;
+}
+
+export interface EventDetail extends ClickEvent {
+  shows: Show[];
+}
+
+export interface SeatRow {
+  row: string;
+  tier: 'standard' | 'premium';
+  seats: { label: string; available: boolean }[];
+}
+
+export interface ShowSeatMap extends Show {
+  event: ClickEvent;
+  layout: { rows: SeatRow[]; maxPerBooking: number };
+}
+
+export interface Booking {
+  id: UUID;
+  reference: string;
+  status: 'confirmed' | 'cancelled';
+  event: ClickEvent;
+  show: Show;
+  seats: { label: string; tier: string; price: Money }[];
+  subtotal: Money;
+  convenienceFee: Money;
+  tax: Money;
+  total: Money;
+  currency: string;
+  payments: Payment[];
+  canCancel: boolean;
+  createdAt: ISODateTime;
+  cancelledAt: ISODateTime | null;
 }

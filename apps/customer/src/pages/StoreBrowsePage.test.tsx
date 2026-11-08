@@ -22,7 +22,7 @@ describe('StoreBrowsePage (food)', () => {
     const { container } = renderWithProviders(<FoodPage />, { route: '/food' });
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
     expect(await screen.findByText('10 restaurants')).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(10);
+    expect(container.querySelectorAll('a.store-card')).toHaveLength(10);
   });
 
   it('filters by category chip and search from the URL', async () => {

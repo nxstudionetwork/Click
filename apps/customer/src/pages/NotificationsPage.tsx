@@ -8,10 +8,10 @@ import { api } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 
 const ICON: Record<NotificationCategory, IconName> = {
-  orders: 'receipt', rides: 'ride', deliveries: 'parcel', payments: 'card', offers: 'tag', rewards: 'gift', support: 'help', system: 'bell',
+  orders: 'receipt', rides: 'ride', deliveries: 'parcel', payments: 'card', wallet: 'wallet', bookings: 'ticket', offers: 'tag', rewards: 'gift', support: 'help', system: 'bell',
 };
 const FILTERS: { id: '' | NotificationCategory; label: string }[] = [
-  { id: '', label: 'All' }, { id: 'orders', label: 'Orders' }, { id: 'rewards', label: 'Rewards' }, { id: 'support', label: 'Support' }, { id: 'offers', label: 'Offers' },
+  { id: '', label: 'All' }, { id: 'orders', label: 'Orders' }, { id: 'bookings', label: 'Bookings' }, { id: 'wallet', label: 'Wallet' }, { id: 'rewards', label: 'Rewards' }, { id: 'support', label: 'Support' }, { id: 'offers', label: 'Offers' },
 ];
 
 export function NotificationsPage() {

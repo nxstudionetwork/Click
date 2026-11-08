@@ -40,6 +40,7 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=254, unique=True)  # stored lowercased; CI constraint below
     full_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=20, blank=True)
+    phone_verified = models.BooleanField(default=False, help_text="Phone ownership proven by an identity provider (OTP).")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False, help_text="Can access internal tools (Business OS / admin).")
 
@@ -51,7 +52,11 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ["-created_at"]
-        constraints = [models.UniqueConstraint(Lower("email"), name="users_user_email_ci_unique")]
+        constraints = [
+            models.UniqueConstraint(Lower("email"), name="users_user_email_ci_unique"),
+            # A verified phone number belongs to exactly one Click account.
+            models.UniqueConstraint(fields=["phone"], condition=models.Q(phone_verified=True), name="users_verified_phone_unique"),
+        ]
 
     def __str__(self) -> str:
         return self.email
