@@ -81,7 +81,6 @@ function AppRoutes() {
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
-        <Route path="explore" element={<ExplorePage />} />
         <Route path="food" element={<StoreBrowsePage key="restaurant" storeType="restaurant" />} />
         <Route path="groceries" element={<StoreBrowsePage key="grocery" storeType="grocery" />} />
         <Route path="shopping" element={<StoreBrowsePage key="retail" storeType="retail" />} />
@@ -105,6 +104,7 @@ function AppRoutes() {
         <Route path="profile" element={<Navigate to="/account" replace />} />
 
         {/* Customer-owned data (authenticated; API enforces ownership) */}
+        <Route path="explore" element={guard(<ExplorePage />)} />
         <Route path="cart" element={guard(<CartPage />)} />
         <Route path="checkout" element={guard(<CheckoutPage />)} />
         <Route path="orders" element={guard(<OrdersPage />)} />

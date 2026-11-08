@@ -1,0 +1,109 @@
+/* Click. Explore: discovery (banner + features) → Your Click. → Account → brand. Tokens only (White and Dark). */
+
+.explore { display: flex; flex-direction: column; gap: var(--s-8); max-width: 1080px; margin: 0 auto; width: 100%; }
+.explore__head h1 { font-size: clamp(1.6rem, 6vw, 2rem); font-weight: 800; letter-spacing: -0.03em; }
+.explore__head p { color: var(--c-ink-3); font-size: var(--fs-sm); margin-top: 2px; }
+.explore__sec { display: flex; flex-direction: column; gap: var(--s-4); animation: x-rise 0.4s var(--ease) both; }
+.explore__sec:nth-of-type(2) { animation-delay: 0.05s; }
+.explore__sec:nth-of-type(3) { animation-delay: 0.1s; }
+.explore__h { font-size: clamp(1.1rem, 4.4vw, 1.3rem); font-weight: 800; letter-spacing: -0.02em; }
+@keyframes x-rise { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---- Banner (changes on each opening; fades in, never auto-rotates) ---- */
+.xbanner {
+  position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: flex-end; min-height: 240px;
+  margin-top: calc(-1 * var(--s-4)); padding: var(--s-6) var(--s-5) var(--s-8); border-radius: 26px; color: #fff;
+  background: var(--hero-bg); box-shadow: 0 24px 50px -26px rgb(var(--c-theme-rgb) / 80%), inset 0 1px 0 rgb(255 255 255 / 16%);
+  animation: x-banner 0.55s var(--ease) both;
+}
+@keyframes x-banner { from { opacity: 0; transform: scale(0.985); } }
+.xbanner__photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; animation: x-photo 1.2s var(--ease) both; }
+@keyframes x-photo { from { transform: scale(1.06); } }
+.xbanner__shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(6 9 22 / 82%) 0%, rgb(6 9 22 / 45%) 55%, rgb(6 9 22 / 10%) 100%), linear-gradient(0deg, rgb(var(--c-theme-rgb) / 45%), transparent 55%); }
+.xbanner:not(:has(.xbanner__photo)) .xbanner__shade { background: radial-gradient(80% 60% at 0% 100%, rgb(255 255 255 / 8%), transparent 60%); }
+.xbanner__copy { position: relative; display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.xbanner__eyebrow { align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.01em; background: rgb(255 255 255 / 16%); backdrop-filter: blur(8px); }
+.xbanner__title { font-size: clamp(1.7rem, 7vw, 2.6rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; }
+.xbanner__title span { background: linear-gradient(90deg, #fff 0%, #ffe8a3 70%, #fbbf24 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.xbanner__sub { color: rgb(255 255 255 / 84%); max-width: 44ch; }
+.xbanner__cta { align-self: flex-start; margin-top: 6px; }
+.xbanner__brand { position: absolute; right: -14px; top: 18px; width: 150px; height: 150px; opacity: 0.35; }
+.xbanner__brand img { position: absolute; left: 50%; top: 50%; width: 84px; height: 84px; margin: -42px 0 0 -42px; filter: drop-shadow(0 16px 26px rgb(0 0 0 / 35%)); animation: float 6s ease-in-out infinite; }
+.xbanner__chip { position: absolute; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgb(255 255 255 / 18%); backdrop-filter: blur(6px); box-shadow: inset 0 1px 0 rgb(255 255 255 / 30%); animation: float 5s ease-in-out infinite; }
+.xbanner__chip--0 { left: 0; top: 10%; } .xbanner__chip--1 { right: 4%; top: 0; animation-delay: -1.5s; } .xbanner__chip--2 { right: 0; bottom: 18%; animation-delay: -3s; }
+.xbanner__chip--3 { left: 12%; bottom: 0; animation-delay: -2s; } .xbanner__chip--4 { left: 44%; top: -8%; animation-delay: -4s; }
+.xbanner__dots { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 5px; }
+.xbanner__dots span { width: 6px; height: 6px; border-radius: 3px; background: rgb(255 255 255 / 40%); transition: width 0.3s var(--ease); }
+.xbanner__dots span.on { width: 18px; background: #fff; }
+@media (min-width: 560px) {
+  .xbanner { min-height: 260px; padding: var(--s-8); }
+  .xbanner__brand { position: relative; right: auto; top: auto; flex: none; margin-left: auto; align-self: center; width: 200px; height: 200px; opacity: 1; }
+  .xbanner__brand img { width: 104px; height: 104px; margin: -52px 0 0 -52px; }
+}
+@media (min-width: 1024px) { .xbanner { min-height: 300px; padding: 44px 48px; margin-top: 0; } }
+
+/* ---- Features: one continuous A–Z collection ---- */
+.xfeatures { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 560px) { .xfeatures { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .xfeatures { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .xfeatures { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.xfeature {
+  position: relative; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 14px 16px;
+  border-radius: 20px; background: var(--c-surface); border: 1px solid var(--c-line); box-shadow: var(--shadow-1);
+  transition: transform 0.18s var(--ease), border-color 0.18s, box-shadow 0.18s;
+}
+.xfeature::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(90% 70% at 100% 0%, rgb(var(--c-theme-rgb) / 9%), transparent 60%); }
+.xfeature:hover { transform: translateY(-2px); border-color: rgb(var(--c-theme-rgb) / 45%); box-shadow: 0 14px 28px -16px rgb(var(--c-theme-rgb) / 75%); }
+.xfeature:active { transform: scale(0.975); }
+.xfeature__icon { width: 46px; height: 46px; margin-bottom: 8px; border-radius: 15px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, var(--c-theme), var(--c-theme-solid)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 32%), 0 8px 16px -8px rgb(var(--c-theme-rgb) / 85%); transition: transform 0.2s var(--ease); }
+.xfeature:hover .xfeature__icon { transform: rotate(-6deg) scale(1.05); }
+.xfeature__name { font-weight: 800; font-size: var(--fs-md); color: var(--c-ink); }
+.xfeature__hint { font-size: var(--fs-xs); color: var(--c-ink-3); line-height: 1.3; }
+.xfeature--soon .xfeature__icon { filter: saturate(0.5); opacity: 0.75; box-shadow: none; }
+.xfeature--soon .xfeature__hint { color: var(--c-accent-ink); font-weight: 700; }
+.xfeature[data-theme='buzz'] { border-color: rgb(225 29 143 / 30%); }
+.xfeature[data-theme='buzz'] .xfeature__icon { background: linear-gradient(145deg, #f472b6, #e11d8f 55%, #7c3aed); }
+
+/* ---- Your Click. badges: compact, horizontal on phones ---- */
+.ybadges { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 calc(-1 * var(--s-4)); padding: 2px var(--s-4) 8px; }
+.ybadges::-webkit-scrollbar { display: none; }
+.ybadges > * { flex: 0 0 auto; width: 150px; scroll-snap-align: start; }
+@media (min-width: 720px) { .ybadges { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; margin: 0; padding: 0; } .ybadges > * { width: auto; } }
+.ybadge-wrap { position: relative; }
+.ybadge {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 128px; padding: 14px;
+  border-radius: 20px; color: #fff; background: var(--hero-bg); box-shadow: 0 14px 26px -18px rgb(var(--c-theme-rgb) / 90%);
+  transition: transform 0.18s var(--ease);
+}
+.ybadge:hover { transform: translateY(-2px); }
+.ybadge:active { transform: scale(0.97); }
+.ybadge::after { content: ''; position: absolute; right: -36px; top: -36px; width: 110px; height: 110px; border-radius: 50%; background: rgb(255 255 255 / 10%); }
+.ybadge__icon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgb(255 255 255 / 20%); margin-bottom: auto; }
+.ybadge__title { font-size: var(--fs-sm); font-weight: 700; color: rgb(255 255 255 / 88%); margin-top: 12px; }
+.ybadge__value { font-size: 1.15rem; font-weight: 900; letter-spacing: -0.01em; }
+.ybadge__skel { display: inline-block; width: 70px; height: 20px; opacity: 0.35; }
+.ybadge__reveal { position: absolute; top: 10px; right: 10px; z-index: 1; width: 32px; height: 32px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; color: #fff; background: rgb(255 255 255 / 18%); backdrop-filter: blur(6px); }
+.ybadge__reveal:hover { background: rgb(255 255 255 / 28%); }
+
+/* ---- Account: list rows, not feature cards ---- */
+.xaccount { display: flex; flex-direction: column; padding: 6px; border-radius: 20px; background: var(--c-surface); border: 1px solid var(--c-line); box-shadow: var(--shadow-1); }
+.xaccount__row { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 10px 12px; border-radius: 14px; transition: background 0.15s, transform 0.1s; }
+.xaccount__row + .xaccount__row { box-shadow: 0 -1px 0 var(--c-line); }
+.xaccount__row:hover { background: var(--c-surface-2); }
+.xaccount__row:active { transform: scale(0.99); }
+.xaccount__icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--c-brand-soft); color: var(--c-brand-strong); }
+.xaccount__text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.xaccount__text span { font-size: var(--fs-xs); color: var(--c-ink-3); }
+.xaccount__chev { color: var(--c-ink-3); flex: none; transition: transform 0.15s; }
+.xaccount__row:hover .xaccount__chev { transform: translateX(2px); }
+
+/* ---- Brand footer ---- */
+.explore__brand { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: var(--s-6) 0 var(--s-4); text-align: center; }
+.explore__brand img { border-radius: 24%; opacity: 0.95; }
+.explore__tagline { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -0.02em; color: var(--c-ink-2); line-height: 1.2; }
+.explore__tagline span { color: var(--c-brand); }
+.explore__venture { font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.01em; color: var(--c-ink-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .xbanner, .xbanner__photo, .xbanner__brand img, .xbanner__chip, .explore__sec { animation: none !important; }
+}

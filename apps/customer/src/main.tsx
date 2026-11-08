@@ -15,6 +15,7 @@ import './styles/layout.css';
 import './styles/features.css';
 import './styles/onboarding.css';
 import './styles/home.css';
+import './styles/explore.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

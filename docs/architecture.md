@@ -102,6 +102,12 @@ and support tickets. Frontend route guards are UX only.
   name), quick services (from `config/services.ts`), offers, near you, popular, discover, Buzz, recent activity,
   rewards & wallet, then time-of-day moments from `config/home.ts`. Every section has loading, empty and error states.
   "Near you" uses the selected address's saved coordinates; without them it shows the address's city and says so.
+- **Explore (`/explore`, signed-in):** Click.'s discovery hub, opened from the bottom navigation (it replaces the old
+  Menu). Order: a banner that advances one step each time Explore opens (`config/explore.ts`, deterministic, remembered
+  per device; only the shown banner's image loads), then every feature from `CLICK_FEATURES` (services + Activity,
+  Buddy, Offers, Rewards, Wallet) sorted A–Z by name in code, then Your Click. (Wallet masked until revealed, Rewards
+  points, Activity, live Offers count, all real data), Account (Payments, Settings, Help & Support, Addresses), and the
+  footer "Everything you need. One Click. away." / "A venture of IFX Group". Unlaunched services say "Coming soon".
 - **Buzz:** `/buzz` is a full-screen vertical feed (own layout), plus a Home preview and a persistent edge handle.
 - **Buddy:** GO = voice-first action mode (records only when the server reports a speech provider; otherwise says so
   and accepts typing), MAN = `/buddy`, the full conversation page with its own header (New chat, Home).
