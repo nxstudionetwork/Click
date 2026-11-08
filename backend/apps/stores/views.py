@@ -1,6 +1,9 @@
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 from rest_framework import generics, permissions
+from rest_framework.response import Response
+
+from apps.core.api.permissions import IsCustomer
 
 from .geo import NearQuerySerializer, with_distance
 from .models import Store, StoreCategory, StoreOffer, StoreType
@@ -25,6 +28,9 @@ SORTS = {
     "popular": ("-rating_count", "-rating_average", "name"),
     "rating": ("-rating_average", "-rating_count", "name"),
     "new": ("-created_at", "name"),
+    "eta": ("delivery_time_min", "delivery_time_max", "-rating_average"),
+    "price_low": ("price_level", "-rating_average", "name"),
+    "price_high": ("-price_level", "-rating_average", "name"),
 }
 
 
@@ -32,7 +38,9 @@ class StoreListView(generics.ListAPIView):
     """GET /api/v1/stores?type=restaurant&category=pizza&search=...
 
     Location: `lat`, `lng` (and optional `radius` km, default 10) return only stores with known coordinates
-    inside the radius, each with `distanceKm`, nearest first. `sort=popular|rating|new|distance`.
+    inside the radius, each with `distanceKm`, nearest first.
+    Filters: `veg=true` (no non-vegetarian items), `min_rating=4`, `offers=true` (has a live offer),
+    `max_price=1..4` (price level). Sort: `popular|rating|new|eta|price_low|price_high|distance`.
     """
 
     serializer_class = StoreSerializer
@@ -65,7 +73,26 @@ class StoreListView(generics.ListAPIView):
             )
         if params.get("open") == "true":
             qs = qs.filter(is_accepting_orders=True)
+        if params.get("veg") == "true":
+            from apps.catalog.models import Product
+
+            qs = qs.exclude(pk__in=Product.objects.filter(dietary="non_veg", is_active=True).values("store_id"))
+        if (min_rating := _number(params.get("min_rating"), 0, 5)) is not None:
+            qs = qs.filter(rating_average__gte=min_rating)
+        if (max_price := _number(params.get("max_price"), 1, 4)) is not None:
+            qs = qs.filter(price_level__lte=max_price)
+        if params.get("offers") == "true":
+            qs = qs.filter(offers__in=active_offers())
         return qs.distinct()
+
+
+def _number(raw, lo, hi):
+    """A query number within [lo, hi], or None when absent or invalid (invalid filters are ignored, not guessed)."""
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return v if lo <= v <= hi else None
 
 
 class StoreDetailView(generics.RetrieveAPIView):
@@ -100,3 +127,24 @@ class OfferListView(generics.ListAPIView):
         if (store_type := self.request.query_params.get("type")) in StoreType.values:
             qs = qs.filter(store__store_type=store_type)
         return qs.order_by("-store__is_accepting_orders", "-created_at")
+
+
+class RecommendedStoresView(generics.GenericAPIView):
+    """GET /customer/recommendations/stores?type=restaurant[&lat&lng&radius] — rule-based picks with a reason each."""
+
+    permission_classes = [IsCustomer]
+
+    def get(self, request):
+        from .recommendations import recommend_stores
+
+        store_type = request.query_params.get("type", StoreType.RESTAURANT)
+        if store_type not in StoreType.values:
+            store_type = StoreType.RESTAURANT
+        near = None
+        if "lat" in request.query_params or "lng" in request.query_params:
+            s = NearQuerySerializer(data=request.query_params)
+            s.is_valid(raise_exception=True)
+            near = s.validated_data
+        picks = recommend_stores(request.user.customer_profile, store_type, limit=10, near=near)
+        ctx = self.get_serializer_context()
+        return Response({"results": [{"store": StoreSerializer(p["store"], context=ctx).data, "reason": p["reason"]} for p in picks]})

@@ -39,7 +39,9 @@ launch, because their lifecycles differ.
     store with exactly one `action {label, path}` into the matching flow. Media is the record's own image/video only.
 - **Shared identity:** `auth/register|login|refresh|logout`, `me`
 - **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, wallet, bookings, support/tickets, assistant/messages,
-  assistant/capabilities, assistant/transcribe, profile/summary}`
+  assistant/capabilities, assistant/transcribe, profile/summary,
+  cart/offer (POST apply / DELETE), orders/<id>/review, recommendations/stores}`
+  - `stores` also accepts `veg=true`, `min_rating`, `offers=true`, `max_price` and `sort=eta|price_low|price_high`.
 - **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
@@ -75,6 +77,18 @@ and support tickets. Frontend route guards are UX only.
 - **Customer App:** `npm run dev:customer` serves on 5173. It proxies `/api` to port 4000 (override with `CLICK_API_PROXY`).
 - **API base URL:** the frontend reads it from one place, `VITE_API_BASE_URL` (default `/api/v1`).
 
+## Offers, customisation and reviews
+
+- **Offers:** a `StoreOffer` with a `discount_type` (`percent` with optional cap, `flat`, `free_delivery`) and
+  `min_order_amount` can be applied to the cart (`Cart.offer`). It is re-checked on every price calculation and again
+  at order placement; a lapsed offer stops placement with a reason instead of silently changing the total. Offers
+  without a rule type stay display-only. Orders store `discount` and an `offer_title` snapshot.
+- **Customisation:** `ProductOptionGroup` (min/max selections) → `ProductOption` (`price_delta`). Cart lines hold the
+  chosen options (`options_key` keeps one line per combination); unit price = product price + option deltas, always
+  read server-side. Order items snapshot `options_summary`; reorder maps names back to today's options.
+- **Reviews:** `OrderReview` (one per delivered order, 1–5 + comment) updates the store's `rating_average`/`rating_count`
+  in the same transaction.
+
 ## Wallet and bookings
 
 - **Wallet:** the balance is always the sum of an append-only ledger. Writes lock the customer row, so concurrent
@@ -92,8 +106,11 @@ and support tickets. Frontend route guards are UX only.
   from `assets/Click Brand Style Guide Board.png`: blue #2F3CFF / #4F6BFF, amber #FBBF24, navy #0B1F44, white #F8FAFC.
 - **Appearance:** White (default) or Dark navy, chosen in Settings (or "Match device"); stored per device and applied
   before first paint (`src/appearance.ts`, `data-appearance` on `<html>`). All colours are tokens in `styles/tokens.css`.
-- **Navigation:** primary nav is Home | Ride | Food | Explore | Profile (`/`, `/rides`, `/food`, `/explore`, `/account`);
-  each item carries its service colour. `/home`, `/ride` and `/profile` redirect to those routes.
+- **Navigation:** primary nav is Home | Ride | Food | Explore | Shop (`/`, `/rides`, `/food`, Explore sheet, `/shopping`);
+  each item carries its service colour. Profile is reached from the header avatar. `/home`, `/ride`, `/shop` and
+  `/profile` redirect to their routes.
+- **Header rule:** the Click. header is sticky on every shell page and content starts below it. The global search bar
+  appears only on Home (and `/search`); Food, Groceries and Shop have their own search; other pages have none.
 - **Themes:** each service sets its accent (`--c-theme`, `-solid`, `-soft`, `-strong`) and hero gradient through
   `data-theme` on any element. Typography, spacing, components and motion are shared.
 - **Header:** Click. logo, location ("Delivering to"), search (text with recent searches and hints, voice, camera QR scan),
@@ -121,6 +138,17 @@ and support tickets. Frontend route guards are UX only.
   no backend deletion workflow yet.
 - **Activity (`/activity`):** a timeline read from the source domains (orders, bookings), filterable by Food,
   Groceries, Shopping and Bookings; rides, parcels and service bookings join as those services launch.
+- **Service pages (`/food`, `/groceries`, `/shopping`):** one pattern (`pages/ServicePage.tsx`, `features/service/*`, config in
+  `config/servicePages.ts`): intro (title + fixed tagline) → horizontal categories from the API → service search
+  (debounced; stores incl. menu matches + dishes/products) → filter bar (Pure veg, Rating 4.0+, Offers, Open now,
+  Budget; sort Recommended/Rating/Delivery time/Price/Distance when the address has coordinates) → Offers, Nearby,
+  Popular near you, Recommended for you (rule-based, each with its reason), Explore categories → All (20 per page,
+  infinite scroll). Category, search and filters live in the URL.
+- **Ordering:** customisation groups (size, add-ons) are chosen in the item sheet / product page; quick-add on an item
+  with required choices opens the picker. A cart from another store triggers an in-app confirmation (never silently
+  cleared). Checkout lists the store's applicable offers; the server validates and prices everything again at
+  placement (idempotent). The order page shows the confirmation, a polled status timeline, options per line, and a
+  one-time rating once delivered.
 - **Buzz:** `/buzz` is a full-screen vertical feed (own layout), plus a Home preview and a persistent edge handle.
 - **Buddy:** GO = voice-first action mode (records only when the server reports a speech provider; otherwise says so
   and accepts typing), MAN = `/buddy`, the full conversation page with its own header (New chat, Home).

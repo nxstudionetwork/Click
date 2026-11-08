@@ -3,7 +3,7 @@ import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
-  Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
+  Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
 /** Auth is shared across every Click app. */
@@ -62,8 +62,11 @@ export interface StoresSource {
 }
 
 export const storesApi = (http: HttpClient): StoresSource => ({
-  list: (query) =>
-    http.request('/stores', { query: { ...query, open: query.open ? 'true' : undefined }, auth: false }),
+  list: ({ open, veg, offers, minRating, maxPrice, ...query }) =>
+    http.request('/stores', {
+      query: { ...query, open: open ? 'true' : undefined, veg: veg ? 'true' : undefined, offers: offers ? 'true' : undefined, min_rating: minRating, max_price: maxPrice },
+      auth: false,
+    }),
   get: (slug) => http.request(`/stores/${encodeURIComponent(slug)}`, { auth: false }),
   menu: (slug) => http.request(`/stores/${encodeURIComponent(slug)}/menu`, { auth: false }),
   categories: (type) => http.request('/store-categories', { query: { type }, auth: false }),
@@ -80,8 +83,11 @@ export const customerApi = (http: HttpClient) => ({
   cart: {
     get: () => http.request<Cart>('/customer/cart'),
     clear: () => http.request<Cart>('/customer/cart', { method: 'DELETE' }),
-    addItem: (input: { productId: string; quantity: number; note?: string }) =>
+    addItem: (input: { productId: string; quantity: number; note?: string; optionIds?: string[] }) =>
       http.request<Cart>('/customer/cart/items', { method: 'POST', body: input }),
+    /** Apply an offer (validated server-side) / remove it. */
+    applyOffer: (offerId: string) => http.request<Cart>('/customer/cart/offer', { method: 'POST', body: { offerId } }),
+    removeOffer: () => http.request<Cart>('/customer/cart/offer', { method: 'DELETE' }),
     updateItem: (id: string, input: { quantity: number; note?: string }) =>
       http.request<Cart>(`/customer/cart/items/${id}`, { method: 'PATCH', body: input }),
     removeItem: (id: string) => http.request<Cart>(`/customer/cart/items/${id}`, { method: 'DELETE' }),
@@ -94,6 +100,8 @@ export const customerApi = (http: HttpClient) => ({
     place: (input: PlaceOrderInput) => http.request<OrderDetail>('/customer/orders', { method: 'POST', body: input }),
     cancel: (id: string, reason = '') =>
       http.request<OrderDetail>(`/customer/orders/${id}/cancel`, { method: 'POST', body: { reason } }),
+    review: (id: string, input: { rating: number; comment?: string }) =>
+      http.request<OrderDetail>(`/customer/orders/${id}/review`, { method: 'POST', body: input }),
   },
   wishlist: {
     list: () => http.request<WishlistItem[]>('/customer/wishlist'),
@@ -111,6 +119,9 @@ export const customerApi = (http: HttpClient) => ({
     markAllRead: () => http.request<{ updated: number }>('/customer/notifications/read-all', { method: 'POST' }),
   },
   rewards: () => http.request<RewardsSummary>('/customer/rewards'),
+  /** Rule-based store picks for the signed-in customer, each with its reason. */
+  recommendedStores: (q: { type?: StoreType; lat?: number; lng?: number; radius?: number } = {}) =>
+    http.request<{ results: StoreRecommendation[] }>('/customer/recommendations/stores', { query: q }),
   /** Counts for the Profile page (no full lists). */
   profileSummary: () => http.request<ProfileSummary>('/customer/profile/summary'),
   support: {

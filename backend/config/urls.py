@@ -36,13 +36,16 @@ customer_router.register("addresses", AddressViewSet, basename="address")
 
 customer_urls = [
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
+    path("recommendations/stores", store_views.RecommendedStoresView.as_view(), name="recommended-stores"),
     path("cart", cart_views.CartView.as_view(), name="cart"),
     path("cart/items", cart_views.CartItemsView.as_view(), name="cart-items"),
+    path("cart/offer", cart_views.CartOfferView.as_view(), name="cart-offer"),
     path("cart/items/<uuid:item_id>", cart_views.CartItemDetailView.as_view(), name="cart-item"),
     path("orders", order_views.OrderListCreateView.as_view(), name="orders"),
     path("orders/<uuid:pk>", order_views.OrderDetailView.as_view(), name="order-detail"),
     path("orders/<uuid:pk>/cancel", order_views.OrderCancelView.as_view(), name="order-cancel"),
     path("orders/<uuid:pk>/reorder", order_views.OrderReorderView.as_view(), name="order-reorder"),
+    path("orders/<uuid:pk>/review", order_views.OrderReviewView.as_view(), name="order-review"),
     path("wishlist", wishlist_views.WishlistView.as_view(), name="wishlist"),
     path("wishlist/<uuid:pk>", wishlist_views.WishlistItemView.as_view(), name="wishlist-item"),
     path("notifications", notification_views.NotificationListView.as_view(), name="notifications"),

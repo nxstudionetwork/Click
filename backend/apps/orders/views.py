@@ -9,7 +9,7 @@ from apps.stores.models import StoreType
 
 from . import services
 from .models import Order
-from .serializers import CancelOrderSerializer, OrderDetailSerializer, OrderSummarySerializer, PlaceOrderSerializer
+from .serializers import CancelOrderSerializer, OrderDetailSerializer, OrderSummarySerializer, PlaceOrderSerializer, ReviewSerializer
 
 
 def customer_orders(request):
@@ -68,3 +68,17 @@ class OrderReorderView(APIView):
         order = get_object_or_404(customer_orders(request), pk=pk)
         cart, skipped = services.reorder(order, customer=request.user.customer_profile)
         return Response({"cart": CartSerializer(cart).data, "skipped": skipped})
+
+
+class OrderReviewView(APIView):
+    """POST /customer/orders/<id>/review {rating 1-5, comment} for a delivered order (once)."""
+
+    permission_classes = [IsCustomer]
+
+    def post(self, request, pk):
+        order = get_object_or_404(customer_orders(request), pk=pk)
+        s = ReviewSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        services.submit_review(order, customer=request.user.customer_profile, **s.validated_data)
+        order.refresh_from_db()
+        return Response(OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED)

@@ -36,7 +36,7 @@ import { RewardsPage } from './pages/RewardsPage';
 import { SearchPage } from './pages/SearchPage';
 import { ServiceComingSoonPage } from './pages/ServiceComingSoonPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { StoreBrowsePage } from './pages/StoreBrowsePage';
+import { ServicePage } from './pages/ServicePage';
 import { StorePage } from './pages/StorePage';
 import { TicketPage } from './pages/TicketPage';
 import { WishlistPage } from './pages/WishlistPage';
@@ -83,9 +83,10 @@ function AppRoutes() {
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
-        <Route path="food" element={<StoreBrowsePage key="restaurant" storeType="restaurant" />} />
-        <Route path="groceries" element={<StoreBrowsePage key="grocery" storeType="grocery" />} />
-        <Route path="shopping" element={<StoreBrowsePage key="retail" storeType="retail" />} />
+        <Route path="food" element={<ServicePage key="restaurant" storeType="restaurant" />} />
+        <Route path="groceries" element={<ServicePage key="grocery" storeType="grocery" />} />
+        <Route path="shopping" element={<ServicePage key="retail" storeType="retail" />} />
+        <Route path="shop" element={<Navigate to="/shopping" replace />} />
         <Route path="stores/:slug" element={<StorePage />} />
         <Route path="products/:id" element={<ProductPage />} />
         <Route path="offers" element={<OffersPage />} />

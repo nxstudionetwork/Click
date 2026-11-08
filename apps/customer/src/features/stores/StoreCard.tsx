@@ -2,12 +2,14 @@ import type { Store } from '@click/api';
 import { Link } from 'react-router-dom';
 import { etaLabel, formatMoney, priceLevelLabel } from '../../lib/format';
 import { Rating, Skeleton, SmartImage } from '../../components/ui';
+import { WishlistButton } from '../wishlist/WishlistButton';
 
 export function StoreCard({ store }: { store: Store }) {
   const offer = store.offers[0];
   return (
     <Link to={`/stores/${store.slug}`} className={`store-card ${store.isOpen ? '' : 'store-card--closed'}`}>
       <SmartImage src={store.imageUrl} alt={store.name} className="store-card__media">
+        <WishlistButton target={{ storeId: store.id }} name={store.name} className="store-card__wish" />
         {offer && store.isOpen && (
           <div className="store-card__offer"><span className="badge">{offer.title}</span></div>
         )}

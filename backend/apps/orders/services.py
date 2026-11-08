@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.carts.models import Cart
 from apps.catalog.models import Product
-from apps.carts.services import add_item, clear_cart, compute_totals, get_or_create_cart
+from apps.carts.services import add_item, clear_cart, compute_totals, get_or_create_cart, offer_problem, unit_price
 from apps.core.api.exceptions import ConflictError, DomainError
 from apps.customers.models import CustomerProfile
 from apps.notifications.models import NotificationCategory
@@ -35,7 +35,7 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
     if existing:
         return existing, False
 
-    items = list(cart.items.select_related("product", "product__store"))
+    items = list(cart.items.select_related("product", "product__store").prefetch_related("options"))
     if not items:
         raise DomainError("Your cart is empty.", code="cart_empty")
 
@@ -43,7 +43,8 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
     if store is None or not store.is_open:
         raise DomainError("This store isn't accepting orders right now.", code="store_closed")
 
-    unavailable = [i.product.name for i in items if not i.product.is_orderable or i.product.store_id != store.id]
+    unavailable = [i.product.name for i in items if not i.product.is_orderable or i.product.store_id != store.id
+                   or any(not o.is_available for o in i.options.all())]
     if unavailable:
         raise ConflictError("Some items are no longer available.", code="items_unavailable", details={"items": unavailable})
 
@@ -57,17 +58,22 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
             f"Minimum order for {store.name} is {store.min_order_amount} {store.currency}.",
             code="below_minimum_order",
         )
+    # An offer chosen earlier must still apply now (dates, store, minimum); otherwise stop and say why.
+    if cart.offer_id and (problem := offer_problem(cart.offer, store, totals.subtotal)):
+        raise ConflictError(problem, code="offer_not_applicable")
 
     # Reserve inventory atomically; a concurrent buyer taking the last unit fails here, not later.
+    wanted: dict = {}
     for i in items:
-        if i.product.stock_quantity is None:
-            continue
-        reserved = Product.objects.filter(pk=i.product.pk, stock_quantity__gte=i.quantity).update(
-            stock_quantity=F("stock_quantity") - i.quantity
+        if i.product.stock_quantity is not None:
+            wanted[i.product] = wanted.get(i.product, 0) + i.quantity
+    for product, qty in wanted.items():
+        reserved = Product.objects.filter(pk=product.pk, stock_quantity__gte=qty).update(
+            stock_quantity=F("stock_quantity") - qty
         )
         if not reserved:
             raise ConflictError(
-                "Some items are no longer available.", code="items_unavailable", details={"items": [i.product.name]}
+                "Some items are no longer available.", code="items_unavailable", details={"items": [product.name]}
             )
 
     order = Order.objects.create(
@@ -79,6 +85,8 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
         subtotal=totals.subtotal,
         delivery_fee=totals.delivery_fee,
         tax=totals.tax,
+        discount=totals.discount,
+        offer_title=cart.offer.title if totals.discount else "",
         total=totals.total,
         currency=store.currency,
         idempotency_key=idempotency_key,
@@ -89,10 +97,11 @@ def place_order(*, customer: CustomerProfile, address_id, payment_method: str, i
             order=order,
             product=i.product,
             product_name=i.product.name,
-            unit_price=i.product.price,
+            unit_price=unit_price(i),
             quantity=i.quantity,
-            line_total=i.product.price * i.quantity,
+            line_total=unit_price(i) * i.quantity,
             note=i.note,
+            options_summary=" · ".join(o.name for o in i.options.all())[:300],
         )
         for i in items
     )
@@ -159,9 +168,35 @@ def reorder(order: Order, *, customer: CustomerProfile):
         if not item.product:
             skipped.append(item.product_name)
             continue
+        # Options are snapshotted by name; map them back to today's options for this product.
+        names = {n for n in item.options_summary.split(" · ") if n}
+        option_ids = [o.id for g in item.product.option_groups.prefetch_related("options") for o in g.options.all() if o.name in names]
         try:
-            add_item(customer, item.product_id, item.quantity, item.note)
+            add_item(customer, item.product_id, item.quantity, item.note, option_ids)
         except DomainError:
             skipped.append(item.product_name)
     cart.refresh_from_db()
     return cart, skipped
+
+
+@transaction.atomic
+def submit_review(order: Order, *, customer: CustomerProfile, rating: int, comment: str = "") -> "OrderReview":
+    """Rate a delivered order once; the store's average rating and count update in the same transaction."""
+    from decimal import ROUND_HALF_UP, Decimal
+
+    from apps.stores.models import Store
+
+    from .models import OrderReview
+
+    if order.status != OrderStatus.DELIVERED:
+        raise DomainError("You can rate an order once it's delivered.", code="review_not_allowed")
+    if OrderReview.objects.filter(order=order).exists():
+        raise ConflictError("You've already rated this order.", code="review_exists")
+    review = OrderReview.objects.create(order=order, customer=customer, store=order.store, rating=rating, comment=comment.strip())
+    store = Store.objects.select_for_update().get(pk=order.store_id)
+    total = store.rating_average * store.rating_count + rating
+    store.rating_count += 1
+    store.rating_average = (Decimal(total) / store.rating_count).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    store.save(update_fields=["rating_average", "rating_count", "updated_at"])
+    record(customer, "order.reviewed", {"rating": rating}, obj=order)
+    return review

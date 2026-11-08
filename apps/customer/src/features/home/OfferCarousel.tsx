@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { OfferWithStore } from '@click/api';
+import type { OfferWithStore, StoreType } from '@click/api';
 import { Icon, Sheet } from '../../components/ui';
 import { servicePhoto } from '../../config/media';
 import { serviceForStoreType } from '../../config/services';
@@ -30,10 +30,16 @@ export function interleaveOffers(offers: OfferWithStore[]): OfferWithStore[] {
 }
 
 export function OfferCarousel() {
-  const offers = useQuery({ queryKey: ['offers', 'all'], queryFn: () => api.catalog.offers() });
+  return <OfferCarouselFor title="Offers for you" subtitle="More ways to save on Click." />;
+}
+
+/** Offers carousel, optionally for one service (`type`). Every offer comes from the API. */
+export function OfferCarouselFor({ type, title, subtitle, hideWhenEmpty = false }: { type?: StoreType; title: string; subtitle: string; hideWhenEmpty?: boolean }) {
+  const offers = useQuery({ queryKey: ['offers', type ?? 'all'], queryFn: () => api.catalog.offers(type) });
   const [open, setOpen] = useState<OfferWithStore | null>(null);
+  if (hideWhenEmpty && offers.isSuccess && offers.data.results.length === 0) return null;
   return (
-    <HomeSection id="offers" title="Offers for you" subtitle="More ways to save on Click." to="/offers" icon="tag" theme="rewards">
+    <HomeSection id={`offers-${type ?? 'all'}`} title={title} subtitle={subtitle} to="/offers" icon="tag" theme="rewards">
       {offers.isPending ? <RailSkeleton variant="wide" count={3} /> : offers.isError ? <SectionError onRetry={() => offers.refetch()} /> :
         offers.data.results.length === 0 ? <SectionEmpty icon="tag" title="No offers right now" text="New deals from stores near you will show up here." /> : (
           <Rail label="Offers" variant="wide">

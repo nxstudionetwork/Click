@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError } from '@click/api';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
-import { ToastProvider } from './components/ui';
+import { ConfirmProvider, ToastProvider } from './components/ui';
 import { LocationProvider } from './location/LocationProvider';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -17,6 +17,7 @@ import './styles/onboarding.css';
 import './styles/home.css';
 import './styles/explore.css';
 import './styles/profile.css';
+import './styles/service.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,7 +36,9 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <LocationProvider>
             <ToastProvider>
-              <App />
+              <ConfirmProvider>
+                <App />
+              </ConfirmProvider>
             </ToastProvider>
           </LocationProvider>
         </AuthProvider>

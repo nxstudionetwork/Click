@@ -6,6 +6,24 @@ from .models import MenuCategory, Product
 LOW_STOCK_THRESHOLD = 5
 
 
+class ProductOptionSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
+    is_available = serializers.BooleanField()
+
+
+class ProductOptionGroupSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    min_select = serializers.IntegerField()
+    max_select = serializers.IntegerField()
+    options = serializers.SerializerMethodField()
+
+    def get_options(self, g):
+        return ProductOptionSerializer(g.options.all(), many=True).data
+
+
 class ProductSerializer(serializers.ModelSerializer):
     """Contract mirrored by `Product` in packages/api/src/types.ts."""
 
@@ -14,12 +32,15 @@ class ProductSerializer(serializers.ModelSerializer):
     is_available = serializers.SerializerMethodField()
     discount_percent = serializers.SerializerMethodField()
     low_stock = serializers.SerializerMethodField()
+    # Customisation steps (size, add-ons). Empty for products without options. Prefetch `option_groups__options`.
+    option_groups = ProductOptionGroupSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
         fields = [
             "id", "store_id", "category_id", "name", "description", "image_url", "price", "compare_at_price",
             "discount_percent", "brand", "unit_label", "dietary", "is_available", "low_stock", "is_featured",
+            "option_groups",
         ]
 
     def get_is_available(self, p) -> bool:

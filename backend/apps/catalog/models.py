@@ -70,3 +70,43 @@ class Product(BaseModel):
     @property
     def is_orderable(self) -> bool:
         return self.is_active and self.is_available and self.in_stock
+
+
+class ProductOptionGroup(BaseModel):
+    """A customisation step for a product, e.g. "Size" (choose 1) or "Add-ons" (up to 3)."""
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="option_groups")
+    name = models.CharField(max_length=60)
+    min_select = models.PositiveSmallIntegerField(default=0, help_text="0 = optional; 1 = a choice is required.")
+    max_select = models.PositiveSmallIntegerField(default=1)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["product", "name"], name="catalog_option_group_unique"),
+            models.CheckConstraint(condition=Q(max_select__gte=1) & Q(max_select__gte=F("min_select")), name="catalog_option_group_bounds"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.product.name}: {self.name}"
+
+
+class ProductOption(BaseModel):
+    """One choice inside a group. `price_delta` is added to the product price (never set by the client)."""
+
+    group = models.ForeignKey(ProductOptionGroup, on_delete=models.CASCADE, related_name="options")
+    name = models.CharField(max_length=60)
+    price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_available = models.BooleanField(default=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["group", "name"], name="catalog_option_unique"),
+            models.CheckConstraint(condition=Q(price_delta__gte=0), name="catalog_option_price_non_negative"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name

@@ -22,13 +22,22 @@ const signedIn = { status: 'authenticated', user: { fullName: 'Asha Rao', email:
 describe('AppShell', () => {
   beforeEach(() => { auth.value = { status: 'anonymous', user: null }; });
 
-  it('primary navigation is Home | Ride | Food | Explore | Profile, each with its own service colour', () => {
+  it('primary navigation is Home | Ride | Food | Explore | Shop, each with its own service colour', () => {
     renderWithProviders(<AppShell />);
     const bottom = screen.getAllByRole('navigation', { name: 'Primary' })[1]!;
     const items = [...bottom.children] as HTMLElement[];
-    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Explore', 'Profile']);
-    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', null, '/account']);
-    expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'explore', 'profile']);
+    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Explore', 'Shop']);
+    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', null, '/shopping']);
+    expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'explore', 'shopping']);
+  });
+
+  it('the global search bar appears only on Home; other pages keep just the fixed header', () => {
+    const { unmount } = renderWithProviders(<AppShell />, { route: '/' });
+    expect(within(screen.getByRole('banner')).getAllByLabelText('Search Click.').length).toBeGreaterThan(0);
+    unmount();
+    renderWithProviders(<AppShell />, { route: '/wallet' });
+    expect(within(screen.getByRole('banner')).queryByLabelText('Search Click.')).toBeNull();
+    expect(within(screen.getByRole('banner')).getByRole('img', { name: 'Click.' })).toBeInTheDocument();
   });
 
   it('Explore opens as a bottom sheet over the page for signed-in customers, and closes with Escape', async () => {

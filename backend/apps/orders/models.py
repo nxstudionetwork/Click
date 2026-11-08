@@ -54,6 +54,7 @@ class Order(BaseModel):
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2)
     tax = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    offer_title = models.CharField(max_length=80, blank=True, help_text="Snapshot of the applied offer.")
     total = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, default=settings.CLICK_DEFAULT_CURRENCY)
 
@@ -85,10 +86,25 @@ class OrderItem(BaseModel):
     quantity = models.PositiveSmallIntegerField()
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
     note = models.CharField(max_length=200, blank=True)
+    options_summary = models.CharField(max_length=300, blank=True, help_text="Snapshot, e.g. 'Large · Extra cheese'.")
 
     class Meta:
         ordering = ["created_at"]
         constraints = [models.CheckConstraint(condition=Q(quantity__gte=1), name="orders_item_quantity_positive")]
+
+
+class OrderReview(BaseModel):
+    """A customer's rating of a delivered order (one per order). Feeds the store's rating."""
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="review")
+    customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE, related_name="reviews")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="reviews")
+    rating = models.PositiveSmallIntegerField()
+    comment = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [models.CheckConstraint(condition=Q(rating__gte=1, rating__lte=5), name="orders_review_rating_range")]
 
 
 class OrderStatusEvent(BaseModel):

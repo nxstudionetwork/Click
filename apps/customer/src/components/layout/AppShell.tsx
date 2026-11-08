@@ -22,7 +22,7 @@ export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme;
   { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
   { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
   { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
-  { to: '/account', label: 'Profile', icon: 'user', theme: 'profile' },
+  { to: '/shopping', label: 'Shop', icon: 'shop', theme: 'shopping' },
 ];
 
 const ThemeOverride = createContext<(t: Theme | null) => void>(() => {});
@@ -45,7 +45,9 @@ export function AppShell() {
   const openExplore = () => (status === 'authenticated' ? setExploreOpen(true) : navigate('/login?next=/explore'));
   const count = cart?.itemCount ?? 0;
   const theme = override ?? themeForPath(pathname);
-  const focused = pathname === '/checkout';
+  // The global search belongs to Home (and its results page) only; service pages have their own search,
+  // and other pages have none. The header itself stays fixed on every page.
+  const showSearch = pathname === '/' || pathname === '/search';
   const headerRef = useRef<HTMLElement>(null);
 
   // Sticky page elements sit below the real header height, which varies by breakpoint and page.
@@ -67,7 +69,7 @@ export function AppShell() {
           <div className="header__bar">
             <Link to="/" aria-label="Click. home" className="header__logo"><Logo /></Link>
             <div className="header__location"><LocationSelector /></div>
-            {!focused && <div className="header__search"><GlobalSearch /></div>}
+            {showSearch ? <div className="header__search"><GlobalSearch /></div> : <div className="header__spacer" />}
             <div className="header__actions">
               <BuddySelector />
               <Link to="/notifications" className="icon-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
@@ -84,7 +86,7 @@ export function AppShell() {
             </div>
           </div>
           <div className="header__mobile-location"><LocationSelector compact /></div>
-          {!focused && <div className="header__mobile-search"><GlobalSearch compact /></div>}
+          {showSearch && <div className="header__mobile-search"><GlobalSearch compact /></div>}
           <nav className="header__nav" aria-label="Primary">
             {PRIMARY.map((n) => n.sheet ? (
               <button key={n.to} type="button" data-theme={n.theme} className={exploreOpen || pathname === n.to ? 'active' : ''}

@@ -7,11 +7,11 @@ from apps.core.api.permissions import IsCustomer
 
 from . import services
 from .models import Cart, CartItem
-from .serializers import AddCartItemSerializer, CartSerializer, UpdateCartItemSerializer
+from .serializers import AddCartItemSerializer, ApplyOfferSerializer, CartSerializer, UpdateCartItemSerializer
 
 
 def _cart_response(customer, code=status.HTTP_200_OK):
-    cart = Cart.objects.select_related("store").get(pk=services.get_or_create_cart(customer).pk)
+    cart = Cart.objects.select_related("store", "offer").get(pk=services.get_or_create_cart(customer).pk)
     return Response(CartSerializer(cart).data, status=code)
 
 
@@ -53,3 +53,21 @@ class CartItemDetailView(APIView):
     def delete(self, request, item_id):
         services.remove_item(self._get_item(request, item_id))
         return _cart_response(request.user.customer_profile)
+
+
+class CartOfferView(APIView):
+    """POST /customer/cart/offer {offerId} applies an offer (validated server-side); DELETE removes it."""
+
+    permission_classes = [IsCustomer]
+
+    def post(self, request):
+        s = ApplyOfferSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        customer = request.user.customer_profile
+        services.set_offer(services.get_or_create_cart(customer), s.validated_data["offer_id"])
+        return _cart_response(customer)
+
+    def delete(self, request):
+        customer = request.user.customer_profile
+        services.remove_offer(services.get_or_create_cart(customer))
+        return _cart_response(customer)

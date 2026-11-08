@@ -12,7 +12,7 @@ class StoreCategorySerializer(serializers.ModelSerializer):
 class StoreOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoreOffer
-        fields = ["id", "title", "description", "ends_at"]
+        fields = ["id", "title", "description", "ends_at", "discount_type", "discount_value", "max_discount", "min_order_amount", "is_redeemable"]
 
 
 class OfferStoreSerializer(serializers.ModelSerializer):

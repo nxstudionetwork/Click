@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { Button, EmptyState, ErrorState, Skeleton, TextArea } from '../components/ui';
 import { AddressForm } from '../features/addresses/AddressForm';
 import { useAddresses } from '../features/addresses/useAddresses';
+import { OfferPicker } from '../features/cart/OfferPicker';
 import { Totals } from '../features/cart/Totals';
 import { cartKey, useCart } from '../features/cart/useCart';
 import { api } from '../lib/api';
@@ -97,7 +98,7 @@ export function CheckoutPage() {
           <h3 id="review-h">2. Review order · {c.store.name}</h3>
           {c.items.map((i) => (
             <div key={i.id} className="spread small">
-              <span>{i.quantity} × {i.product.name}</span>
+              <span>{i.quantity} × {i.product.name}{i.options.length > 0 && <span className="muted"> ({i.options.map((o) => o.name).join(', ')})</span>}</span>
               <span>{formatMoney(i.lineTotal, currency)}</span>
             </div>
           ))}
@@ -105,8 +106,13 @@ export function CheckoutPage() {
           <TextArea label="Note for the restaurant (optional)" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
         </section>
 
+        <section className="card card--pad stack" aria-labelledby="offer-h">
+          <h3 id="offer-h">3. Offers</h3>
+          <OfferPicker cart={c} />
+        </section>
+
         <section className="card card--pad stack" aria-labelledby="pay-h">
-          <h3 id="pay-h">3. Payment</h3>
+          <h3 id="pay-h">4. Payment</h3>
           <label className="option">
             <input type="radio" name="payment" checked={payment === 'cash_on_delivery'} onChange={() => setPayment('cash_on_delivery')} />
             <div><strong>Cash on delivery</strong><div className="muted small">Pay with cash or UPI when your order arrives.</div></div>
@@ -117,7 +123,7 @@ export function CheckoutPage() {
 
       <aside className="checkout__aside card card--pad stack">
         <h3>Bill details</h3>
-        <Totals totals={c.totals} currency={currency} />
+        <Totals totals={c.totals} currency={currency} offerTitle={c.offer?.title} />
         {err && (
           <div className="badge badge--danger" role="alert" style={{ whiteSpace: 'normal', padding: '8px 12px' }}>
             {err.message}

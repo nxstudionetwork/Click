@@ -77,6 +77,23 @@ export interface StoreOffer {
   title: string;
   description: string;
   endsAt: ISODateTime | null;
+  /** '' = display-only; otherwise the server can apply it at checkout. */
+  discountType: '' | 'percent' | 'flat' | 'free_delivery';
+  discountValue: Money;
+  maxDiscount: Money | null;
+  minOrderAmount: Money;
+  isRedeemable: boolean;
+}
+
+/** An offer of the cart's store, with whether it applies now (decided server-side) and the saving if it does. */
+export interface CartOffer {
+  id: UUID;
+  title: string;
+  description: string;
+  minOrderAmount: Money;
+  endsAt: ISODateTime | null;
+  problem: string | null;
+  saving?: Money | null;
 }
 
 export interface OfferWithStore extends StoreOffer {
@@ -118,7 +135,14 @@ export interface StoreQuery {
   lat?: number;
   lng?: number;
   radius?: number;
-  sort?: 'popular' | 'rating' | 'new' | 'distance';
+  sort?: 'popular' | 'rating' | 'new' | 'distance' | 'eta' | 'price_low' | 'price_high';
+  /** Only stores without non-vegetarian items. */
+  veg?: boolean;
+  minRating?: number;
+  /** Only stores with a live offer. */
+  offers?: boolean;
+  /** Price level 1–4 or lower. */
+  maxPrice?: number;
 }
 
 export interface Product {
@@ -138,6 +162,8 @@ export interface Product {
   isAvailable: boolean;
   lowStock: boolean;
   isFeatured: boolean;
+  /** Customisation steps (size, add-ons). Empty when the item has none. */
+  optionGroups: ProductOptionGroup[];
 }
 
 export interface ProductStore {
@@ -206,18 +232,24 @@ export interface Address {
 export type AddressInput = Omit<Address, 'id' | 'createdAt' | 'latitude' | 'longitude' | 'deliveryInstructions'> &
   Partial<Pick<Address, 'latitude' | 'longitude' | 'deliveryInstructions'>>;
 
+export interface ProductOption { id: UUID; name: string; priceDelta: Money; isAvailable: boolean }
+export interface ProductOptionGroup { id: UUID; name: string; minSelect: number; maxSelect: number; options: ProductOption[] }
+
 export interface CartTotals {
   subtotal: Money;
   deliveryFee: Money;
   tax: Money;
+  discount: Money;
   total: Money;
 }
 
 export interface CartItem {
   id: UUID;
   product: Product;
+  options: { id: UUID; name: string; priceDelta: Money }[];
   quantity: number;
   note: string;
+  unitPrice: Money;
   lineTotal: Money;
 }
 
@@ -240,6 +272,10 @@ export interface Cart {
   items: CartItem[];
   itemCount: number;
   totals: CartTotals;
+  /** The applied offer; `problem` says why it no longer applies, if so. */
+  offer: CartOffer | null;
+  /** Offers of this store that can be applied at checkout. */
+  offers: CartOffer[];
 }
 
 // --- Orders -----------------------------------------------------------------
@@ -274,6 +310,8 @@ export interface OrderItem {
   id: UUID;
   productId: UUID | null;
   productName: string;
+  /** e.g. "Large · Extra cheese" (snapshot). */
+  optionsSummary: string;
   unitPrice: Money;
   quantity: number;
   lineTotal: Money;
@@ -306,11 +344,16 @@ export interface OrderDetail extends OrderSummary {
   deliveryFee: Money;
   tax: Money;
   discount: Money;
+  offerTitle: string;
   estimatedDeliveryAt: ISODateTime | null;
   cancelledAt: ISODateTime | null;
   deliveredAt: ISODateTime | null;
   canCancel: boolean;
+  review: { rating: number; comment: string; createdAt: ISODateTime } | null;
+  canReview: boolean;
 }
+
+export interface StoreRecommendation { store: Store; reason: string }
 
 export interface PlaceOrderInput {
   addressId: UUID;

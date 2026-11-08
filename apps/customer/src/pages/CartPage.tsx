@@ -34,6 +34,7 @@ export function CartPage() {
             <div key={i.id} className="line">
               <div>
                 <div>{i.product.name}</div>
+                {i.options.length > 0 && <div className="muted small">{i.options.map((o) => o.name).join(' · ')}</div>}
                 {i.note && <div className="muted small">“{i.note}”</div>}
                 {!i.product.isAvailable && <span className="badge badge--warning">No longer available</span>}
               </div>
@@ -53,7 +54,7 @@ export function CartPage() {
       </div>
       <aside className="checkout__aside card card--pad stack">
         <h3>Bill details</h3>
-        <Totals totals={c.totals} currency={currency} />
+        <Totals totals={c.totals} currency={currency} offerTitle={c.offer?.title} />
         {belowMin && <p className="badge badge--warning">Add {formatMoney(Number(c.store.minOrderAmount) - Number(c.totals.subtotal), currency)} more to reach the minimum order</p>}
         {!c.store.isOpen && <p className="badge badge--danger">This store is closed right now</p>}
         <Link to="/checkout" className={`btn btn--primary btn--block ${belowMin || !c.store.isOpen ? 'disabled' : ''}`} aria-disabled={belowMin || !c.store.isOpen} onClick={(e) => (belowMin || !c.store?.isOpen) && e.preventDefault()} style={belowMin || !c.store.isOpen ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}>

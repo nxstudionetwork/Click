@@ -47,7 +47,11 @@ export function StorePage() {
   const s = store.data;
   const service = serviceForStoreType(s.storeType);
   const isRestaurant = s.storeType === 'restaurant';
-  const qtyFor = (productId: string) => cart?.items.find((i) => i.product.id === productId);
+  // Customisable dishes can sit on several cart lines (one per choice combination); the row shows their total.
+  const qtyFor = (productId: string) => {
+    const lines = cart?.items.filter((i) => i.product.id === productId) ?? [];
+    return lines.length ? { ...lines[0]!, quantity: lines.reduce((n, i) => n + i.quantity, 0) } : undefined;
+  };
   const busy = isAdding || update.isPending || remove.isPending;
 
   const changeQty = (productId: string, next: number) => {
@@ -146,7 +150,7 @@ export function StorePage() {
         canOrder={s.isOpen}
         busy={isAdding}
         onClose={() => setSelected(null)}
-        onAdd={async (p, qty, note) => { if (await addToCart(p, qty, note)) setSelected(null); }}
+        onAdd={async (p, qty, note, optionIds) => { if (await addToCart(p, qty, note, optionIds)) setSelected(null); }}
       />
       <CartBar storeId={s.id} />
     </>

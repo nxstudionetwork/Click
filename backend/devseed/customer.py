@@ -105,6 +105,11 @@ WISHLIST_PRODUCTS = [("volt-electronics", "Wireless Earbuds Pro"), ("volt-electr
                      ("sushi-sakura-bar", "Salmon Nigiri (6)")]
 
 
+def default_options(product) -> list:
+    """The first choice of each required customisation group (what a customer must pick at minimum)."""
+    return [g.options.first().id for g in product.option_groups.filter(min_select__gt=0) if g.options.exists()]
+
+
 def _key(label: str) -> uuid.UUID:
     return uuid.uuid5(NS, label)
 
@@ -164,7 +169,8 @@ def seed_orders(profile, log) -> None:
         with transaction.atomic():
             cart_services.clear_cart(cart)
             for name, qty in items:
-                cart_services.add_item(profile, Product.objects.get(store=store, name=name).id, qty)
+                product = Product.objects.get(store=store, name=name)
+                cart_services.add_item(profile, product.id, qty, option_ids=default_options(product))
             order, _ = order_services.place_order(customer=profile, address_id=address.id, payment_method=method,
                                                   idempotency_key=_key(f"order-{i}"), customer_note=note)
             if final == "cancelled":
@@ -211,7 +217,8 @@ def seed_cart(profile, log) -> None:
         return
     store = Store.objects.get(slug="momo-mantra")
     for name, qty in [("Pan-fried Paneer Momos (8)", 1), ("Chilli Garlic Noodles", 1)]:
-        cart_services.add_item(profile, Product.objects.get(store=store, name=name).id, qty)
+        product = Product.objects.get(store=store, name=name)
+        cart_services.add_item(profile, product.id, qty, option_ids=default_options(product))
     log("cart: 2 items from Momo Mantra")
 
 

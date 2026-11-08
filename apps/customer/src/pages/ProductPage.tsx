@@ -5,15 +5,18 @@ import { ApiError } from '@click/api';
 import { Button, DietMark, EmptyState, ErrorState, Icon, PriceTag, QuantityStepper, Skeleton, SmartImage } from '../components/ui';
 import { serviceForStoreType } from '../config/services';
 import { useThemeOverride } from '../components/layout/AppShell';
+import { OptionPicker, useOptionSelection } from '../features/menu/OptionPicker';
 import { useAddToCart } from '../features/menu/useAddToCart';
 import { ProductCard } from '../features/stores/ProductCard';
 import { WishlistButton } from '../features/wishlist/WishlistButton';
 import { api } from '../lib/api';
 import { etaLabel, formatMoney } from '../lib/format';
 
+const useProductQuery = (id: string) => useQuery({ queryKey: ['products', id], queryFn: () => api.catalog.product(id) });
+
 export function ProductPage() {
   const { id = '' } = useParams();
-  const product = useQuery({ queryKey: ['products', id], queryFn: () => api.catalog.product(id) });
+  const product = useProductQuery(id);
   useThemeOverride(product.data ? serviceForStoreType(product.data.store.storeType).theme : null);
   const { addToCart, isAdding } = useAddToCart();
   const [qty, setQty] = useState(1);
@@ -26,9 +29,16 @@ export function ProductPage() {
   }
   if (product.isPending) return <div className="pdp"><Skeleton height={360} radius={22} /><div className="stack"><Skeleton height={32} width="70%" /><Skeleton height={20} width="40%" /><Skeleton height={80} /></div></div>;
 
-  const p = product.data;
+  return <ProductDetail p={product.data} addToCart={addToCart} isAdding={isAdding} qty={qty} setQty={setQty} added={added} setAdded={setAdded} />;
+}
+
+function ProductDetail({ p, addToCart, isAdding, qty, setQty, added, setAdded }: {
+  p: NonNullable<ReturnType<typeof useProductQuery>['data']>; addToCart: ReturnType<typeof useAddToCart>['addToCart']; isAdding: boolean;
+  qty: number; setQty: (n: number) => void; added: boolean; setAdded: (v: boolean) => void;
+}) {
   const store = p.store;
   const canOrder = store.isOpen && p.isAvailable;
+  const selection = useOptionSelection(p);
 
   return (
     <div className="stack">
@@ -53,11 +63,12 @@ export function ProductPage() {
             {p.categoryName && <span className="badge">{p.categoryName}</span>}
           </div>
           {p.description && <p>{p.description}</p>}
+          <OptionPicker product={p} currency={store.currency} selection={selection} />
           {canOrder && (
             <div className="row">
               <QuantityStepper value={qty} onChange={(n) => setQty(Math.max(1, n))} label={p.name} />
-              <Button loading={isAdding} style={{ flex: 1 }} onClick={async () => { if (await addToCart(p, qty)) setAdded(true); }}>
-                Add to cart · {formatMoney((Number(p.price) * qty).toFixed(2), store.currency)}
+              <Button loading={isAdding} disabled={selection.missing.length > 0} style={{ flex: 1 }} onClick={async () => { if (await addToCart(p, qty, '', selection.optionIds)) setAdded(true); }}>
+                Add to cart · {formatMoney((selection.unitPrice * qty).toFixed(2), store.currency)}
               </Button>
             </div>
           )}

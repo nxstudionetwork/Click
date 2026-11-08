@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type OrderDetail } from '@click/api';
-import { Button, EmptyState, ErrorState, Icon, Skeleton, useToast } from '../components/ui';
+import { Button, EmptyState, ErrorState, Icon, Skeleton, useConfirm, useToast } from '../components/ui';
+import { OrderReview } from '../features/orders/OrderReview';
+import { serviceForStoreType } from '../config/services';
 import { Totals } from '../features/cart/Totals';
 import { cartKey } from '../features/cart/useCart';
 import { isTerminal, PAYMENT_LABEL, PROGRESS, STATUS_LABEL, statusTone } from '../features/orders/status';
@@ -13,6 +15,7 @@ export function OrderPage() {
   const location = useLocation();
   const qc = useQueryClient();
   const toast = useToast();
+  const confirm = useConfirm();
   const key = ['customer', 'orders', 'detail', id];
   const order = useQuery({
     queryKey: key,
@@ -51,9 +54,23 @@ export function OrderPage() {
     <div className="checkout">
       <div className="stack">
         {(location.state as { justPlaced?: boolean } | null)?.justPlaced && (
-          <div className="card card--pad row" style={{ background: 'var(--c-accent-soft)', borderColor: 'transparent' }} role="status">
-            <Icon name="check" /> <strong>Order placed! {o.store.name} will confirm it shortly.</strong>
-          </div>
+          <section className="placed" data-theme={serviceForStoreType(o.store.storeType).theme} role="status" aria-labelledby="placed-h">
+            <span className="placed__check" aria-hidden="true"><Icon name="check" size={30} /></span>
+            <h2 id="placed-h">Order placed</h2>
+            <p>{o.store.name} will confirm it shortly.</p>
+            <dl className="placed__facts">
+              <div><dt>Order ID</dt><dd>{o.number}</dd></div>
+              <div><dt>Total</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
+              <div><dt>Payment</dt><dd>{o.payments[0] ? `${o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : 'Click. Wallet'} · ${PAYMENT_LABEL[o.payments[0].status]}` : '—'}</dd></div>
+              {o.estimatedDeliveryAt && <div><dt>Estimated arrival</dt><dd>by {formatTime(o.estimatedDeliveryAt)}</dd></div>}
+              <div className="placed__wide"><dt>Delivering to</dt><dd>{[o.deliveryAddress.line1, o.deliveryAddress.line2, o.deliveryAddress.city].filter(Boolean).join(', ')}</dd></div>
+            </dl>
+            <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+              <a href="#order-status" className="btn btn--light btn--sm">View order</a>
+              <Link to={`/${serviceForStoreType(o.store.storeType).id}`} className="btn btn--glass btn--sm">Continue {serviceForStoreType(o.store.storeType).name}</Link>
+              <Link to="/" className="btn btn--glass btn--sm">Go home</Link>
+            </div>
+          </section>
         )}
         <div className="spread">
           <div>
@@ -63,7 +80,7 @@ export function OrderPage() {
           <span className={`badge ${statusTone(o.status)}`}>{STATUS_LABEL[o.status]}</span>
         </div>
 
-        <section className="card card--pad stack" aria-label="Order status">
+        <section className="card card--pad stack" aria-label="Order status" id="order-status">
           {o.status === 'cancelled' ? (
             <p>This order was cancelled{o.cancelledAt ? ` at ${formatTime(o.cancelledAt)}` : ''}.</p>
           ) : (
@@ -81,7 +98,7 @@ export function OrderPage() {
           <div className="row" style={{ flexWrap: 'wrap' }}>
             {o.canCancel && (
               <Button variant="danger" size="sm" loading={cancel.isPending}
-                onClick={() => window.confirm('Cancel this order?') && cancel.mutate()}>
+                onClick={async () => { if (await confirm({ title: 'Cancel this order?', message: `${o.store.name} won’t prepare it. Wallet payments are refunded to your Click. Wallet.`, confirmLabel: 'Cancel order', cancelLabel: 'Keep order', danger: true })) cancel.mutate(); }}>
                 Cancel order
               </Button>
             )}
@@ -96,18 +113,19 @@ export function OrderPage() {
           <h3>Items</h3>
           {o.items.map((i) => (
             <div key={i.id} className="spread small">
-              <span>{i.quantity} × {i.productName}{i.note && <span className="muted"> — “{i.note}”</span>}</span>
+              <span>{i.quantity} × {i.productName}{i.optionsSummary && <span className="muted"> ({i.optionsSummary})</span>}{i.note && <span className="muted"> — “{i.note}”</span>}</span>
               <span>{formatMoney(i.lineTotal, o.currency)}</span>
             </div>
           ))}
           {o.customerNote && <p className="small muted">Note: {o.customerNote}</p>}
         </section>
+        <OrderReview order={o} />
       </div>
 
       <aside className="checkout__aside stack">
         <div className="card card--pad stack">
           <h3>Bill</h3>
-          <Totals totals={{ subtotal: o.subtotal, deliveryFee: o.deliveryFee, tax: o.tax, total: o.total }} currency={o.currency} discount={o.discount} />
+          <Totals totals={{ subtotal: o.subtotal, deliveryFee: o.deliveryFee, tax: o.tax, discount: o.discount, total: o.total }} currency={o.currency} offerTitle={o.offerTitle} />
           {o.payments[0] && (
             <p className="small muted">Payment: {o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : o.payments[0].method} · {PAYMENT_LABEL[o.payments[0].status]}</p>
           )}

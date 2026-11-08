@@ -70,6 +70,11 @@ Stores and the test customer's addresses have coordinates near real Bengaluru lo
 `devseed.locality_point`), so Home's "Near you" can be tested with real distance queries. Address coordinates are
 only filled where missing, never overwritten.
 
+Food (`devseed/food.py`, run after the catalogue): extra dishes per cuisine (about 180 dishes in total),
+customisations on about 40 dishes (pizza sizes and toppings, biryani portions and add-ons, burger meals and extras,
+coffee sizes, momo dips), and checkout rules for the five offers the engine can express. Offers with other
+conditions (first order, weekends, time of day, specific items, buy-one-get-one) stay display-only.
+
 Click. Buzz needs no seed: its feed is built from the offers, shows and stores above.
 
 Rides, parcels and home services aren't seeded because those features don't exist yet; their records would have no
