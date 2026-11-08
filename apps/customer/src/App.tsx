@@ -8,7 +8,6 @@ import { VerifyPage } from './onboarding/VerifyPage';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppShell } from './components/layout/AppShell';
 import { EmptyState } from './components/ui';
-import { AccountPage } from './pages/AccountPage';
 import { AddressesPage } from './pages/AddressesPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { BookingPage } from './pages/BookingPage';
@@ -32,6 +31,7 @@ import { OrderPage } from './pages/OrderPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { PaymentsPage } from './pages/PaymentsPage';
 import { ProductPage } from './pages/ProductPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { RewardsPage } from './pages/RewardsPage';
 import { SearchPage } from './pages/SearchPage';
 import { ServiceComingSoonPage } from './pages/ServiceComingSoonPage';
@@ -77,6 +77,8 @@ function AppRoutes() {
       {/* Immersive experiences with their own layouts (no app header / bottom navigation) */}
       <Route path="buddy" element={<BuddyPage />} />
       <Route path="buzz" element={<BuzzPage />} />
+      {/* Profile: a dedicated personal page with its own header (no app header or bottom navigation) */}
+      <Route path="account" element={guard(<ProfilePage />)} />
       <Route element={<AppShell />}>
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
@@ -112,7 +114,6 @@ function AppRoutes() {
         <Route path="wishlist" element={guard(<WishlistPage />)} />
         <Route path="rewards" element={guard(<RewardsPage />)} />
         <Route path="notifications" element={guard(<NotificationsPage />)} />
-        <Route path="account" element={guard(<AccountPage />)} />
         <Route path="account/addresses" element={guard(<AddressesPage />)} />
         <Route path="account/card" element={guard(lazyCard(false))} />
         <Route path="account/payments" element={guard(<PaymentsPage />)} />

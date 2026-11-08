@@ -403,6 +403,15 @@ export interface BuddyReply {
   mode: 'basic' | 'provider';
 }
 
+/** GET /customer/profile/summary: counts for the signed-in customer's Profile page. */
+export interface ProfileSummary {
+  activity: { orders: number; bookings: number; total: number };
+  wishlist: number;
+  addresses: number;
+  unreadNotifications: number;
+  rewardsBalance: number;
+}
+
 export interface AssistantCapabilities {
   mode: 'basic' | 'provider' | 'unavailable';
   /** Speech-to-text is configured on the server (Buddy GO / voice search can record). */

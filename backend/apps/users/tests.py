@@ -79,3 +79,9 @@ def test_session_refresh_has_its_own_throttle_scope():
 
     assert LoginView.throttle_scope == RegisterView.throttle_scope == "auth"
     assert RefreshView.throttle_scope == "auth_session"
+
+
+def test_name_update_requires_letters(auth_api):
+    assert auth_api.patch("/api/v1/me", {"fullName": "12345"}, format="json").status_code == 400
+    r = auth_api.patch("/api/v1/me", {"fullName": "  Asha   Rao "}, format="json")
+    assert r.status_code == 200 and r.json()["fullName"] == "Asha Rao"

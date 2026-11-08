@@ -27,3 +27,21 @@ def test_addresses_are_isolated_between_customers(api, customer, other_customer,
 
 def test_addresses_require_auth(api):
     assert api.get("/api/v1/customer/addresses").status_code == 401
+
+
+def test_profile_summary_counts_only_the_signed_in_customer(auth_api, customer, other_customer, store):
+    from apps.customers.models import Address
+    from apps.wishlists.models import WishlistItem
+
+    mine, theirs = customer.customer_profile, other_customer.customer_profile
+    Address.objects.create(customer=mine, recipient_name="A", phone="1", line1="x", city="Bengaluru", postal_code="560001")
+    WishlistItem.objects.create(customer=mine, store=store)
+    WishlistItem.objects.create(customer=theirs, store=store)
+    r = auth_api.get("/api/v1/customer/profile/summary")
+    assert r.status_code == 200
+    assert r.json() == {"activity": {"orders": 0, "bookings": 0, "total": 0}, "wishlist": 1, "addresses": 1,
+                        "unreadNotifications": 0, "rewardsBalance": 0}
+
+
+def test_profile_summary_requires_sign_in(api):
+    assert api.get("/api/v1/customer/profile/summary").status_code == 401

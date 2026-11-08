@@ -39,7 +39,7 @@ launch, because their lifecycles differ.
     store with exactly one `action {label, path}` into the matching flow. Media is the record's own image/video only.
 - **Shared identity:** `auth/register|login|refresh|logout`, `me`
 - **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, wallet, bookings, support/tickets, assistant/messages,
-  assistant/capabilities, assistant/transcribe}`
+  assistant/capabilities, assistant/transcribe, profile/summary}`
 - **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
@@ -102,12 +102,25 @@ and support tickets. Frontend route guards are UX only.
   name), quick services (from `config/services.ts`), offers, near you, popular, discover, Buzz, recent activity,
   rewards & wallet, then time-of-day moments from `config/home.ts`. Every section has loading, empty and error states.
   "Near you" uses the selected address's saved coordinates; without them it shows the address's city and says so.
-- **Explore (`/explore`, signed-in):** Click.'s discovery hub, opened from the bottom navigation (it replaces the old
-  Menu). Order: a banner that advances one step each time Explore opens (`config/explore.ts`, deterministic, remembered
+- **Explore (signed-in):** Click.'s discovery hub. The bottom (and desktop) navigation opens it as a bottom sheet (~80% of
+  the screen, page behind blurred and dimmed, scrolls internally, closes on Escape/backdrop/navigation); `/explore` renders
+  the same `ExploreContent` for deep links. Order: a banner that advances one step each time Explore opens (`config/explore.ts`, deterministic, remembered
   per device; only the shown banner's image loads), then every feature from `CLICK_FEATURES` (services + Activity,
   Buddy, Offers, Rewards, Wallet) sorted A–Z by name in code, then Your Click. (Wallet masked until revealed, Rewards
   points, Activity, live Offers count, all real data), Account (Payments, Settings, Help & Support, Addresses), and the
-  footer "Everything you need. One Click. away." / "A venture of IFX Group". Unlaunched services say "Coming soon".
+  footer "Everything you need. One Click. away." / "A venture of IFX Group". Feature tiles are compact; unlaunched
+  services carry a "Soon" tag.
+- **Profile (`/account`, signed-in; `/profile` redirects):** a dedicated page with its own header (no app header, search,
+  location or bottom navigation). Identity from `/me`: photo (take/choose/remove via `/me/avatar`, validated and re-encoded
+  server-side; the UI changes only after the server stores it), name (editable, validated on both sides), immutable
+  Click. ID with copy, masked verified phone, email (read-only: email and phone changes need verification flows that
+  don't exist yet). Badges (Activity, Wishlist, Rewards, Wallet masked until revealed) use
+  `GET /customer/profile/summary` (counts only; detail pages load their own data). Account rows: Click. ID Card,
+  Addresses, Payments, Notifications (unread count), Settings, Help & Support. Security sheet and Log out (confirmation;
+  ends the Click. session server-side and clears all cached customer data). Account deletion is not offered: there is
+  no backend deletion workflow yet.
+- **Activity (`/activity`):** a timeline read from the source domains (orders, bookings), filterable by Food,
+  Groceries, Shopping and Bookings; rides, parcels and service bookings join as those services launch.
 - **Buzz:** `/buzz` is a full-screen vertical feed (own layout), plus a Home preview and a persistent edge handle.
 - **Buddy:** GO = voice-first action mode (records only when the server reports a speech provider; otherwise says so
   and accepts typing), MAN = `/buddy`, the full conversation page with its own header (New chat, Home).

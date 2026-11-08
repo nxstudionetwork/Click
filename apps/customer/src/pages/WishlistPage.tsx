@@ -15,7 +15,7 @@ export function WishlistPage() {
     <div className="stack">
       <h1>Wishlist</h1>
       {wishlist.data.length === 0 ? (
-        <EmptyState icon="heart" title="Nothing saved yet" message="Tap the heart on a store or product to save it here." action={<Link to="/explore" className="btn btn--primary">Explore</Link>} />
+        <EmptyState icon="heart" title="Your wishlist is empty." message="Save things you love and find them here later." action={<Link to="/food" className="btn btn--primary">Discover places</Link>} />
       ) : (
         <>
           {stores.length > 0 && (

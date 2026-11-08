@@ -27,7 +27,7 @@ from apps.rewards.views import RewardsView
 from apps.support import views as support_views
 from apps.wishlists import views as wishlist_views
 from apps.core.views import health
-from apps.customers.views import AddressViewSet
+from apps.customers.views import AddressViewSet, ProfileSummaryView
 from apps.orders import views as order_views
 from apps.stores import views as store_views
 
@@ -35,6 +35,7 @@ customer_router = SimpleRouter(trailing_slash=False)
 customer_router.register("addresses", AddressViewSet, basename="address")
 
 customer_urls = [
+    path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     path("cart", cart_views.CartView.as_view(), name="cart"),
     path("cart/items", cart_views.CartItemsView.as_view(), name="cart-items"),
     path("cart/items/<uuid:item_id>", cart_views.CartItemDetailView.as_view(), name="cart-item"),

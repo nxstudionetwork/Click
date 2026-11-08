@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { themeForPath, type Theme } from '../../config/services';
 import { useCart } from '../../features/cart/useCart';
+import { ExploreSheet } from '../../features/explore/ExploreSheet';
 import { useUnreadCount } from '../../features/notifications/hooks';
 import { LocationSelector } from '../../location/LocationSelector';
 import { BuddySelector } from '../shell/BuddySelector';
@@ -12,12 +13,15 @@ import { ProfileButton } from '../shell/ProfileButton';
 import { Icon, type IconName } from '../ui';
 import { Logo } from './Logo';
 
-/** Primary navigation. Each destination carries its own service colour (inactive: subtle, active: strong). */
-export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme; end?: boolean; match?: RegExp }[] = [
+/**
+ * Primary navigation. Each destination carries its own service colour (inactive: subtle, active: strong).
+ * Explore opens as a bottom sheet over the current page (`sheet`); the others are routes.
+ */
+export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme; end?: boolean; sheet?: boolean }[] = [
   { to: '/', label: 'Home', icon: 'home', theme: 'default', end: true },
   { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
   { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
-  { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore' },
+  { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
   { to: '/account', label: 'Profile', icon: 'user', theme: 'profile' },
 ];
 
@@ -34,6 +38,11 @@ export function AppShell() {
   const { data: cart } = useCart();
   const { data: unread = 0 } = useUnreadCount();
   const [override, setOverride] = useState<Theme | null>(null);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const navigate = useNavigate();
+  const closeExplore = useCallback(() => setExploreOpen(false), []);
+  // Explore is for signed-in customers; others are sent to sign in first.
+  const openExplore = () => (status === 'authenticated' ? setExploreOpen(true) : navigate('/login?next=/explore'));
   const count = cart?.itemCount ?? 0;
   const theme = override ?? themeForPath(pathname);
   const focused = pathname === '/checkout';
@@ -77,8 +86,11 @@ export function AppShell() {
           <div className="header__mobile-location"><LocationSelector compact /></div>
           {!focused && <div className="header__mobile-search"><GlobalSearch compact /></div>}
           <nav className="header__nav" aria-label="Primary">
-            {PRIMARY.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme}><Icon name={n.icon} size={18} />{n.label}</NavLink>
+            {PRIMARY.map((n) => n.sheet ? (
+              <button key={n.to} type="button" data-theme={n.theme} className={exploreOpen || pathname === n.to ? 'active' : ''}
+                aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}><Icon name={n.icon} size={18} />{n.label}</button>
+            ) : (
+              <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => (isActive && !exploreOpen ? 'active' : '')}><Icon name={n.icon} size={18} />{n.label}</NavLink>
             ))}
           </nav>
         </header>
@@ -91,13 +103,20 @@ export function AppShell() {
 
         <BuzzEntry />
         <nav className="bottom-nav" aria-label="Primary">
-          {PRIMARY.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className="bottom-nav__item">
+          {PRIMARY.map((n) => n.sheet ? (
+            <button key={n.to} type="button" data-theme={n.theme} className={`bottom-nav__item ${exploreOpen || pathname === n.to ? 'active' : ''}`}
+              aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}>
+              <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
+              <span className="bottom-nav__label">{n.label}</span>
+            </button>
+          ) : (
+            <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => `bottom-nav__item ${isActive && !exploreOpen ? 'active' : ''}`}>
               <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
               <span className="bottom-nav__label">{n.label}</span>
             </NavLink>
           ))}
         </nav>
+        <ExploreSheet open={exploreOpen} onClose={closeExplore} />
       </div>
     </ThemeOverride.Provider>
   );

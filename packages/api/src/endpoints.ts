@@ -1,7 +1,7 @@
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
@@ -28,6 +28,7 @@ export const authApi = (http: HttpClient) => ({
     form.append('image', file, 'avatar');
     return http.request<User>('/me/avatar', { method: 'POST', body: form });
   },
+  removeAvatar: () => http.request<User>('/me/avatar', { method: 'DELETE' }),
   /** DEVELOPMENT ONLY: 404 unless the backend runs with DEBUG. */
   devLoginInfo: () => http.request<DevLoginInfo>('/auth/dev-login', { auth: false }),
   devLogin: () => http.request<Session>('/auth/dev-login', { method: 'POST', auth: false }),
@@ -110,6 +111,8 @@ export const customerApi = (http: HttpClient) => ({
     markAllRead: () => http.request<{ updated: number }>('/customer/notifications/read-all', { method: 'POST' }),
   },
   rewards: () => http.request<RewardsSummary>('/customer/rewards'),
+  /** Counts for the Profile page (no full lists). */
+  profileSummary: () => http.request<ProfileSummary>('/customer/profile/summary'),
   support: {
     list: () => http.request<Paginated<SupportTicket>>('/customer/support/tickets'),
     get: (id: string) => http.request<SupportTicket>(`/customer/support/tickets/${id}`),

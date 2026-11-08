@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../test/utils';
@@ -8,6 +8,7 @@ vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => auth.value }));
 const api = vi.hoisted(() => ({
   catalog: { offers: vi.fn().mockResolvedValue({ results: [] }) },
   customer: {
+    wallet: vi.fn().mockResolvedValue({ balance: '10.00', currency: 'INR' }), rewards: vi.fn().mockResolvedValue({ balance: 5 }),
     bookings: { list: vi.fn() }, cart: { get: vi.fn().mockResolvedValue({ itemCount: 0 }) }, notifications: { summary: vi.fn().mockResolvedValue({ unread: 3 }) },
     addresses: { list: vi.fn().mockResolvedValue([]) },
     assistant: { capabilities: vi.fn().mockResolvedValue({ mode: 'basic', voice: false, visualSearch: false }), send: vi.fn() },
@@ -24,10 +25,23 @@ describe('AppShell', () => {
   it('primary navigation is Home | Ride | Food | Explore | Profile, each with its own service colour', () => {
     renderWithProviders(<AppShell />);
     const bottom = screen.getAllByRole('navigation', { name: 'Primary' })[1]!;
-    const links = within(bottom).getAllByRole('link');
-    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Explore', 'Profile']);
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', '/explore', '/account']);
-    expect(links.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'explore', 'profile']);
+    const items = [...bottom.children] as HTMLElement[];
+    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Explore', 'Profile']);
+    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', null, '/account']);
+    expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'explore', 'profile']);
+  });
+
+  it('Explore opens as a bottom sheet over the page for signed-in customers, and closes with Escape', async () => {
+    auth.value = signedIn;
+    renderWithProviders(<AppShell />);
+    const bottom = screen.getAllByRole('navigation', { name: 'Primary' })[1]!;
+    await userEvent.click(within(bottom).getByRole('button', { name: 'Explore' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Explore' });
+    expect(within(sheet).getByRole('link', { name: /^Food:/ })).toHaveAttribute('href', '/food');
+    expect(within(sheet).getByRole('link', { name: /^Rides:/ })).toHaveAttribute('href', '/rides');
+    expect(within(bottom).getByRole('button', { name: 'Explore' })).toHaveClass('active');
+    await userEvent.keyboard('{Escape}');
+    await waitForElementToBeRemoved(() => screen.queryByRole('dialog', { name: 'Explore' }));
   });
 
   it('header shows the Click. logo first, then Buddy, notifications and profile; no development labels', () => {
