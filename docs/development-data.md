@@ -77,5 +77,18 @@ conditions (first order, weekends, time of day, specific items, buy-one-get-one)
 
 Click. Buzz needs no seed: its feed is built from the offers, shows and stores above.
 
-Rides, parcels and home services aren't seeded because those features don't exist yet; their records would have no
-real model, API or flow behind them. They will be seeded when each feature is built.
+Rides (`devseed/rides.py`): 4 ride types (Bike, Auto, Cab, XL) with rates, 2 ride offers, and 7 verified test drivers
+(transport partners with vehicles, colour and plate) online near Indiranagar, Koramangala, Jayanagar, HSR Layout and
+Whitefield. Driver locations count as fresh for 10 minutes, so re-run the seed before testing a ride. A pickup far from
+those areas (for example Yelahanka) gets "no driver".
+
+To play the driver while testing (DEBUG only), run these in order:
+
+```
+python manage.py ride_driver latest accept     # or a ride number, e.g. CLK-R-3XZVVNM
+python manage.py ride_driver latest arrived
+python manage.py ride_driver latest start
+python manage.py ride_driver latest complete
+```
+
+Parcels and home services aren't seeded because those features don't exist yet.

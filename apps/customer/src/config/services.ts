@@ -30,7 +30,7 @@ export const SERVICES: ClickService[] = [
   { id: 'food', name: 'Food', tagline: 'Restaurants near you', icon: 'food', path: '/food', status: 'live', theme: 'food', storeType: 'restaurant' },
   { id: 'groceries', name: 'Groceries', tagline: 'Daily essentials, fast', icon: 'grocery', path: '/groceries', status: 'live', theme: 'grocery', storeType: 'grocery' },
   { id: 'shopping', name: 'Shopping', short: 'Shop', tagline: 'Electronics, fashion, home', icon: 'shop', path: '/shopping', status: 'live', theme: 'shopping', storeType: 'retail' },
-  { id: 'rides', name: 'Rides', short: 'Ride', tagline: 'Get around the city', icon: 'ride', path: '/rides', status: 'soon', theme: 'ride',
+  { id: 'rides', name: 'Rides', short: 'Ride', tagline: 'Bike, auto and cab rides', icon: 'ride', path: '/rides', status: 'live', theme: 'ride',
     upcoming: ['Pickup and drop with saved places', 'Ride options with upfront fare estimates', 'Driver and vehicle details', 'Ride history and receipts'] },
   { id: 'parcels', name: 'Parcels', short: 'Parcel', tagline: 'Send packages across town', icon: 'parcel', path: '/parcels', status: 'soon', theme: 'parcel',
     upcoming: ['Sender and receiver details', 'Package size and instructions', 'Price estimate before booking', 'Delivery status and history'] },

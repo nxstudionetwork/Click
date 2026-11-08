@@ -10,6 +10,9 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
   readonly VITE_FIREBASE_APP_ID?: string;
   readonly VITE_FIREBASE_AUTH_EMULATOR_HOST?: string;
+  /** Ride map tiles (XYZ URL) and their attribution. Defaults to OpenStreetMap tiles for development. */
+  readonly VITE_MAP_TILE_URL?: string;
+  readonly VITE_MAP_ATTRIBUTION?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

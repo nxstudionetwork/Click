@@ -50,6 +50,7 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/bookings    movies & live events: venues, shows, seat-safe bookings
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
+  apps/rides       rides: ride types, upfront pricing, driver matching, trip lifecycle, safety, ratings
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),

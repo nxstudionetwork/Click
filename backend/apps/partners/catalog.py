@@ -48,6 +48,8 @@ TYPES: list[dict] = [
                 },
                 {"key": "vehicle_model", "label": "Vehicle make & model", "kind": "text", "required": False,
                  "placeholder": "e.g. Maruti Dzire", "max_length": 60},
+                {"key": "vehicle_color", "label": "Vehicle colour", "kind": "text", "required": False,
+                 "placeholder": "e.g. White", "max_length": 20, "help": "Shown to riders so they can find your vehicle."},
                 {"key": "vehicle_number", "label": "Vehicle registration number", "kind": "text", "required": True,
                  "placeholder": "e.g. KA 01 AB 1234", "max_length": 15,
                  "help": "As printed on your registration certificate. Used for verification."},

@@ -53,6 +53,8 @@ class ClickBasicBuddy:
 
         if wants_food and wants_movie:
             return self._dinner_and_movie(text)
+        if _has(text, "ride", "cab", "taxi", "auto", "bike taxi", "take me", "drop me", "get me to", "go to"):
+            return self._ride(messages[-1].content)
         if _has(text, "order", "orders", "delivery", "track", "delayed", "late", "where") and not wants_movie and not _has(text, "pizza", "biryani"):
             return self._orders(customer, text)
         if _has(text, "booking", "bookings", "my tickets"):
@@ -66,12 +68,24 @@ class ClickBasicBuddy:
                               cards=[{"type": "offer", "offer": o} for o in tools.offers()], actions=[{"label": "All offers", "path": "/offers"}])
         if wants_movie:
             return self._movies(text)
-        if _has(text, "ride", "rides", "cab", "taxi", "parcel", "parcels", "plumber", "electrician", "cleaning", "repair"):
-            return BuddyReply("That service isn’t live on Click yet, so I can’t book it. Food, groceries, shopping and movie/event tickets are available now.",
+        if _has(text, "parcel", "parcels", "plumber", "electrician", "cleaning", "repair"):
+            return BuddyReply("That service isn’t live on Click yet, so I can’t book it. Food, groceries, shopping, rides and movie/event tickets are available now.",
                               actions=[{"label": "Explore Click", "path": "/explore"}])
         return self._search(text)
 
     # --- intents ---------------------------------------------------------
+    def _ride(self, original: str):
+        """Hand a ride request to Click. Ride with the destination pre-filled. Buddy never books or pays for a ride."""
+        import re
+        from urllib.parse import quote
+
+        m = re.search(r"(?:to|towards|till)\s+(?:the\s+)?(.+?)[.?!]*$", original.strip(), flags=re.I)
+        dest = m.group(1).strip()[:60] if m else ""
+        lead = (f"Let's get you to {dest}. " if dest else "Let's plan your ride. ") + (
+            "Confirm your pickup, pick the destination, then compare Bike, Auto and Cab fares before you confirm.")
+        path = f"/rides?to={quote(dest)}" if dest else "/rides"
+        return BuddyReply(lead, actions=[{"label": "Plan this ride", "path": path}])
+
     def _help(self):
         return BuddyReply(
             "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, show movies playing tonight, "

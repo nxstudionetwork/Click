@@ -21,8 +21,8 @@ export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme;
   { to: '/', label: 'Home', icon: 'home', theme: 'default', end: true },
   { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
   { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
+  { to: '/services', label: 'Services', icon: 'wrench', theme: 'shopping' },
   { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
-  { to: '/shopping', label: 'Shop', icon: 'shop', theme: 'shopping' },
 ];
 
 const ThemeOverride = createContext<(t: Theme | null) => void>(() => {});
@@ -48,6 +48,8 @@ export function AppShell() {
   // The global search belongs to Home (and its results page) only; service pages have their own search,
   // and other pages have none. The header itself stays fixed on every page.
   const showSearch = pathname === '/' || pathname === '/search';
+  // The active location is app-wide state (LocationProvider); only Home shows and changes it in the header.
+  const showLocation = pathname === '/';
   const headerRef = useRef<HTMLElement>(null);
 
   // Sticky page elements sit below the real header height, which varies by breakpoint and page.
@@ -68,7 +70,7 @@ export function AppShell() {
         <header className="header" ref={headerRef}>
           <div className="header__bar">
             <Link to="/" aria-label="Click. home" className="header__logo"><Logo /></Link>
-            <div className="header__location"><LocationSelector /></div>
+            {showLocation && <div className="header__location"><LocationSelector /></div>}
             {showSearch ? <div className="header__search"><GlobalSearch /></div> : <div className="header__spacer" />}
             <div className="header__actions">
               <BuddySelector />
@@ -85,7 +87,7 @@ export function AppShell() {
               <ProfileButton />
             </div>
           </div>
-          <div className="header__mobile-location"><LocationSelector compact /></div>
+          {showLocation && <div className="header__mobile-location"><LocationSelector compact /></div>}
           {showSearch && <div className="header__mobile-search"><GlobalSearch compact /></div>}
           <nav className="header__nav" aria-label="Primary">
             {PRIMARY.map((n) => n.sheet ? (

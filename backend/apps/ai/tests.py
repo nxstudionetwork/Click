@@ -63,7 +63,10 @@ def test_buddy_order_status_uses_customers_own_orders(api, customer, other_custo
 
 
 def test_buddy_never_claims_unlaunched_services(auth_api):
-    assert "isn’t live" in ask(auth_api, "book me a cab to the airport")["message"]["content"]
+    assert "isn’t live" in ask(auth_api, "I need a plumber")["message"]["content"]
+    # Rides are live now: Buddy hands off to Ride (with the destination) but never books it.
+    cab = ask(auth_api, "book me a cab to the airport")
+    assert cab["actions"] == [{"label": "Plan this ride", "path": "/rides?to=airport"}]
 
 
 def test_capabilities_report_voice_off_by_default(auth_api):
@@ -100,3 +103,10 @@ def test_transcribe_uses_configured_provider_and_validates_audio(auth_api, setti
 class EchoSpeech:
     def transcribe(self, audio, content_type, language):
         return " find biryani "
+
+
+def test_buddy_hands_ride_requests_to_ride_without_booking(auth_api):
+    r = auth_api.post("/api/v1/customer/assistant/messages", {"messages": [{"role": "user", "content": "Take me to the airport"}]}, format="json")
+    body = r.json()
+    assert r.status_code == 200 and "airport" in body["message"]["content"]
+    assert body["actions"] == [{"label": "Plan this ride", "path": "/rides?to=airport"}]

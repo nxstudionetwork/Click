@@ -39,7 +39,7 @@ def test_profile_summary_counts_only_the_signed_in_customer(auth_api, customer, 
     WishlistItem.objects.create(customer=theirs, store=store)
     r = auth_api.get("/api/v1/customer/profile/summary")
     assert r.status_code == 200
-    assert r.json() == {"activity": {"orders": 0, "bookings": 0, "total": 0}, "wishlist": 1, "addresses": 1,
+    assert r.json() == {"activity": {"orders": 0, "bookings": 0, "rides": 0, "total": 0}, "wishlist": 1, "addresses": 1,
                         "unreadNotifications": 0, "rewardsBalance": 0}
 
 

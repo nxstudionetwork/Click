@@ -448,7 +448,7 @@ export interface BuddyReply {
 
 /** GET /customer/profile/summary: counts for the signed-in customer's Profile page. */
 export interface ProfileSummary {
-  activity: { orders: number; bookings: number; total: number };
+  activity: { orders: number; bookings: number; rides: number; total: number };
   wishlist: number;
   addresses: number;
   unreadNotifications: number;
@@ -693,4 +693,54 @@ export interface PartnerLocationInput {
   longitude?: number | null;
   serviceArea?: string;
   serviceRadiusKm?: number | null;
+}
+
+// --- Rides ------------------------------------------------------------------
+export interface RidePlace { label: string; address: string; lat: number; lng: number }
+export interface RidePlaceResult extends RidePlace { kind: 'saved' | 'recent' | 'place' }
+export interface RideTypeInfo { code: string; name: string; description: string; icon: string; seats: number }
+export interface RideFare { base: Money; distance: Money; time: Money; fees: Money; subtotal: Money; discount: Money; total: Money; minimumApplied?: boolean }
+export interface RideOfferInfo {
+  id: UUID; title: string; description: string; discountType: 'percent' | 'flat'; discountValue: Money; maxDiscount: Money | null;
+  minFare: Money; rideTypes: string[]; endsAt: ISODateTime | null;
+}
+export interface RideQuoteOption {
+  rideType: RideTypeInfo;
+  durationMinutes: number;
+  /** Minutes for the nearest available driver to reach the pickup; null when no driver is available. */
+  pickupEtaMinutes: number | null;
+  available: boolean;
+  fare: RideFare;
+  offerProblem: string | null;
+}
+export interface RideQuote {
+  distanceKm: string;
+  /** "straight_line": estimated from coordinates (no road-routing or traffic provider connected). */
+  estimateBasis: 'straight_line' | 'road';
+  options: RideQuoteOption[];
+  offers: RideOfferInfo[];
+}
+export type RideStatus = 'scheduled' | 'searching' | 'driver_assigned' | 'driver_arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_driver';
+export interface RideDriver {
+  name: string; rating: number | null; ratingCount: number; vehicleType: string; vehicleModel: string; vehicleColor: string; plate: string;
+  /** Last position reported by the driver's app; `live` only when it is recent. */
+  location: { lat: number; lng: number; reportedAt: ISODateTime; live: boolean } | null;
+}
+export interface Ride {
+  id: UUID; number: string; status: RideStatus; statusLabel: string; rideType: RideTypeInfo;
+  pickup: RidePlace; drop: RidePlace; stops: RidePlace[]; distanceKm: string; durationMinutes: number;
+  fare: RideFare; offerTitle: string; currency: string; paymentMethod: 'cash' | 'wallet';
+  payment: { method: string; status: PaymentStatus } | null; passengerName: string; scheduledFor: ISODateTime | null;
+  driver: RideDriver | null; driverAssignedAt: ISODateTime | null; startedAt: ISODateTime | null; completedAt: ISODateTime | null;
+  cancelledAt: ISODateTime | null; events: { toStatus: RideStatus; createdAt: ISODateTime }[];
+  rating: { stars: number; comment: string } | null; canCancel: boolean; createdAt: ISODateTime;
+}
+export interface RideSummary {
+  id: UUID; number: string; status: RideStatus; statusLabel: string; rideType: RideTypeInfo; pickupLabel: string; dropLabel: string;
+  total: Money; currency: string; paymentMethod: 'cash' | 'wallet'; scheduledFor: ISODateTime | null; createdAt: ISODateTime;
+}
+export interface RideTripInput { pickup: RidePlace; drop: RidePlace; stops?: RidePlace[]; offerId?: string | null }
+export interface RideRequestInput extends RideTripInput {
+  rideType: string; paymentMethod: 'cash' | 'wallet'; idempotencyKey: string; scheduledFor?: ISODateTime | null;
+  passengerName?: string; passengerPhone?: string;
 }

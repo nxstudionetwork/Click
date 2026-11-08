@@ -22,13 +22,13 @@ const signedIn = { status: 'authenticated', user: { fullName: 'Asha Rao', email:
 describe('AppShell', () => {
   beforeEach(() => { auth.value = { status: 'anonymous', user: null }; });
 
-  it('primary navigation is Home | Ride | Food | Explore | Shop, each with its own service colour', () => {
+  it('primary navigation is Home | Ride | Food | Services | Explore, each with its own service colour', () => {
     renderWithProviders(<AppShell />);
     const bottom = screen.getAllByRole('navigation', { name: 'Primary' })[1]!;
     const items = [...bottom.children] as HTMLElement[];
-    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Explore', 'Shop']);
-    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', null, '/shopping']);
-    expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'explore', 'shopping']);
+    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Services', 'Explore']);
+    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', '/services', null]);
+    expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'shopping', 'explore']);
   });
 
   it('the global search bar appears only on Home; other pages keep just the fixed header', () => {
@@ -38,6 +38,18 @@ describe('AppShell', () => {
     renderWithProviders(<AppShell />, { route: '/wallet' });
     expect(within(screen.getByRole('banner')).queryByLabelText('Search Click.')).toBeNull();
     expect(within(screen.getByRole('banner')).getByRole('img', { name: 'Click.' })).toBeInTheDocument();
+  });
+
+  it('the location selector lives only on Home; other pages never show or ask for location in the header', () => {
+    auth.value = signedIn;
+    const { unmount } = renderWithProviders(<AppShell />, { route: '/' });
+    expect(screen.getAllByRole('button', { name: /Change location/ }).length).toBeGreaterThan(0);
+    unmount();
+    for (const route of ['/rides', '/food', '/shopping', '/movies']) {
+      const r = renderWithProviders(<AppShell />, { route });
+      expect(screen.queryByRole('button', { name: /Change location/ })).toBeNull();
+      r.unmount();
+    }
   });
 
   it('Explore opens as a bottom sheet over the page for signed-in customers, and closes with Escape', async () => {

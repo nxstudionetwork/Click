@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "apps.activity",
     "apps.partners",
     "apps.buzz",
+    "apps.rides",
 ]
 
 MIDDLEWARE = [
@@ -170,6 +171,7 @@ REST_FRAMEWORK = {
         "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
+        "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }

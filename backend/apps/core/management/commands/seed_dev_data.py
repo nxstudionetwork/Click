@@ -17,6 +17,7 @@ from devseed.catalog import seed_catalog
 from devseed.customer import TEST_CUSTOMER, seed_test_customer
 from devseed.events import seed_events
 from devseed.food import seed_food
+from devseed.rides import seed_rides
 
 
 class Command(BaseCommand):
@@ -33,6 +34,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             seed_catalog(log)
             seed_food(log)
+            seed_rides(log)
             seed_events(log)
         if not opts["catalog_only"]:
             with transaction.atomic():

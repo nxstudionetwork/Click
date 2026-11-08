@@ -18,6 +18,7 @@ from rest_framework.routers import SimpleRouter
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
 from apps.buzz.views import BuzzFeedView
+from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
@@ -36,6 +37,7 @@ customer_router.register("addresses", AddressViewSet, basename="address")
 
 customer_urls = [
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
+    *ride_customer_urls,
     path("recommendations/stores", store_views.RecommendedStoresView.as_view(), name="recommended-stores"),
     path("cart", cart_views.CartView.as_view(), name="cart"),
     path("cart/items", cart_views.CartItemsView.as_view(), name="cart-items"),
@@ -79,6 +81,7 @@ api_v1 = [
     path("buzz", BuzzFeedView.as_view(), name="buzz"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
+    path("partner/", include(ride_partner_urls)),
     path("partner/", include("apps.partners.urls")),
 ]
 

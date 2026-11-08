@@ -43,6 +43,10 @@ import { WishlistPage } from './pages/WishlistPage';
 
 const guard = (el: React.ReactNode) => <RequireAuth>{el}</RequireAuth>;
 // The Click card (QR rendering) is only needed after signup / from Account, so it loads on demand.
+// Ride pages carry the map library (Leaflet), so they load on first visit rather than with the app.
+const RidePage = lazy(() => import('./pages/RidePage').then((m) => ({ default: m.RidePage })));
+const RideTripPage = lazy(() => import('./pages/RideTripPage').then((m) => ({ default: m.RideTripPage })));
+const rideFallback = <div className="stack"><div className="skeleton" style={{ height: 320, borderRadius: 20 }} /><div className="skeleton" style={{ height: 160, borderRadius: 20 }} /></div>;
 const CardPage = lazy(() => import('./onboarding/CardPage').then((m) => ({ default: m.CardPage })));
 const lazyCard = (onboardingStep: boolean) => <Suspense fallback={<div className="state"><div className="skeleton" style={{ width: 320, height: 200, borderRadius: 26 }} /></div>}><CardPage onboardingStep={onboardingStep} /></Suspense>;
 
@@ -93,7 +97,8 @@ function AppRoutes() {
         <Route path="movies" element={<MoviesPage />} />
         <Route path="movies/:slug" element={<EventPage />} />
         <Route path="shows/:id" element={<ShowPage />} />
-        <Route path="rides" element={<ServiceComingSoonPage key="rides" serviceId="rides" />} />
+        <Route path="rides" element={<Suspense fallback={rideFallback}><RidePage /></Suspense>} />
+        <Route path="rides/:id" element={guard(<Suspense fallback={rideFallback}><RideTripPage /></Suspense>)} />
         <Route path="parcels" element={<ServiceComingSoonPage key="parcels" serviceId="parcels" />} />
         <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
         <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />

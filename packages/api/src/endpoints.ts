@@ -1,7 +1,7 @@
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
@@ -143,6 +143,18 @@ export const customerApi = (http: HttpClient) => ({
     },
   },
   wallet: () => http.request<WalletSummary>('/customer/wallet'),
+  rides: {
+    places: (q: string) => http.request<{ results: RidePlaceResult[] }>('/customer/rides/places', { query: { q } }),
+    quote: (input: RideTripInput) => http.request<RideQuote>('/customer/rides/quote', { method: 'POST', body: input }),
+    request: (input: RideRequestInput) => http.request<Ride>('/customer/rides', { method: 'POST', body: input }),
+    list: (page?: number) => http.request<Paginated<RideSummary>>('/customer/rides', { query: { page } }),
+    get: (id: string) => http.request<Ride>(`/customer/rides/${id}`),
+    cancel: (id: string, reason = '') => http.request<Ride>(`/customer/rides/${id}/cancel`, { method: 'POST', body: { reason } }),
+    rate: (id: string, input: { stars: number; comment?: string; compliment?: string }) =>
+      http.request<Ride>(`/customer/rides/${id}/rating`, { method: 'POST', body: input }),
+    safety: (id: string, kind: 'sos' | 'share' | 'report', note = '') =>
+      http.request<{ recorded: boolean }>(`/customer/rides/${id}/safety`, { method: 'POST', body: { kind, note } }),
+  },
   bookings: {
     list: (when?: 'upcoming' | 'past') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
     get: (id: string) => http.request<Booking>(`/customer/bookings/${id}`),

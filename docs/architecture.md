@@ -23,12 +23,13 @@ addresses) · `stores` (storefronts of every vertical, categories, offers) · `c
 inventory, search) · `carts` · `orders` (placement, state machine, reorder) · `payments` · `wishlists` ·
 `notifications` · `rewards` (points ledger) · `support` (tickets) · `wallet` (append-only money ledger) ·
 `bookings` (venues, events, shows, seat-safe bookings) · `ai` (Buddy: provider-agnostic AI layer + customer-scoped tools,
-speech-to-text extension point) · `buzz` (actionable discovery feed composed from real offers, shows and stores).
+speech-to-text extension point) · `buzz` (actionable discovery feed composed from real offers, shows and stores) ·
+`rides` (ride types and rates, upfront pricing, driver matching, trip lifecycle, safety, ratings).
 
 Food, groceries and shopping share one commerce model. A `Store` has a `store_type` (`restaurant`, `grocery`,
 `retail`), and its products, cart, orders and payments are the same tables. A new commerce vertical is a new
-`store_type` plus UI, not a new system. Rides, deliveries, tickets and bookings get their own domains when they
-launch, because their lifecycles differ.
+`store_type` plus UI, not a new system. Rides, bookings and (later) deliveries have their own domains because
+their lifecycles differ.
 
 ## API surfaces (`/api/v1`)
 
@@ -41,10 +42,14 @@ launch, because their lifecycles differ.
 - **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, wallet, bookings, support/tickets, assistant/messages,
   assistant/capabilities, assistant/transcribe, profile/summary,
   cart/offer (POST apply / DELETE), orders/<id>/review, recommendations/stores}`
+  - Rides: `customer/rides/places?q=`, `customer/rides/quote` (POST trip → options with fares and pickup ETAs),
+    `customer/rides` (GET list, POST book; idempotent), `customer/rides/<id>`, `/cancel`, `/rating`, `/safety`.
   - `stores` also accepts `veg=true`, `min_rating`, `offers=true`, `max_price` and `sort=eta|price_low|price_high`.
 - **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
+  - Drivers (transport partners): `partner/rides/offers`, `partner/rides/<id>/accept`, `partner/rides/<id>/status`,
+    `partner/driver/location`.
 - **Business OS:** `os/*` (Phase 6)
 
 Rules:
@@ -99,6 +104,30 @@ and support tickets. Frontend route guards are UX only.
   - Placement is idempotent and prices are computed on the server.
   - Cancelling releases the seats and refunds wallet payments; it's allowed up to 2 hours before the show.
 
+## Rides
+
+- **Ride types** (`RideType`) hold the rates: base, per km, per minute, minimum, booking fee, per stop, and which
+  vehicle types serve them. Offers (`RideOffer`) are percent or flat, with an optional cap, minimum fare and ride types.
+- **Pricing** (`apps/rides/pricing.py`): distance is the straight line between points × 1.3 (road factor), labelled
+  `straight_line` in quotes and shown as "estimated from your points (no live traffic)". No routing or traffic
+  provider is connected yet. The fare is computed on the server and locked when the ride is booked. Trips must be
+  0.3 to 60 km, with at most 2 stops.
+- **Matching** (`matching.py`): eligible drivers are verified, available transport partners whose vehicle type fits,
+  whose location is at most 10 minutes old and within 6 km, and who aren't on another trip. The nearest 5 get an
+  offer and the first to accept gets the ride. Nobody is assigned at random. With no eligible driver the ride ends
+  as `no_driver`. A driver location counts as live only if it is at most 45 seconds old; otherwise the app shows its time.
+- **Lifecycle:** `scheduled → searching → driver_assigned → driver_arrived → in_progress → completed`, plus
+  `cancelled` and `no_driver`. Transitions are checked against `ALLOWED_TRANSITIONS` and logged as `RideStatusEvent`s.
+  Wallet rides are charged at booking and refunded on cancel or no driver; cash is recorded as captured on completion.
+  Scheduled rides (30 minutes to 7 days ahead) are dispatched by `manage.py dispatch_scheduled_rides` (run it from cron).
+- **Safety:** the share, SOS (opens the phone's emergency call to 112 and logs the event) and report actions are stored
+  as `RideSafetyEvent`. The driver card shows first name, rating, vehicle, colour and plate. Location is visible only
+  during an active trip.
+- **Map:** Leaflet with configurable tiles (`VITE_MAP_TILE_URL`, `VITE_MAP_ATTRIBUTION`; default OpenStreetMap tiles
+  for development only). Google Maps is not used. Place search covers saved addresses with coordinates, recent ride
+  places and Click. stores. No external geocoder is connected yet.
+- **Updates:** the trip page polls every 5 seconds while a ride is active (no push channel yet).
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching
@@ -106,14 +135,19 @@ and support tickets. Frontend route guards are UX only.
   from `assets/Click Brand Style Guide Board.png`: blue #2F3CFF / #4F6BFF, amber #FBBF24, navy #0B1F44, white #F8FAFC.
 - **Appearance:** White (default) or Dark navy, chosen in Settings (or "Match device"); stored per device and applied
   before first paint (`src/appearance.ts`, `data-appearance` on `<html>`). All colours are tokens in `styles/tokens.css`.
-- **Navigation:** primary nav is Home | Ride | Food | Explore | Shop (`/`, `/rides`, `/food`, Explore sheet, `/shopping`);
-  each item carries its service colour. Profile is reached from the header avatar. `/home`, `/ride`, `/shop` and
+- **Navigation:** primary nav is Home | Ride | Food | Services | Explore (`/`, `/rides`, `/food`, `/services`, Explore sheet);
+  each item carries its service colour (Services uses the Shopping indigo). Profile is reached from the header avatar.
+  Shopping, Groceries and Movies are reached from Home and Explore. `/home`, `/ride`, `/shop` and
   `/profile` redirect to their routes.
 - **Header rule:** the Click. header is sticky on every shell page and content starts below it. The global search bar
   appears only on Home (and `/search`); Food, Groceries and Shop have their own search; other pages have none.
+- **Location rule:** the active location is chosen on Home only, from the addresses saved in Profile → Addresses
+  (the selector never adds or edits them; with none saved it links to Addresses). It is stored per device
+  (`click.selectedAddressId`) and used across the app: Home, store distances, delivery, and the Ride pickup.
+  Other pages never show it in the header. Long addresses are truncated.
 - **Themes:** each service sets its accent (`--c-theme`, `-solid`, `-soft`, `-strong`) and hero gradient through
   `data-theme` on any element. Typography, spacing, components and motion are shared.
-- **Header:** Click. logo, location ("Delivering to"), search (text with recent searches and hints, voice, camera QR scan),
+- **Header:** Click. logo, location ("Delivering to", Home only), search (Home only) (text with recent searches and hints, voice, camera QR scan),
   Buddy (GO / MAN chooser), notifications, cart (only when it has items) and profile (links to `/account`).
 - **Home (`src/pages/HomePage.tsx`):** composed from `src/features/home/*`, in order: hero (greeting with the customer's
   name), quick services (from `config/services.ts`), offers, near you, popular, discover, Buzz, recent activity,
@@ -136,8 +170,12 @@ and support tickets. Frontend route guards are UX only.
   Addresses, Payments, Notifications (unread count), Settings, Help & Support. Security sheet and Log out (confirmation;
   ends the Click. session server-side and clears all cached customer data). Account deletion is not offered: there is
   no backend deletion workflow yet.
-- **Activity (`/activity`):** a timeline read from the source domains (orders, bookings), filterable by Food,
-  Groceries, Shopping and Bookings; rides, parcels and service bookings join as those services launch.
+- **Activity (`/activity`):** a timeline read from the source domains (orders, bookings, rides), filterable by Rides,
+  Food, Groceries, Shopping and Bookings; parcels and service bookings join as those services launch.
+- **Ride (`/rides`, `/rides/:id`):** map first, then pickup (starts at the active location), up to 2 stops and the
+  drop, quick chips (Home, Work, Recent, Schedule, For someone), ride options with server fares and pickup ETAs,
+  offers, payment (cash or wallet), then Confirm. The trip page shows status, the driver card, safety tools, the
+  receipt, Ride again and a one-time rating. Ride pages are lazy-loaded so the map library loads only when needed.
 - **Service pages (`/food`, `/groceries`, `/shopping`):** one pattern (`pages/ServicePage.tsx`, `features/service/*`, config in
   `config/servicePages.ts`): intro (title + fixed tagline) → horizontal categories from the API → service search
   (debounced; stores incl. menu matches + dishes/products) → filter bar (Pure veg, Rating 4.0+, Offers, Open now,
