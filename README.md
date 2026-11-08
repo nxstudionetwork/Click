@@ -1,5 +1,21 @@
 # Click
 
+## Run Click on Windows (easy way)
+
+**One-time installs** (keep the default options in each installer):
+1. **Node.js 22 LTS**: https://nodejs.org
+2. **Python 3.12+**: https://www.python.org/downloads/ (tick **"Add python.exe to PATH"** on the first screen)
+3. **PostgreSQL 16**: https://www.postgresql.org/download/windows/ (write down the password you choose for
+   the `postgres` user)
+
+**Every time:**
+1. Get the latest code: open the Click folder, then run `git pull` in a terminal (or GitHub Desktop → *Pull origin*).
+2. Double-click **`START-CLICK.bat`**.
+   - The first run installs everything and asks once for your PostgreSQL password.
+   - Click opens in your browser at http://localhost:5173.
+   - Two windows stay open (the API and the App). Close them to stop Click.
+3. To sign in quickly while testing, use **Login as Test Customer** on the sign-in screen.
+
 Click is a platform that brings everyday services (food, groceries, rides, deliveries and more) into one ecosystem.
 
 ## Repository layout
