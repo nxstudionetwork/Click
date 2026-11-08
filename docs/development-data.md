@@ -66,5 +66,11 @@ lives in Firebase Console and only works for the test number.
 | Test customer: support tickets | 20 (all statuses) |
 | Test customer: cart | 2 items |
 
-Rides, parcels, home services and Buzz aren't seeded because those features don't exist yet; their records
-would have no real model, API or flow behind them. They will be seeded when each feature is built.
+Stores and the test customer's addresses have coordinates near real Bengaluru locality centres (stable per record,
+`devseed.locality_point`), so Home's "Near you" can be tested with real distance queries. Address coordinates are
+only filled where missing, never overwritten.
+
+Click. Buzz needs no seed: its feed is built from the offers, shows and stores above.
+
+Rides, parcels and home services aren't seeded because those features don't exist yet; their records would have no
+real model, API or flow behind them. They will be seeded when each feature is built.

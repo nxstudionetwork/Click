@@ -1,60 +1,85 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { CameraSearch } from '../../features/assist/CameraSearch';
+import { VoiceInput } from '../../features/assist/VoiceInput';
+import { clearRecentSearches, recentSearches, rememberSearch, SEARCH_HINTS } from '../../features/search/recent';
 import { Icon, Sheet } from '../ui';
 
-type Pending = 'voice' | 'camera' | null;
+type Panel = 'voice' | 'camera' | null;
 
-/**
- * One Click search: type, speak, show or ask. Text search and "ask Buddy" are live.
- * Voice and camera input need a speech-to-text / image-recognition provider that is
- * not yet approved (browser speech APIs route audio to third-party clouds such as
- * Google's, which Click does not use), so they explain that instead of faking it.
- */
+/** One Click. search: type (with recent searches and hints), speak, or scan. Results come from /search. */
 export function GlobalSearch({ compact = false }: { compact?: boolean }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [params] = useSearchParams();
   const [q, setQ] = useState(pathname === '/search' ? params.get('q') ?? '' : '');
-  const [pending, setPending] = useState<Pending>(null);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [focused, setFocused] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+  const wrap = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { if (pathname !== '/search') setQ(''); }, [pathname]);
+  useEffect(() => { if (focused) setRecent(recentSearches()); }, [focused]);
   useEffect(() => {
-    if (pathname !== '/search') setQ('');
-  }, [pathname]);
+    if (!focused) return;
+    const onDoc = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setFocused(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [focused]);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    navigate(`/search${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`);
+  const search = (term: string) => {
+    const t = term.trim();
+    if (t) rememberSearch(t);
+    setFocused(false);
+    navigate(`/search${t ? `?q=${encodeURIComponent(t)}` : ''}`);
   };
+  const submit = (e: FormEvent) => { e.preventDefault(); search(q); };
 
   return (
-    <>
+    <div className="gsearch-wrap" ref={wrap}>
       <form className={`gsearch ${compact ? 'gsearch--compact' : ''}`} role="search" onSubmit={submit}>
         <Icon name="search" size={18} className="gsearch__lead" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search food, groceries, products, movies…" aria-label="Search Click" enterKeyHint="search" />
+        <input
+          value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocused(true)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setFocused(false); }}
+          placeholder="Search Click." aria-label="Search Click." enterKeyHint="search" autoComplete="off"
+        />
         <div className="gsearch__tools">
-          <button type="button" className="gsearch__tool" aria-label="Search by voice" onClick={() => setPending('voice')}><Icon name="mic" size={18} /></button>
-          <button type="button" className="gsearch__tool" aria-label="Search with camera" onClick={() => setPending('camera')}><Icon name="camera" size={18} /></button>
-          <button type="button" className="gsearch__tool gsearch__tool--ai" aria-label="Ask Buddy"
-            onClick={() => navigate(q.trim() ? `/buddy?q=${encodeURIComponent(q.trim())}` : '/buddy')}>
-            <Icon name="sparkle" size={18} />
-          </button>
+          <button type="button" className="gsearch__tool" aria-label="Search by voice" onClick={() => setPanel('voice')}><Icon name="mic" size={18} /></button>
+          <button type="button" className="gsearch__tool" aria-label="Search with camera" onClick={() => setPanel('camera')}><Icon name="camera" size={18} /></button>
         </div>
       </form>
-      <Sheet open={pending !== null} onClose={() => setPending(null)} label={pending === 'voice' ? 'Voice search' : 'Camera search'}>
-        <div className="stack" style={{ padding: 'var(--s-6)', textAlign: 'center', alignItems: 'center' }}>
-          <div className="state__icon"><Icon name={pending === 'voice' ? 'mic' : 'camera'} /></div>
-          <h2>{pending === 'voice' ? 'Voice search is coming' : 'Camera search is coming'}</h2>
-          <p className="muted">
-            {pending === 'voice'
-              ? 'Speak to search Click and talk to Buddy. We’re choosing a private speech provider before turning this on.'
-              : 'Snap a dish or product to find it on Click. We’re choosing an image-recognition provider before turning this on.'}
-          </p>
-          <div className="row">
-            <button className="btn btn--primary" onClick={() => { setPending(null); navigate('/buddy'); }}>Ask Buddy instead</button>
-            <button className="btn btn--ghost" onClick={() => setPending(null)}>Close</button>
-          </div>
+
+      {focused && !q.trim() && (
+        <div className="gsearch__panel" role="dialog" aria-label="Search suggestions">
+          {recent.length > 0 && (
+            <section>
+              <div className="spread"><span className="gsearch__heading">Recent</span>
+                <button className="gsearch__clear" onClick={() => { clearRecentSearches(); setRecent([]); }}>Clear</button></div>
+              <ul className="gsearch__recent">
+                {recent.map((r) => (
+                  <li key={r}><button onClick={() => search(r)}><Icon name="history" size={16} />{r}</button></li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <section>
+            <span className="gsearch__heading">Try</span>
+            <div className="gsearch__hints">
+              {SEARCH_HINTS.map((h) => <Link key={h.label} to={h.to} data-theme={h.theme} className="hint-chip" onClick={() => setFocused(false)}>{h.label}</Link>)}
+            </div>
+          </section>
+        </div>
+      )}
+
+      <Sheet open={panel !== null} onClose={() => setPanel(null)} label={panel === 'voice' ? 'Voice search' : 'Camera search'}>
+        <div className="stack" style={{ padding: 'var(--s-5)' }}>
+          <div className="spread"><h2>{panel === 'voice' ? 'Voice search' : 'Scan with camera'}</h2>
+            <button className="icon-btn" aria-label="Close" onClick={() => setPanel(null)}><Icon name="close" /></button></div>
+          {panel === 'voice' && <VoiceInput onText={(t) => { setPanel(null); search(t); }} placeholder="Type your search" />}
+          {panel === 'camera' && <CameraSearch onDone={() => setPanel(null)} />}
         </div>
       </Sheet>
-    </>
+    </div>
   );
 }

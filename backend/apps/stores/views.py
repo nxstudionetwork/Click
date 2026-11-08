@@ -2,6 +2,7 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 from rest_framework import generics, permissions
 
+from .geo import NearQuerySerializer, with_distance
 from .models import Store, StoreCategory, StoreOffer, StoreType
 from .serializers import OfferWithStoreSerializer, StoreCategorySerializer, StoreSerializer
 
@@ -20,8 +21,19 @@ def public_stores():
     )
 
 
+SORTS = {
+    "popular": ("-rating_count", "-rating_average", "name"),
+    "rating": ("-rating_average", "-rating_count", "name"),
+    "new": ("-created_at", "name"),
+}
+
+
 class StoreListView(generics.ListAPIView):
-    """GET /api/v1/stores?type=restaurant&category=pizza&search=..."""
+    """GET /api/v1/stores?type=restaurant&category=pizza&search=...
+
+    Location: `lat`, `lng` (and optional `radius` km, default 10) return only stores with known coordinates
+    inside the radius, each with `distanceKm`, nearest first. `sort=popular|rating|new|distance`.
+    """
 
     serializer_class = StoreSerializer
     permission_classes = [permissions.AllowAny]
@@ -29,6 +41,17 @@ class StoreListView(generics.ListAPIView):
     def get_queryset(self):
         qs = public_stores()
         params = self.request.query_params
+        near = None
+        if "lat" in params or "lng" in params:
+            s = NearQuerySerializer(data=params)
+            s.is_valid(raise_exception=True)
+            near = s.validated_data
+            qs = with_distance(qs, near["lat"], near["lng"]).filter(distance_km__lte=near["radius"])
+        sort = params.get("sort")
+        if sort in SORTS:
+            qs = qs.order_by(*SORTS[sort])
+        elif near and sort in (None, "", "distance"):
+            qs = qs.order_by("distance_km", "name")
         store_type = params.get("type")
         if store_type in StoreType.values:
             qs = qs.filter(store_type=store_type)

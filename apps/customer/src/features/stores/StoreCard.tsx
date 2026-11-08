@@ -19,7 +19,8 @@ export function StoreCard({ store }: { store: Store }) {
           <Rating value={store.ratingAverage} />
         </div>
         <div className="store-card__meta">
-          <span>{etaLabel(store.deliveryTimeMin, store.deliveryTimeMax)}</span>
+          {store.distanceKm != null && <span className="store-card__dist">{store.distanceKm < 1 ? `${Math.round(store.distanceKm * 1000)} m` : `${store.distanceKm.toFixed(1)} km`}</span>}
+          <span className={store.distanceKm != null ? 'dot-sep' : undefined}>{etaLabel(store.deliveryTimeMin, store.deliveryTimeMax)}</span>
           <span className="dot-sep">{Number(store.deliveryFee) ? `${formatMoney(store.deliveryFee, store.currency)} delivery` : 'Free delivery'}</span>
           <span className="dot-sep">{priceLevelLabel(store.priceLevel)}</span>
         </div>

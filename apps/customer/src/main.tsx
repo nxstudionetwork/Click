@@ -14,6 +14,7 @@ import './styles/ui.css';
 import './styles/layout.css';
 import './styles/features.css';
 import './styles/onboarding.css';
+import './styles/home.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -9,7 +9,7 @@ import type { IconName } from '../components/ui';
 
 export type ServiceStatus = 'live' | 'soon';
 export type ServiceGroup = 'everyday' | 'bookings' | 'services' | 'content';
-export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'rewards' | 'wallet' | 'buzz' | 'buddy';
+export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile';
 
 export interface ClickService {
   id: string;
@@ -24,23 +24,25 @@ export interface ClickService {
   storeType?: StoreType;
   /** What will exist when a 'soon' service launches (shown honestly, never as bookable). */
   upcoming?: string[];
+  /** Short label for compact rows (Home quick services). Defaults to `name`. */
+  short?: string;
 }
 
 export const SERVICES: ClickService[] = [
   { id: 'food', name: 'Food', tagline: 'Restaurants near you', icon: 'food', path: '/food', status: 'live', group: 'everyday', theme: 'food', storeType: 'restaurant' },
   { id: 'groceries', name: 'Groceries', tagline: 'Daily essentials, fast', icon: 'grocery', path: '/groceries', status: 'live', group: 'everyday', theme: 'grocery', storeType: 'grocery' },
-  { id: 'shopping', name: 'Shopping', tagline: 'Electronics, fashion, home', icon: 'shop', path: '/shopping', status: 'live', group: 'everyday', theme: 'shopping', storeType: 'retail' },
-  { id: 'rides', name: 'Rides', tagline: 'Get around the city', icon: 'ride', path: '/rides', status: 'soon', group: 'everyday', theme: 'ride',
+  { id: 'shopping', name: 'Shopping', short: 'Shop', tagline: 'Electronics, fashion, home', icon: 'shop', path: '/shopping', status: 'live', group: 'everyday', theme: 'shopping', storeType: 'retail' },
+  { id: 'rides', name: 'Rides', short: 'Ride', tagline: 'Get around the city', icon: 'ride', path: '/rides', status: 'soon', group: 'everyday', theme: 'ride',
     upcoming: ['Pickup and drop with saved places', 'Ride options with upfront fare estimates', 'Driver and vehicle details', 'Ride history and receipts'] },
-  { id: 'parcels', name: 'Parcels', tagline: 'Send packages across town', icon: 'parcel', path: '/parcels', status: 'soon', group: 'everyday', theme: 'parcel',
+  { id: 'parcels', name: 'Parcels', short: 'Parcel', tagline: 'Send packages across town', icon: 'parcel', path: '/parcels', status: 'soon', group: 'everyday', theme: 'parcel',
     upcoming: ['Sender and receiver details', 'Package size and instructions', 'Price estimate before booking', 'Delivery status and history'] },
-  { id: 'movies', name: 'Movies & Events', tagline: 'Book seats for shows near you', icon: 'ticket', path: '/movies', status: 'live', group: 'bookings', theme: 'movies' },
+  { id: 'movies', name: 'Movies & Events', short: 'Movies', tagline: 'Book seats for shows near you', icon: 'film', path: '/movies', status: 'live', group: 'bookings', theme: 'movies' },
+  { id: 'events', name: 'Live Events', short: 'Events', tagline: 'Concerts, comedy and more', icon: 'ticket', path: '/movies?tab=events', status: 'live', group: 'bookings', theme: 'movies' },
   { id: 'experiences', name: 'Experiences', tagline: 'Tours, classes and activities', icon: 'compass', path: '/experiences', status: 'soon', group: 'bookings', theme: 'movies',
     upcoming: ['Curated local experiences', 'Date and slot selection', 'Instant confirmation'] },
-  { id: 'services', name: 'Home Services', tagline: 'Cleaning, repairs, professionals', icon: 'wrench', path: '/services', status: 'soon', group: 'services', theme: 'services',
+  { id: 'services', name: 'Home Services', short: 'Services', tagline: 'Cleaning, repairs, professionals', icon: 'wrench', path: '/services', status: 'soon', group: 'services', theme: 'services',
     upcoming: ['Verified providers with ratings', 'Upfront pricing and estimates', 'Pick a date and time slot', 'Provider status updates and reviews'] },
-  { id: 'buzz', name: 'Click Buzz', tagline: 'Discover food, places and products', icon: 'play', path: '/buzz', status: 'soon', group: 'content', theme: 'buzz',
-    upcoming: ['Short videos from restaurants, stores and creators', 'Tap through to the dish, product or event', 'Save and share what you like'] },
+  { id: 'buzz', name: 'Click. Buzz', short: 'Buzz', tagline: 'Instants you can act on', icon: 'play', path: '/buzz', status: 'live', group: 'content', theme: 'buzz' },
 ];
 
 export const SERVICE_GROUPS: { id: ServiceGroup; label: string }[] = [
@@ -64,7 +66,7 @@ const THEME_ROUTES: [RegExp, Theme][] = [
   [/^\/food/, 'food'],
   [/^\/groceries/, 'grocery'],
   [/^\/shopping/, 'shopping'],
-  [/^\/(rides)/, 'ride'],
+  [/^\/(rides|ride)/, 'ride'],
   [/^\/parcels/, 'parcel'],
   [/^\/(movies|events|shows|bookings|experiences)/, 'movies'],
   [/^\/services/, 'services'],
@@ -72,6 +74,8 @@ const THEME_ROUTES: [RegExp, Theme][] = [
   [/^\/wallet/, 'wallet'],
   [/^\/buzz/, 'buzz'],
   [/^\/buddy/, 'buddy'],
+  [/^\/(explore|search)/, 'explore'],
+  [/^\/(account|settings|activity|orders|wishlist|notifications|help)/, 'profile'],
 ];
 
 export function themeForPath(path: string, storeType?: StoreType): Theme {

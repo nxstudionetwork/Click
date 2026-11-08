@@ -64,3 +64,39 @@ def test_buddy_order_status_uses_customers_own_orders(api, customer, other_custo
 
 def test_buddy_never_claims_unlaunched_services(auth_api):
     assert "isn’t live" in ask(auth_api, "book me a cab to the airport")["message"]["content"]
+
+
+def test_capabilities_report_voice_off_by_default(auth_api):
+    r = auth_api.get("/api/v1/customer/assistant/capabilities")
+    assert r.status_code == 200
+    assert r.json() == {"mode": "basic", "voice": False, "visualSearch": False}
+
+
+def test_capabilities_and_transcribe_require_a_customer(api):
+    assert api.get("/api/v1/customer/assistant/capabilities").status_code == 401
+    assert api.post("/api/v1/customer/assistant/transcribe").status_code == 401
+
+
+def test_transcribe_is_unavailable_without_a_provider(auth_api):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    audio = SimpleUploadedFile("a.webm", b"\x1aE\xdf\xa3", content_type="audio/webm")
+    r = auth_api.post("/api/v1/customer/assistant/transcribe", {"audio": audio}, format="multipart")
+    assert r.status_code == 503 and r.json()["error"]["code"] == "speech_unavailable"
+
+
+def test_transcribe_uses_configured_provider_and_validates_audio(auth_api, settings):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.CLICK_SPEECH_PROVIDER = "apps.ai.tests.EchoSpeech"
+    ok = SimpleUploadedFile("a.webm", b"audio", content_type="audio/webm")
+    r = auth_api.post("/api/v1/customer/assistant/transcribe", {"audio": ok}, format="multipart")
+    assert r.status_code == 200 and r.json() == {"text": "find biryani"}
+    bad = SimpleUploadedFile("a.txt", b"nope", content_type="text/plain")
+    assert auth_api.post("/api/v1/customer/assistant/transcribe", {"audio": bad}, format="multipart").status_code == 400
+    assert auth_api.get("/api/v1/customer/assistant/capabilities").json()["voice"] is True
+
+
+class EchoSpeech:
+    def transcribe(self, audio, content_type, language):
+        return " find biryani "

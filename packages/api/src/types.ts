@@ -103,6 +103,8 @@ export interface Store {
   currency: string;
   isOpen: boolean;
   offers: StoreOffer[];
+  /** Kilometres from the queried point; only present for location queries (lat/lng), otherwise null. */
+  distanceKm: number | null;
 }
 
 export interface StoreQuery {
@@ -112,6 +114,11 @@ export interface StoreQuery {
   city?: string;
   open?: boolean;
   page?: number;
+  /** Customer's point: returns only stores with known coordinates within `radius` km (default 10), nearest first. */
+  lat?: number;
+  lng?: number;
+  radius?: number;
+  sort?: 'popular' | 'rating' | 'new' | 'distance';
 }
 
 export interface Product {
@@ -394,6 +401,30 @@ export interface BuddyReply {
   cards: BuddyCard[];
   actions: BuddyAction[];
   mode: 'basic' | 'provider';
+}
+
+export interface AssistantCapabilities {
+  mode: 'basic' | 'provider' | 'unavailable';
+  /** Speech-to-text is configured on the server (Buddy GO / voice search can record). */
+  voice: boolean;
+  /** Image recognition is configured on the server (camera search beyond QR). */
+  visualSearch: boolean;
+}
+
+// --- Buzz -------------------------------------------------------------------
+/** One actionable Click. Buzz instant. Built from real Click records; media is never generated. */
+export interface BuzzItem {
+  id: string;
+  kind: 'offer' | 'event' | 'store' | 'post';
+  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'ride' | 'parcel';
+  title: string;
+  body: string;
+  tag: string;
+  source: { name: string; handle: string };
+  mediaUrl: string;
+  mediaType: 'image' | 'video' | '';
+  action: { label: string; path: string };
+  publishedAt: string;
 }
 
 // --- Wallet -----------------------------------------------------------------

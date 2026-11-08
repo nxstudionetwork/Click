@@ -15,8 +15,9 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
-from apps.ai.views import CustomerAssistantView
+from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
+from apps.buzz.views import BuzzFeedView
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
@@ -51,6 +52,8 @@ customer_urls = [
     path("support/tickets", support_views.SupportTicketListCreateView.as_view(), name="support-tickets"),
     path("support/tickets/<uuid:pk>", support_views.SupportTicketDetailView.as_view(), name="support-ticket"),
     path("assistant/messages", CustomerAssistantView.as_view(), name="assistant"),
+    path("assistant/capabilities", AssistantCapabilitiesView.as_view(), name="assistant-capabilities"),
+    path("assistant/transcribe", AssistantTranscribeView.as_view(), name="assistant-transcribe"),
     path("wallet", WalletView.as_view(), name="wallet"),
     path("bookings", booking_views.BookingListCreateView.as_view(), name="bookings"),
     path("bookings/<uuid:pk>", booking_views.BookingDetailView.as_view(), name="booking-detail"),
@@ -69,6 +72,7 @@ api_v1 = [
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),
     path("shows/<uuid:pk>", booking_views.ShowSeatMapView.as_view(), name="show-seatmap"),
     path("offers", store_views.OfferListView.as_view(), name="offers"),
+    path("buzz", BuzzFeedView.as_view(), name="buzz"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
     path("partner/", include("apps.partners.urls")),

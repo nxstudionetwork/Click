@@ -49,6 +49,7 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/wallet      Click Wallet (append-only ledger; pay + refunds)
   apps/bookings    movies & live events: venues, shows, seat-safe bookings
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
+  apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),

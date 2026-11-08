@@ -69,6 +69,7 @@ export const MOCK_STORES: Store[] = SEEDS.map(([slug, name, cats, rating, count,
   currency: 'INR',
   isOpen: open,
   offers: offer ? [{ id: `mock-offer-${i + 1}`, title: offer, description: '', endsAt: null }] : [],
+  distanceKm: null,
 }));
 
 const MENU_ITEMS: Record<string, [string, Product['dietary'], string][]> = {

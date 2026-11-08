@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.activity",
     "apps.partners",
+    "apps.buzz",
 ]
 
 MIDDLEWARE = [
@@ -242,6 +243,10 @@ CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365")
 # Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
 # (built-in, answers only from real Click data). Set to empty to disable AI.
 CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")
+# Speech-to-text for Buddy GO / voice search (dotted path to an apps.ai.speech.SpeechProvider). Empty = voice off.
+CLICK_SPEECH_PROVIDER = os.environ.get("CLICK_SPEECH_PROVIDER", "")
+# Image recognition for camera search. Empty = off (QR scanning still works on-device in the app).
+CLICK_VISION_PROVIDER = os.environ.get("CLICK_VISION_PROVIDER", "")
 
 LOGGING = {
     "version": 1,

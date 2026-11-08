@@ -1,7 +1,7 @@
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
@@ -40,6 +40,8 @@ export const catalogApi = (http: HttpClient) => ({
   search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
+  /** Click. Buzz: actionable instants from real offers, shows and stores. */
+  buzz: (limit = 12) => http.request<{ results: BuzzItem[] }>('/buzz', { query: { limit }, auth: false }),
 });
 
 /** Movies & live events (public discovery). */
@@ -117,6 +119,14 @@ export const customerApi = (http: HttpClient) => ({
   assistant: {
     send: (messages: AssistantMessage[]) =>
       http.request<BuddyReply>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+    capabilities: () => http.request<AssistantCapabilities>('/customer/assistant/capabilities'),
+    /** Speech to text (503 `speech_unavailable` until a provider is configured). */
+    transcribe: (audio: Blob, language = 'en-IN') => {
+      const form = new FormData();
+      form.append('audio', audio, 'speech');
+      form.append('language', language);
+      return http.request<{ text: string }>('/customer/assistant/transcribe', { method: 'POST', body: form });
+    },
   },
   wallet: () => http.request<WalletSummary>('/customer/wallet'),
   bookings: {

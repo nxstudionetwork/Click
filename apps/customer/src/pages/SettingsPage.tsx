@@ -3,6 +3,13 @@ import { ApiError } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, TextField, useToast } from '../components/ui';
 import { api } from '../lib/api';
+import { useAppearance, type Appearance } from '../appearance';
+
+const APPEARANCES: { id: Appearance; label: string }[] = [
+  { id: 'light', label: 'White' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'system', label: 'Match device' },
+];
 
 export function SettingsPage() {
   const { user, logout, refreshUser } = useAuth();
@@ -10,6 +17,7 @@ export function SettingsPage() {
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const { appearance, setAppearance } = useAppearance();
 
   useEffect(() => { setFullName(user?.fullName ?? ''); }, [user]);
 
@@ -40,6 +48,15 @@ export function SettingsPage() {
         {errors._ && <p className="field__error" role="alert">{errors._}</p>}
         <Button type="submit" loading={saving} style={{ alignSelf: 'flex-start' }}>Save changes</Button>
       </form>
+      <section className="card card--pad stack" aria-labelledby="appearance-h">
+        <h3 id="appearance-h">Appearance</h3>
+        <p className="small muted">White is Click.’s standard look. Dark uses deep navy, easier on the eyes at night.</p>
+        <div className="chips" role="radiogroup" aria-labelledby="appearance-h">
+          {APPEARANCES.map((a) => (
+            <button key={a.id} type="button" role="radio" aria-checked={appearance === a.id} aria-pressed={appearance === a.id} className="chip" onClick={() => setAppearance(a.id)}>{a.label}</button>
+          ))}
+        </div>
+      </section>
       <section className="card card--pad stack">
         <h3>Session</h3>
         <p className="small muted">Signing out ends this session on this device.</p>

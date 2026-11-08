@@ -14,6 +14,8 @@ import { ActivityPage } from './pages/ActivityPage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BuddyPage } from './pages/BuddyPage';
+import { BuzzPage } from './pages/BuzzPage';
+import { useAppearance } from './appearance';
 import { EventPage } from './pages/EventPage';
 import { MoviesPage } from './pages/MoviesPage';
 import { ShowPage } from './pages/ShowPage';
@@ -45,6 +47,7 @@ const CardPage = lazy(() => import('./onboarding/CardPage').then((m) => ({ defau
 const lazyCard = (onboardingStep: boolean) => <Suspense fallback={<div className="state"><div className="skeleton" style={{ width: 320, height: 200, borderRadius: 26 }} /></div>}><CardPage onboardingStep={onboardingStep} /></Suspense>;
 
 export function App() {
+  useAppearance(); // keeps the saved White / Dark / device appearance applied (and follows device changes)
   const [splash, setSplash] = useState(() => !splashAlreadyShown());
   const { status } = useAuth();
   const navigate = useNavigate();
@@ -71,6 +74,9 @@ function AppRoutes() {
       <Route path="signup" element={<SignupPage />} />
       <Route path="welcome/card" element={guard(lazyCard(true))} />
       <Route path="register" element={<Navigate to="/login" replace />} />
+      {/* Immersive experiences with their own layouts (no app header / bottom navigation) */}
+      <Route path="buddy" element={<BuddyPage />} />
+      <Route path="buzz" element={<BuzzPage />} />
       <Route element={<AppShell />}>
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
@@ -89,12 +95,14 @@ function AppRoutes() {
         <Route path="parcels" element={<ServiceComingSoonPage key="parcels" serviceId="parcels" />} />
         <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
         <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
-        <Route path="buzz" element={<ServiceComingSoonPage key="buzz" serviceId="buzz" />} />
         <Route path="tickets" element={<Navigate to="/movies" replace />} />
         <Route path="deliveries" element={<Navigate to="/parcels" replace />} />
         <Route path="help" element={<HelpPage />} />
-        <Route path="buddy" element={<BuddyPage />} />
         <Route path="assistant" element={<Navigate to="/buddy" replace />} />
+        {/* Friendly aliases for the primary destinations */}
+        <Route path="home" element={<Navigate to="/" replace />} />
+        <Route path="ride" element={<Navigate to="/rides" replace />} />
+        <Route path="profile" element={<Navigate to="/account" replace />} />
 
         {/* Customer-owned data (authenticated; API enforces ownership) */}
         <Route path="cart" element={guard(<CartPage />)} />

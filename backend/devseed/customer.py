@@ -29,6 +29,8 @@ from apps.users.models import User
 from apps.wallet.models import WalletTransaction
 from apps.wishlists.models import WishlistItem
 
+from . import locality_point
+
 TEST_CUSTOMER = {
     "email": "test.customer@click.local",  # reserved .local domain: can never be a real inbox
     "full_name": "Click Test User",
@@ -124,6 +126,9 @@ def ensure_test_customer(log) -> CustomerProfile:
         Address.objects.get_or_create(customer=profile, line1=line1, defaults=dict(
             label=label, recipient_name=name, phone=phone, line2=line2, landmark=landmark, city="Bengaluru",
             state="Karnataka", postal_code=pin, country="IN", is_default=default and not profile.addresses.filter(is_default=True).exists()))
+        # Coordinates (added later): filled only where missing, so customer edits are never overwritten.
+        lat, lng = locality_point(line2, line1)
+        Address.objects.filter(customer=profile, line1=line1, latitude__isnull=True).update(latitude=lat, longitude=lng)
     log(f"test customer: {user.email} ({profile.customer_code}), {profile.addresses.count()} addresses")
     return profile
 

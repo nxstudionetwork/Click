@@ -22,7 +22,8 @@ TypeScript and CI tooling work without quoting.
 addresses) · `stores` (storefronts of every vertical, categories, offers) · `catalog` (sections, products,
 inventory, search) · `carts` · `orders` (placement, state machine, reorder) · `payments` · `wishlists` ·
 `notifications` · `rewards` (points ledger) · `support` (tickets) · `wallet` (append-only money ledger) ·
-`bookings` (venues, events, shows, seat-safe bookings) · `ai` (Buddy: provider-agnostic AI layer + customer-scoped tools).
+`bookings` (venues, events, shows, seat-safe bookings) · `ai` (Buddy: provider-agnostic AI layer + customer-scoped tools,
+speech-to-text extension point) · `buzz` (actionable discovery feed composed from real offers, shows and stores).
 
 Food, groceries and shopping share one commerce model. A `Store` has a `store_type` (`restaurant`, `grocery`,
 `retail`), and its products, cart, orders and payments are the same tables. A new commerce vertical is a new
@@ -31,9 +32,14 @@ launch, because their lifecycles differ.
 
 ## API surfaces (`/api/v1`)
 
-- **Public discovery:** `stores`, `stores/<slug>`, `stores/<slug>/menu`, `store-categories`, `products/<id>`, `search`, `offers`, `events`, `events/<slug>`, `shows/<id>`
+- **Public discovery:** `stores`, `stores/<slug>`, `stores/<slug>/menu`, `store-categories`, `products/<id>`, `search`, `offers`, `events`, `events/<slug>`, `shows/<id>`, `buzz`
+  - `stores?lat=&lng=&radius=` returns only stores with known coordinates within `radius` km (default 10, max 50), nearest
+    first, each with `distanceKm` (haversine in PostgreSQL; `null` on non-location queries). `sort=popular|rating|new|distance`.
+  - `buzz?limit=` (1–30) returns `{results: [BuzzItem]}`: each item is a real offer, now-showing event or top-rated open
+    store with exactly one `action {label, path}` into the matching flow. Media is the record's own image/video only.
 - **Shared identity:** `auth/register|login|refresh|logout`, `me`
-- **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, wallet, bookings, support/tickets, assistant/messages}`
+- **Customer:** `customer/{addresses, cart, orders, wishlist, notifications, rewards, wallet, bookings, support/tickets, assistant/messages,
+  assistant/capabilities, assistant/transcribe}`
 - **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
@@ -81,12 +87,26 @@ and support tickets. Frontend route guards are UX only.
 
 ## Customer App frontend
 
-- **Navigation:** primary nav is Home | Ride | Food | Services | Menu. Menu opens a bottom-up hub driven by
-  `apps/customer/src/config/services.ts`, which lists every service with its status, group and theme.
-- **Themes:** each service sets its own accent colours and hero gradient through `data-theme`. Typography,
-  spacing, components and motion are shared.
-- **Header:** a location selector, global search (text, voice, camera, Ask Buddy), Buddy, notifications, cart
-  and a profile menu.
+- **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching
+  into `apps/customer/public/brand/`) followed by the "Click." wordmark; the period uses the logo's amber. Palette
+  from `assets/Click Brand Style Guide Board.png`: blue #2F3CFF / #4F6BFF, amber #FBBF24, navy #0B1F44, white #F8FAFC.
+- **Appearance:** White (default) or Dark navy, chosen in Settings (or "Match device"); stored per device and applied
+  before first paint (`src/appearance.ts`, `data-appearance` on `<html>`). All colours are tokens in `styles/tokens.css`.
+- **Navigation:** primary nav is Home | Ride | Food | Explore | Profile (`/`, `/rides`, `/food`, `/explore`, `/account`);
+  each item carries its service colour. `/home`, `/ride` and `/profile` redirect to those routes.
+- **Themes:** each service sets its accent (`--c-theme`, `-solid`, `-soft`, `-strong`) and hero gradient through
+  `data-theme` on any element. Typography, spacing, components and motion are shared.
+- **Header:** Click. logo, location ("Delivering to"), search (text with recent searches and hints, voice, camera QR scan),
+  Buddy (GO / MAN chooser), notifications, cart (only when it has items) and profile (links to `/account`).
+- **Home (`src/pages/HomePage.tsx`):** composed from `src/features/home/*`, in order: hero (greeting with the customer's
+  name), quick services (from `config/services.ts`), offers, near you, popular, discover, Buzz, recent activity,
+  rewards & wallet, then time-of-day moments from `config/home.ts`. Every section has loading, empty and error states.
+  "Near you" uses the selected address's saved coordinates; without them it shows the address's city and says so.
+- **Buzz:** `/buzz` is a full-screen vertical feed (own layout), plus a Home preview and a persistent edge handle.
+- **Buddy:** GO = voice-first action mode (records only when the server reports a speech provider; otherwise says so
+  and accepts typing), MAN = `/buddy`, the full conversation page with its own header (New chat, Home).
+- **Imagery:** real photographs only. Service photos (`config/media.ts`) illustrate a category; a store without its own
+  photo gets a branded gradient, never a borrowed stock photo.
 
 ## AI
 
@@ -96,8 +116,11 @@ and support tickets. Frontend route guards are UX only.
   through `apps/ai/tools.py`: read-only, customer-scoped functions over real data. Replies are structured as
   `{message, cards, actions}`.
 - **Payments:** Buddy never places orders or payments.
-- **Voice and camera search:** these need an approved speech or vision provider. Browser speech APIs send audio to
-  third-party clouds such as Google's, so they aren't used. The backend builds context per surface with permission
+- **Voice:** `CLICK_SPEECH_PROVIDER` (dotted path to an `apps.ai.speech.SpeechProvider`) enables
+  `customer/assistant/transcribe`; it is empty by default, so `capabilities.voice` is false and the app does not record.
+  Browser speech APIs send audio to third-party clouds such as Google's, so they aren't used.
+- **Camera:** QR codes are scanned on the device (BarcodeDetector) and Click. links open in-app. Image recognition
+  needs `CLICK_VISION_PROVIDER` and is not claimed until one is approved. The backend builds context per surface with permission
 filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio are intentionally not used.
 
 ## Click Partner identity

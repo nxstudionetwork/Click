@@ -9,7 +9,7 @@ from django.utils.text import slugify
 from apps.catalog.models import MenuCategory, Product
 from apps.stores.models import Store, StoreCategory, StoreOffer, StoreType
 
-from . import MARKER
+from . import MARKER, locality_point
 
 # name, cuisines, rating, rating_count, price_level, eta, fee, min_order, accepting_orders, locality
 RESTAURANTS = [
@@ -120,7 +120,7 @@ def _store(name, store_type, cats, rating, count, price, eta, fee, minimum, acce
             name=name, store_type=store_type, status=Store.Status.ACTIVE, is_accepting_orders=accepting,
             description=f"{', '.join(cats)}. {MARKER}.", city="Bengaluru", locality=locality,
             rating_average=D(rating), rating_count=count, price_level=price, delivery_time_min=eta[0], delivery_time_max=eta[1],
-            delivery_fee=D(fee), min_order_amount=D(minimum),
+            delivery_fee=D(fee), min_order_amount=D(minimum), **dict(zip(("latitude", "longitude"), locality_point(locality, name))),
         ),
     )
     store.categories.add(*[cat_objs[c] for c in cats])
