@@ -1,24 +1,21 @@
 import threading
 import time
-from types import SimpleNamespace
+from unittest import mock
 
-import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
 from django.db import connection
 from django.test import override_settings
 
-from apps.partners.models import Partner, PartnerCategory, PartnerMembership, PartnerStatusEvent, PartnerVerification
+from apps.identity import services as identity_services
+from apps.identity.models import ExternalIdentity
+from apps.identity.providers import VerifiedIdentity
+from apps.identity.tests import CERT, OTHER_KEY, PROJECT, token
 from apps.partners import services
-from apps.users import firebase
-from apps.users.models import AuthIdentity, User
+from apps.partners.models import Partner, PartnerCategory, PartnerMembership, PartnerStatusEvent, PartnerVerification
+from apps.users.models import User
 
 pytestmark = pytest.mark.django_db
-PROJECT = "click-partner-test"
 CLIENT = {"HTTP_X_CLICK_CLIENT": "partner-web"}
-
-_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-_OTHER_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 
 @pytest.fixture(autouse=True)
@@ -32,112 +29,77 @@ def partner_catalog(db):
 
 
 @pytest.fixture(autouse=True)
-def firebase_keys(monkeypatch, settings):
-    """Real RS256 verification against a test key instead of Google's live JWKS."""
+def firebase_keys(settings):
+    """Real RS256 verification (shared identity layer) against a test certificate instead of Google's."""
     settings.FIREBASE_PROJECT_ID = PROJECT
-    settings.FIREBASE_AUTH_EMULATOR_HOST = ""
-    fake = SimpleNamespace(get_signing_key_from_jwt=lambda token: SimpleNamespace(key=_KEY.public_key()))
-    monkeypatch.setattr(firebase, "_jwks_client", lambda: fake)
+    with mock.patch("apps.identity.firebase.fetch_certificates", return_value={"k1": CERT}):
+        yield
 
 
-def id_token(uid="fb-uid-1", phone="+919876543210", *, key=_KEY, provider="phone", aud=PROJECT, iss=None, exp_in=3600, **extra):
-    now = int(time.time())
-    claims = {
-        "iss": iss or f"https://securetoken.google.com/{aud}", "aud": aud, "sub": uid, "user_id": uid,
-        "iat": now, "auth_time": now, "exp": now + exp_in, "firebase": {"sign_in_provider": provider},
-        **({"phone_number": phone} if phone else {}), **extra,
-    }
-    return jwt.encode(claims, key, algorithm="RS256", headers={"kid": "test"})
-
-
-def sign_in(api, **kw):
-    return api.post("/api/v1/auth/firebase", {"idToken": id_token(**kw)}, **CLIENT)
+def sign_in(api, uid="fb-uid-1", phone="+919876543210", **kw):
+    """The Partner App's sign-in: shared identity exchange, then partner sign-up for a new phone."""
+    r = api.post("/api/v1/auth/identity/exchange", {"provider": "firebase", "token": token(uid=uid, phone=phone, **kw)}, **CLIENT)
+    if r.status_code == 200 and r.json()["status"] == "profile_required":
+        r = api.post("/api/v1/auth/identity/partner-signup", {"signupToken": r.json()["signupToken"]}, **CLIENT)
+    return r
 
 
 def authed(api, **kw):
     r = sign_in(api, **kw)
     assert r.status_code in (200, 201), r.content
-    api.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+    api.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
     return r
 
 
-# --- Firebase session exchange ------------------------------------------------
+# --- Partner sign-in on the shared identity layer ---------------------------------
 
-def test_first_sign_in_creates_one_user_linked_to_firebase_uid(api):
+def test_new_phone_becomes_phone_only_user_linked_to_firebase_uid(api):
     r = sign_in(api)
     assert r.status_code == 201
-    assert r.data["user"]["phone"] == "+919876543210"
-    assert r.data["user"]["email"] is None
-    assert r.data["user"]["roles"] == []
+    user = r.json()["user"]
+    assert user["phone"] == "+919876543210" and user["email"] is None and user["roles"] == []
     assert r.cookies["click_refresh"]["httponly"]
-    identity = AuthIdentity.objects.get()
-    assert identity.subject == "fb-uid-1" and identity.provider == "firebase"
-    assert not identity.user.has_usable_password()
+    link = ExternalIdentity.objects.get()
+    assert (link.provider, link.subject) == ("firebase", "fb-uid-1")
+    assert link.user.phone_verified and not link.user.has_usable_password()
 
 
-def test_returning_sign_in_reuses_user_and_tracks_phone_change(api):
-    first = sign_in(api).data["user"]["id"]
-    r = sign_in(api, phone="+919000000001")
-    assert r.status_code == 200 and r.data["user"]["id"] == first
-    assert User.objects.count() == 1 and AuthIdentity.objects.count() == 1
-    assert User.objects.get().phone == "+919000000001"
-
-
-@pytest.mark.parametrize("kwargs", [
-    {"key": _OTHER_KEY},                                   # forged signature
-    {"aud": "someone-elses-project"},                     # wrong project
-    {"iss": "https://securetoken.google.com/evil"},       # wrong issuer
-    {"provider": "password"},                             # not phone sign-in
-    {"phone": None},                                      # no verified phone
-    {"uid": ""},                                          # no UID
-])
-def test_rejects_tokens_that_fail_verification(api, kwargs):
-    r = sign_in(api, **kwargs)
-    assert r.status_code == 401
-    assert r.json()["error"]["code"] == "phone_verification_failed"
-    assert User.objects.count() == 0
-
-
-def test_expired_token_has_friendly_message(api):
-    r = sign_in(api, exp_in=-120)
-    assert r.status_code == 401
-    assert "expired" in r.json()["error"]["message"]
-
-
-def test_garbage_token_and_missing_token(api):
-    assert api.post("/api/v1/auth/firebase", {"idToken": "not-a-jwt"}, **CLIENT).status_code == 401
-    assert api.post("/api/v1/auth/firebase", {}, **CLIENT).status_code == 400
-
-
-def test_unconfigured_firebase_is_unavailable_not_bypassed(api, settings):
-    settings.FIREBASE_PROJECT_ID = ""
+def test_returning_partner_gets_the_same_user(api):
+    first = sign_in(api).json()["user"]["id"]
     r = sign_in(api)
-    assert r.status_code == 503 and r.json()["error"]["code"] == "phone_auth_unavailable"
+    assert r.status_code == 200 and r.json()["status"] == "authenticated" and r.json()["user"]["id"] == first
+    assert User.objects.count() == 1 and ExternalIdentity.objects.count() == 1
 
 
-def test_google_keys_unreachable_is_unavailable(api, monkeypatch):
-    def boom(token):
-        raise jwt.PyJWKClientConnectionError("down")
-    monkeypatch.setattr(firebase, "_jwks_client", lambda: SimpleNamespace(get_signing_key_from_jwt=boom))
-    r = sign_in(api)
-    assert r.status_code == 503
+def test_existing_customer_with_verified_phone_is_the_same_person(api):
+    customer = User.objects.create_user("meera@example.com", None, phone="+919876543210", phone_verified=True)
+    r = sign_in(api, uid="new-uid")
+    assert r.status_code == 200 and r.json()["user"]["id"] == str(customer.id)
+    assert User.objects.count() == 1
 
 
-def test_disabled_user_cannot_sign_in(api):
+def test_forged_token_is_rejected(api):
+    r = sign_in(api, key=OTHER_KEY)
+    assert r.status_code == 401 and User.objects.count() == 0
+
+
+def test_tampered_signup_token_is_rejected(api):
+    r = api.post("/api/v1/auth/identity/partner-signup", {"signupToken": "forged"}, **CLIENT)
+    assert r.status_code == 401 and User.objects.count() == 0
+
+
+def test_partner_signup_is_idempotent_and_race_safe():
+    identity = VerifiedIdentity(provider="firebase", subject="race-uid", phone_number="+919111122222")
+    a, created_a = identity_services.complete_partner_signup(identity)
+    b, created_b = identity_services.complete_partner_signup(identity)
+    assert a == b and created_a and not created_b
+
+
+def test_disabled_partner_cannot_sign_in(api):
     sign_in(api)
     User.objects.update(is_active=False)
     r = sign_in(api)
     assert r.status_code == 403 and r.json()["error"]["code"] == "account_disabled"
-
-
-def test_emulator_tokens_only_accepted_when_emulator_configured(api, settings):
-    now = int(time.time())
-    claims = {"iss": f"https://securetoken.google.com/{PROJECT}", "aud": PROJECT, "sub": "emu-1", "iat": now,
-              "auth_time": now, "exp": now + 600, "phone_number": "+15555550100", "firebase": {"sign_in_provider": "phone"}}
-    unsigned = jwt.encode(claims, None, algorithm="none")
-    assert api.post("/api/v1/auth/firebase", {"idToken": unsigned}, **CLIENT).status_code == 401
-    settings.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
-    assert api.post("/api/v1/auth/firebase", {"idToken": unsigned}, **CLIENT).status_code == 201
 
 
 def test_logout_then_refresh_fails_but_partner_survives(api):
@@ -415,6 +377,6 @@ def test_user_roles_include_partner_after_onboarding(api):
 
 @override_settings(DEBUG=False)
 def test_error_responses_do_not_leak_internals(api):
-    r = api.post("/api/v1/auth/firebase", {"idToken": id_token(key=_OTHER_KEY)}, **CLIENT)
+    r = sign_in(api, key=OTHER_KEY)
     body = r.json()["error"]
     assert "Signature" not in body["message"] and "Traceback" not in str(body)

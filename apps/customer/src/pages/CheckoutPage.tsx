@@ -10,6 +10,8 @@ import { Totals } from '../features/cart/Totals';
 import { cartKey, useCart } from '../features/cart/useCart';
 import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
+import { WalletOption } from '../features/wallet/WalletOption';
+import { walletKey } from '../features/wallet/useWallet';
 import { formatMoney } from '../lib/format';
 
 export function CheckoutPage() {
@@ -35,6 +37,7 @@ export function CheckoutPage() {
     onSuccess: (order) => {
       qc.invalidateQueries({ queryKey: cartKey });
       qc.invalidateQueries({ queryKey: ['customer', 'orders'] });
+      qc.invalidateQueries({ queryKey: walletKey });
       navigate(`/orders/${order.id}`, { replace: true, state: { justPlaced: true } });
     },
     onError: (e) => {
@@ -108,6 +111,7 @@ export function CheckoutPage() {
             <input type="radio" name="payment" checked={payment === 'cash_on_delivery'} onChange={() => setPayment('cash_on_delivery')} />
             <div><strong>Cash on delivery</strong><div className="muted small">Pay with cash or UPI when your order arrives.</div></div>
           </label>
+          <WalletOption total={c.totals.total} currency={currency} checked={payment === 'wallet'} onSelect={() => setPayment('wallet')} />
         </section>
       </div>
 

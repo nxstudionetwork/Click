@@ -6,11 +6,28 @@ from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    customer_code = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "phone", "roles", "created_at"]
-        read_only_fields = ["id", "email", "roles", "created_at"]
+        fields = ["id", "email", "full_name", "phone", "phone_verified", "roles", "customer_code", "avatar_url", "created_at"]
+        read_only_fields = ["id", "email", "phone", "phone_verified", "roles", "customer_code", "avatar_url", "created_at"]
+
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, user) -> str | None:
+        profile = getattr(user, "customer_profile", None)
+        return profile.avatar.url if profile and profile.avatar else None
+
+    def validate_full_name(self, v):
+        v = " ".join(v.split())
+        if len(v) < 2:
+            raise serializers.ValidationError("Enter your name.")
+        return v
+
+    def get_customer_code(self, user) -> str | None:
+        profile = getattr(user, "customer_profile", None)
+        return profile.customer_code if profile else None
 
     def get_roles(self, user) -> list[str]:
         roles = []
@@ -43,6 +60,3 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
-
-class FirebaseSessionSerializer(serializers.Serializer):
-    id_token = serializers.CharField(max_length=4096, trim_whitespace=True)

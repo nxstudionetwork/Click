@@ -5,3 +5,5 @@ djangorestframework-simplejwt>=5.5,<6
 psycopg[binary]>=3.2,<4
 dj-database-url>=2.3,<3
 django-cors-headers>=4.6,<5
+cryptography>=43,<46         # RS256 verification of identity-provider tokens (Firebase ID tokens)
+Pillow>=11,<12               # profile image validation/re-encoding (strips EXIF)

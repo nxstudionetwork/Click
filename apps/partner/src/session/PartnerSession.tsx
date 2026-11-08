@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type PartnerState, type Session, type User } from '@click/api';
 import { api, session } from '../lib/api';
-import { currentIdToken, firebaseSignOut, isPhoneAuthConfigured } from '../firebase/phoneAuth';
+import { phoneAuth } from '@click/phone-auth';
 import { phoneFlow } from './phoneFlow';
 
 type Status = 'booting' | 'signed_out' | 'signed_in';
@@ -21,8 +21,8 @@ interface PartnerSessionValue {
     error: unknown;
     refetch: () => void;
   };
-  /** Exchange a verified Firebase ID token for a Click session and load the partner. */
-  completeSignIn: (idToken: string) => Promise<PartnerState>;
+  /** Exchange a verified phone credential for a Click session (creating the account if new) and load the partner. */
+  completeSignIn: (credential: { provider: string; token: string }) => Promise<PartnerState>;
   /** Replace the cached partner state after an onboarding write. */
   setPartnerState: (state: PartnerState) => void;
   logout: () => Promise<void>;
@@ -49,7 +49,7 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
     setStatus(s ? 'signed_in' : 'signed_out');
   }, []);
 
-  // Restore: 1) Click session cookie (no Firebase download needed), 2) an existing Firebase session.
+  // Restore from the Click session cookie. Firebase is only used during OTP; it keeps no session.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -57,26 +57,11 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
       try {
         const restored = await api.auth.refresh();
         if (!cancelled) apply(restored);
-        return;
       } catch (err) {
-        if (isUnreachable(err)) {
-          if (!cancelled) { setBootError(OFFLINE); setStatus('signed_out'); }
-          return;
-        }
+        if (cancelled) return;
+        if (isUnreachable(err)) setBootError(OFFLINE);
+        apply(null);
       }
-      if (isPhoneAuthConfigured()) {
-        try {
-          const idToken = await currentIdToken();
-          if (idToken) {
-            const s = await api.auth.firebase(idToken);
-            if (!cancelled) apply(s);
-            return;
-          }
-        } catch {
-          // Expired/invalid Firebase session: fall through to sign-in.
-        }
-      }
-      if (!cancelled) apply(null);
     })();
     return () => { cancelled = true; };
   }, [apply, bootAttempt]);
@@ -104,8 +89,9 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
       error: partnerQuery.error,
       refetch: () => { void partnerQuery.refetch(); },
     },
-    completeSignIn: async (idToken) => {
-      const s = await api.auth.firebase(idToken);
+    completeSignIn: async (credential) => {
+      const result = await api.auth.exchangeIdentity(credential);
+      const s = result.status === 'authenticated' ? result : await api.auth.partnerSignup(result.signupToken);
       session.set(s.access);
       const state = await api.partner.me();
       queryClient.setQueryData(PARTNER_QUERY_KEY, state);
@@ -118,7 +104,7 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
     logout: async () => {
       signingOut.current = true;
       try {
-        await Promise.allSettled([api.auth.logout(), firebaseSignOut()]);
+        await Promise.allSettled([api.auth.logout(), phoneAuth.reset()]);
       } finally {
         phoneFlow.clear();
         session.set(null);

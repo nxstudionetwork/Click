@@ -33,7 +33,7 @@ export function AddressForm({ onSaved, onCancel, defaultName = '' }: { onSaved: 
   return (
     <form className="stack" onSubmit={submit} noValidate>
       <div className="chips" role="radiogroup" aria-label="Address label">
-        {(['home', 'work', 'other'] as AddressLabel[]).map((l) => (
+        {(['home', 'work', 'college', 'family', 'other'] as AddressLabel[]).map((l) => (
           <button key={l} type="button" className="chip" aria-pressed={form.label === l} onClick={() => setForm((f) => ({ ...f, label: l }))}>
             {l[0]!.toUpperCase() + l.slice(1)}
           </button>
@@ -47,6 +47,7 @@ export function AddressForm({ onSaved, onCancel, defaultName = '' }: { onSaved: 
         <TextField label="City" value={form.city} onChange={set('city')} error={errors.city} autoComplete="address-level2" />
         <TextField label="PIN code" value={form.postalCode} onChange={set('postalCode')} error={errors.postalCode} inputMode="numeric" autoComplete="postal-code" />
         <TextField className="span-2" label="Landmark (optional)" value={form.landmark} onChange={set('landmark')} />
+        <TextField className="span-2" label="Delivery instructions (optional)" value={form.deliveryInstructions ?? ''} onChange={set('deliveryInstructions')} maxLength={200} />
       </div>
       {errors._ && <p className="field__error" role="alert">{errors._}</p>}
       <div className="row">

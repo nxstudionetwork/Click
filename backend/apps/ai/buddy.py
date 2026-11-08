@@ -1,0 +1,151 @@
+"""
+Buddy basic mode: a built-in, deterministic assistant that understands common
+Click intents and answers ONLY from real Click data via `tools`. It is the
+default provider until a conversational AI provider is configured; it never
+invents inventory, prices, availability or order states.
+"""
+
+import re
+
+from django.utils import timezone
+
+from . import tools
+from .providers import AIContext, AIMessage, BuddyReply
+
+STOPWORDS = set("""
+a an the me my i we us please find show get give want need order buy book some good best great nice nearby near around
+here today tonight for to of in on at with and or is are can you could would like something any cheap cheapest
+looking look search me? options option place places restaurant restaurants store stores shop shops food dish dishes
+""".split())
+
+STATUS_TEXT = {
+    "placed": "placed and waiting for the store to confirm",
+    "confirmed": "confirmed by the store",
+    "preparing": "being prepared",
+    "ready": "ready and waiting for pickup by the delivery partner",
+    "out_for_delivery": "out for delivery",
+    "delivered": "delivered",
+    "cancelled": "cancelled",
+}
+
+
+def _has(text: str, *words: str) -> bool:
+    return any(re.search(rf"\b{w}\b", text) for w in words)
+
+
+def _keywords(text: str) -> str:
+    words = [w for w in re.findall(r"[a-z0-9&']+", text) if w not in STOPWORDS and len(w) > 1]
+    return " ".join(words[:3])
+
+
+class ClickBasicBuddy:
+    mode = "basic"
+
+    def reply(self, messages: list[AIMessage], context: AIContext) -> BuddyReply:
+        text = messages[-1].content.lower().strip()
+        customer = context.customer
+
+        if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
+            return self._help()
+
+        wants_food = _has(text, "dinner", "lunch", "breakfast", "eat", "food", "hungry", "biryani", "pizza", "burger", "dosa", "restaurant")
+        wants_movie = _has(text, "movie", "movies", "film", "cinema", "show", "shows", "tickets?", "event", "events", "concert")
+
+        if wants_food and wants_movie:
+            return self._dinner_and_movie(text)
+        if _has(text, "order", "orders", "delivery", "track", "delayed", "late", "where") and not wants_movie and not _has(text, "pizza", "biryani"):
+            return self._orders(customer, text)
+        if _has(text, "booking", "bookings", "my tickets"):
+            return self._bookings(customer)
+        if _has(text, "wallet", "balance", "refund", "refunds"):
+            return self._wallet(customer)
+        if _has(text, "points", "rewards?"):
+            return self._rewards(customer)
+        if _has(text, "offers?", "deals?", "discounts?", "coupons?"):
+            return BuddyReply("Here are the current offers on Click. Each store applies its own offer.",
+                              cards=[{"type": "offer", "offer": o} for o in tools.offers()], actions=[{"label": "All offers", "path": "/offers"}])
+        if wants_movie:
+            return self._movies(text)
+        if _has(text, "ride", "rides", "cab", "taxi", "parcel", "parcels", "plumber", "electrician", "cleaning", "repair"):
+            return BuddyReply("That service isn’t live on Click yet, so I can’t book it. Food, groceries, shopping and movie/event tickets are available now.",
+                              actions=[{"label": "Explore Click", "path": "/explore"}])
+        return self._search(text)
+
+    # --- intents ---------------------------------------------------------
+    def _help(self):
+        return BuddyReply(
+            "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, show movies playing tonight, "
+            "check your orders and bookings, and explain your wallet and rewards. I prepare things for you; you always review and pay yourself.",
+            actions=[{"label": "Find biryani", "prompt": "Find me a good biryani"}, {"label": "Movies tonight", "prompt": "Movies tonight"},
+                     {"label": "Where is my order?", "prompt": "Where is my order?"}, {"label": "Dinner and a movie", "prompt": "Plan dinner and a movie tonight"}],
+        )
+
+    def _search(self, text):
+        q = _keywords(text)
+        if not q:
+            return self._help()
+        cheapest = _has(text, "cheap", "cheapest", "budget", "affordable")
+        products = tools.search_products(q, cheapest=cheapest)
+        stores = tools.search_stores(q)
+        if not products and not stores:
+            return BuddyReply(f"I couldn’t find anything for “{q}” on Click right now.",
+                              actions=[{"label": f"Search “{q}”", "path": f"/search?q={q}"}])
+        lead = f"Here’s what I found for “{q}”" + (", cheapest first" if cheapest else "") + ". Tap one to see details, or add it to your cart."
+        cards = [{"type": "product", "product": p} for p in products] + [{"type": "store", "store": s} for s in stores[:2]]
+        return BuddyReply(lead, cards=cards, actions=[{"label": "See all results", "path": f"/search?q={q}"}])
+
+    def _orders(self, customer, text):
+        orders, data = tools.recent_orders(customer)
+        if not orders:
+            return BuddyReply("You don’t have any orders yet.", actions=[{"label": "Order food", "path": "/food"}])
+        o = orders[0]
+        msg = f"Your latest order {o.number} from {o.store.name} is {STATUS_TEXT.get(o.status, o.status)}."
+        actions = [{"label": "Open order", "path": f"/orders/{o.id}"}]
+        if o.status not in ("delivered", "cancelled") and o.estimated_delivery_at:
+            eta = timezone.localtime(o.estimated_delivery_at)
+            if eta < timezone.now():
+                msg += f" It was expected by {eta.strftime('%I:%M %p').lstrip('0')}, so it’s running late. I can’t see the reason from here; support can check with the store."
+                actions.append({"label": "Get help with this order", "path": f"/help/new?orderId={o.id}&category=order"})
+            else:
+                msg += f" Estimated arrival by {eta.strftime('%I:%M %p').lstrip('0')}."
+        return BuddyReply(msg, cards=[{"type": "order", "order": d} for d in data], actions=actions)
+
+    def _bookings(self, customer):
+        data = tools.upcoming_bookings(customer)
+        if not data:
+            return BuddyReply("You have no upcoming bookings.", actions=[{"label": "Browse movies", "path": "/movies"}])
+        return BuddyReply(f"You have {len(data)} upcoming booking{'s' if len(data) > 1 else ''}.",
+                          cards=[{"type": "booking", "booking": b} for b in data], actions=[{"label": "All bookings", "path": "/bookings"}])
+
+    def _wallet(self, customer):
+        bal = tools.wallet(customer)
+        return BuddyReply(f"Your Click Wallet balance is ₹{bal:.2f}. Refunds for wallet payments come back here automatically.",
+                          actions=[{"label": "Open wallet", "path": "/wallet"}])
+
+    def _rewards(self, customer):
+        r = tools.rewards(customer)
+        return BuddyReply(f"You have {r['balance']} Click points ({r['earned']} earned, {r['used']} used). You earn points on delivered orders.",
+                          actions=[{"label": "Open rewards", "path": "/rewards"}])
+
+    def _movies(self, text):
+        tonight = _has(text, "tonight", "today")
+        genre = next((g for g in ("comedy", "drama", "thriller", "action", "sci-fi", "romance", "music") if g in text), "")
+        events = tools.find_events(genre, tonight=tonight)
+        if not events:
+            return BuddyReply("I couldn’t find shows matching that" + (" tonight" if tonight else "") + ".", actions=[{"label": "Browse movies & events", "path": "/movies"}])
+        return BuddyReply(("Playing tonight" if tonight else "Now showing") + (f" ({genre})" if genre else "") + ". Pick one to choose a showtime and seats.",
+                          cards=[{"type": "event", "event": e} for e in events], actions=[{"label": "All movies & events", "path": "/movies"}])
+
+    def _dinner_and_movie(self, text):
+        cuisine = _keywords(re.sub(r"\b(dinner|movie|movies|film|plan|tonight|and|then|after|before)\b", " ", text))
+        stores = tools.search_stores(cuisine, store_type="restaurant", limit=3) or tools.search_stores("", store_type="restaurant", limit=3)
+        events = tools.find_events(tonight=True, limit=3)
+        if not events:
+            return BuddyReply("I found restaurants, but there are no more shows tonight. Here are dinner options:",
+                              cards=[{"type": "store", "store": s} for s in stores], actions=[{"label": "Browse movies", "path": "/movies"}])
+        return BuddyReply(
+            "Here’s a plan: order dinner from one of these open restaurants (delivery times shown), then pick a show tonight. "
+            "Leave about an hour between delivery and showtime. I’ll take you to the restaurant and the show; you confirm and pay in each checkout.",
+            cards=[{"type": "store", "store": s} for s in stores] + [{"type": "event", "event": e} for e in events],
+            actions=[{"label": "Movies tonight", "path": "/movies"}],
+        )

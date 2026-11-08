@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button, Icon, Logo } from '@click/ui';
 import { OTP_LENGTH, OtpInput } from '../components/OtpInput';
-import { friendlyFirebaseError, needsNewCode } from '../firebase/errors';
-import { currentIdToken, sendVerificationCode } from '../firebase/phoneAuth';
+import { phoneAuth, PhoneAuthError } from '@click/phone-auth';
 import { apiMessage, formatPhone } from '../lib/format';
 import { phoneFlow } from '../session/phoneFlow';
 import { usePartnerSession } from '../session/PartnerSession';
@@ -19,8 +18,9 @@ export function VerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'verifying' | 'linking' | 'resending'>('idle');
   const [codeExpired, setCodeExpired] = useState(false);
-  /** Firebase verified the code but Click couldn't be reached: retry the exchange without a new code. */
-  const [backendFailed, setBackendFailed] = useState(false);
+  /** The code was verified but Click couldn't be reached: keep the credential and retry without a new code. */
+  const [credential, setCredential] = useState<{ provider: string; token: string } | null>(null);
+  const backendFailed = credential !== null;
   const [now, setNow] = useState(Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
@@ -32,17 +32,18 @@ export function VerifyPage() {
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   if (!pendingVerification) return <Navigate to="/login" replace />;
-  const { phone, confirmation, sentAt } = pendingVerification;
+  const { phone, verification, sentAt } = pendingVerification;
+  const friendly = (err: unknown) => (err instanceof PhoneAuthError ? err.message : 'We couldn’t verify your number right now. Please try again.');
   const wait = Math.max(0, RESEND_AFTER_SECONDS - Math.floor((now - sentAt) / 1000));
   const busy = status !== 'idle';
 
-  async function linkToClick(idToken: string) {
+  async function linkToClick(cred: { provider: string; token: string }) {
     setStatus('linking');
     try {
-      const state = await completeSignIn(idToken);
+      const state = await completeSignIn(cred);
       navigate(STEP_ROUTE[state.onboardingStep], { replace: true });
     } catch (err) {
-      setBackendFailed(true);
+      setCredential(cred);
       setError(apiMessage(err, 'We couldn’t verify your number right now.'));
       setStatus('idle');
     }
@@ -54,11 +55,10 @@ export function VerifyPage() {
     setError(null);
     setStatus('verifying');
     try {
-      const credential = await confirmation.confirm(value);
-      await linkToClick(await credential.user.getIdToken());
+      await linkToClick(await verification.confirm(value));
     } catch (err) {
-      setCodeExpired(needsNewCode(err));
-      setError(friendlyFirebaseError(err));
+      setCodeExpired(err instanceof PhoneAuthError && err.code === 'code_expired');
+      setError(friendly(err));
       setCode('');
       setStatus('idle');
       inputRef.current?.focus();
@@ -67,29 +67,21 @@ export function VerifyPage() {
 
   async function retryLink() {
     setError(null);
-    try {
-      const token = await currentIdToken(true);
-      if (token) return linkToClick(token);
-      setBackendFailed(false);
-      setError('Your verification ended. Request a new code.');
-      setCodeExpired(true);
-    } catch (err) {
-      setError(friendlyFirebaseError(err));
-    }
+    if (credential) await linkToClick(credential);
   }
 
   async function resend() {
     setStatus('resending');
     setError(null);
     try {
-      const fresh = await sendVerificationCode(phone, recaptchaRef.current!);
+      const fresh = await phoneAuth.start(phone, recaptchaRef.current!);
       phoneFlow.start(phone, fresh);
       setCode('');
       setCodeExpired(false);
       setNow(Date.now());
       inputRef.current?.focus();
     } catch (err) {
-      setError(friendlyFirebaseError(err));
+      setError(friendly(err));
     } finally {
       setStatus('idle');
     }

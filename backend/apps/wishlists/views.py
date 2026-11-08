@@ -3,6 +3,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.activity.services import record
 from apps.catalog.serializers import ProductWithStoreSerializer
 from apps.catalog.views import public_products
 from apps.core.api.permissions import IsCustomer
@@ -58,6 +59,8 @@ class WishlistView(APIView):
         else:
             target = {"product": get_object_or_404(public_products(), pk=s.validated_data["product_id"])}
         item, created = WishlistItem.objects.get_or_create(customer=customer, **target)
+        if created:
+            record(customer, "wishlist.added", obj=next(iter(target.values())))
         item = _items(customer).get(pk=item.pk)
         return Response(WishlistItemSerializer(item).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 

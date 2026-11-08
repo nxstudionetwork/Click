@@ -4,6 +4,9 @@ import { Icon, type IconName } from '../components/ui';
 
 const LINKS: { to: string; label: string; icon: IconName; hint: string }[] = [
   { to: '/orders', label: 'Orders', icon: 'receipt', hint: 'Track and manage orders' },
+  { to: '/bookings', label: 'Bookings', icon: 'ticket', hint: 'Movie and event tickets' },
+  { to: '/activity', label: 'Activity', icon: 'history', hint: 'Everything you’ve done on Click' },
+  { to: '/wallet', label: 'Click Wallet', icon: 'wallet', hint: 'Balance, refunds and credits' },
   { to: '/account/addresses', label: 'Addresses', icon: 'pin', hint: 'Home, work and other places' },
   { to: '/account/payments', label: 'Payments', icon: 'card', hint: 'Methods and payment history' },
   { to: '/wishlist', label: 'Wishlist', icon: 'heart', hint: 'Saved stores and products' },
@@ -11,7 +14,7 @@ const LINKS: { to: string; label: string; icon: IconName; hint: string }[] = [
   { to: '/offers', label: 'Offers', icon: 'tag', hint: 'Current deals' },
   { to: '/notifications', label: 'Notifications', icon: 'bell', hint: 'Updates and alerts' },
   { to: '/help', label: 'Help & Support', icon: 'help', hint: 'FAQs and support requests' },
-  { to: '/settings', label: 'Settings', icon: 'settings', hint: 'Profile and sign out' },
+  { to: '/settings', label: 'Settings & privacy', icon: 'shield', hint: 'Profile, privacy and sign out' },
 ];
 
 export function AccountPage() {
@@ -20,13 +23,16 @@ export function AccountPage() {
   return (
     <div className="stack">
       <section className="card card--pad row" style={{ gap: 'var(--s-4)' }}>
-        <span className="avatar avatar--lg" aria-hidden="true">{initial}</span>
+        <span className="avatar avatar--lg" aria-hidden="true">{user?.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : initial}</span>
         <div style={{ minWidth: 0 }}>
           <h2 className="truncate">{user?.fullName || 'Click member'}</h2>
           <div className="muted small truncate">{user?.email}{user?.phone ? ` · ${user.phone}` : ''}</div>
-          <div className="muted small">Customer ID {user?.id.slice(0, 8).toUpperCase()}</div>
+          <div className="muted small">Customer ID {user?.customerCode ?? '—'}</div>
         </div>
-        <Link to="/settings" className="btn btn--outline btn--sm" style={{ marginLeft: 'auto' }}>Edit</Link>
+        <div className="row" style={{ marginLeft: 'auto' }}>
+          <Link to="/account/card" className="btn btn--secondary btn--sm">Click card</Link>
+          <Link to="/settings" className="btn btn--outline btn--sm">Edit</Link>
+        </div>
       </section>
       <nav className="card list" aria-label="Account">
         {LINKS.map((l) => (

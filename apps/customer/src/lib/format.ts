@@ -1,12 +1,16 @@
 const formatters = new Map<string, Intl.NumberFormat>();
 
+/** ₹249 for whole amounts, ₹7.20 (never ₹7.2) when there are paise. */
 export function formatMoney(amount: string | number, currency = 'INR'): string {
-  let f = formatters.get(currency);
+  const n = Number(amount);
+  const fractional = Math.round(n * 100) % 100 !== 0;
+  const key = `${currency}:${fractional}`;
+  let f = formatters.get(key);
   if (!f) {
-    f = new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 2, minimumFractionDigits: 0 });
-    formatters.set(currency, f);
+    f = new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: fractional ? 2 : 0, maximumFractionDigits: 2 });
+    formatters.set(key, f);
   }
-  return f.format(Number(amount));
+  return f.format(n);
 }
 
 export const priceLevelLabel = (level: number, symbol = '₹') => symbol.repeat(Math.max(1, Math.min(4, level)));

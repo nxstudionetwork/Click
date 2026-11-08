@@ -2,17 +2,16 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Icon, Logo } from '@click/ui';
 import { StoryReel } from '../components/StoryReel';
-import { COUNTRIES, PhoneField, toE164, validateNational } from '../components/PhoneField';
+import { isPhoneAuthConfigured, phoneAuth, PhoneAuthError, toE164 } from '@click/phone-auth';
+import { COUNTRIES, PhoneField, validateNational } from '../components/PhoneField';
 import { ECOSYSTEM_STORY } from '../config/visuals';
-import { friendlyFirebaseError } from '../firebase/errors';
-import { isPhoneAuthConfigured, PhoneAuthUnavailable, sendVerificationCode } from '../firebase/phoneAuth';
 import { phoneFlow } from '../session/phoneFlow';
 import { usePartnerSession } from '../session/PartnerSession';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { bootError, retryBoot } = usePartnerSession();
-  const country = COUNTRIES[0];
+  const country = COUNTRIES[0]!;
   const [digits, setDigits] = useState(() => phoneFlow.get()?.phone.replace(country.dial, '') ?? '');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -27,11 +26,11 @@ export function LoginPage() {
     setPending(true);
     try {
       const phone = toE164(country, digits);
-      const confirmation = await sendVerificationCode(phone, recaptchaRef.current!);
-      phoneFlow.start(phone, confirmation);
+      const verification = await phoneAuth.start(phone, recaptchaRef.current!);
+      phoneFlow.start(phone, verification);
       navigate('/verify');
     } catch (err) {
-      setError(err instanceof PhoneAuthUnavailable ? 'Phone sign-in isn’t available right now. Please try again later.' : friendlyFirebaseError(err));
+      setError(err instanceof PhoneAuthError ? err.message : 'We couldn’t send a code right now. Please try again.');
     } finally {
       setPending(false);
     }

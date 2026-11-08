@@ -17,7 +17,7 @@ class UserManager(BaseUserManager):
 
     def create_phone_user(self, phone: str, **extra):
         """A user who signs in with a verified phone number only (e.g. Click Partner via Firebase)."""
-        user = self.model(email=None, phone=phone, **extra)
+        user = self.model(email=None, phone=phone, phone_verified=True, **extra)
         user.set_unusable_password()
         user.save(using=self._db)
         return user
@@ -49,6 +49,7 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=254, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=20, blank=True)
+    phone_verified = models.BooleanField(default=False, help_text="Phone ownership proven by an identity provider (OTP).")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False, help_text="Can access internal tools (Business OS / admin).")
 
@@ -60,36 +61,12 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ["-created_at"]
-        constraints = [models.UniqueConstraint(Lower("email"), name="users_user_email_ci_unique")]
+        constraints = [
+            models.UniqueConstraint(Lower("email"), name="users_user_email_ci_unique"),
+            # A verified phone number belongs to exactly one Click account.
+            models.UniqueConstraint(fields=["phone"], condition=models.Q(phone_verified=True), name="users_verified_phone_unique"),
+        ]
 
     def __str__(self) -> str:
         return self.email or self.phone or str(self.id)
 
-
-class AuthIdentity(BaseModel):
-    """
-    An external identity provider account linked to a Click user.
-
-    Firebase Authentication proves control of a phone number; its immutable
-    UID (`subject`) is the lookup key, never the phone number itself. Business
-    data lives in Click's own tables, not in the identity provider.
-    """
-
-    class Provider(models.TextChoices):
-        FIREBASE = "firebase", "Firebase Authentication"
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="identities")
-    provider = models.CharField(max_length=20, choices=Provider.choices)
-    subject = models.CharField(max_length=128, help_text="Provider's immutable user ID (Firebase UID).")
-    phone_number = models.CharField(max_length=20, blank=True, help_text="E.164 phone verified by the provider.")
-    last_verified_at = models.DateTimeField()
-
-    class Meta:
-        ordering = ["-created_at"]
-        constraints = [
-            models.UniqueConstraint(fields=["provider", "subject"], name="users_identity_provider_subject_unique"),
-        ]
-        indexes = [models.Index(fields=["provider", "phone_number"], name="users_identity_phone_idx")]
-
-    def __str__(self) -> str:
-        return f"{self.provider}:{self.subject}"

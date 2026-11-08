@@ -8,9 +8,9 @@
 }
 .btn:active:not(:disabled) { transform: scale(0.98); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn--primary { background: var(--c-brand); color: #fff; }
-.btn--primary:hover:not(:disabled) { background: var(--c-brand-strong); }
-.btn--secondary { background: var(--c-brand-soft); color: var(--c-brand-strong); }
+.btn--primary { background: var(--c-theme, var(--c-brand)); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: var(--c-theme-strong, var(--c-brand-strong)); }
+.btn--secondary { background: var(--c-theme-soft, var(--c-brand-soft)); color: var(--c-theme-strong, var(--c-brand-strong)); }
 .btn--ghost { background: transparent; color: var(--c-ink-2); }
 .btn--ghost:hover:not(:disabled) { background: var(--c-surface-2); }
 .btn--outline { background: var(--c-surface); border-color: var(--c-line); color: var(--c-ink); }

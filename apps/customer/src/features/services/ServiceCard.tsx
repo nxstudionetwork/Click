@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui';
 export function ServiceCard({ service, detailed = false }: { service: ClickService; detailed?: boolean }) {
   const live = service.status === 'live';
   return (
-    <Link to={service.path} className={`service ${live ? 'service--live' : 'service--soon'}`}>
+    <Link to={service.path} data-tile={service.theme} className={`service ${live ? 'service--live' : 'service--soon'}`}>
       {!live && <span className="badge">Soon</span>}
       <span className="service__icon"><Icon name={service.icon} /></span>
       <span className="service__name">{service.name}</span>

@@ -37,9 +37,12 @@ def test_menu_groups_products_and_hides_inactive(api, store, products):
     assert names == ["Dal", "Sold out"]  # unavailable is shown (greyed out), inactive is hidden
 
 
-def test_seed_dev_data_is_idempotent(api):
-    call_command("seed_dev_data")
-    call_command("seed_dev_data")
-    assert api.get("/api/v1/stores?type=restaurant").json()["count"] == 10
-    assert api.get("/api/v1/stores?type=grocery").json()["count"] == 4
-    assert api.get("/api/v1/stores?type=retail").json()["count"] == 4
+def test_seed_dev_data_catalog_is_idempotent(api):
+    call_command("seed_dev_data", "--catalog-only")
+    call_command("seed_dev_data", "--catalog-only")
+    assert api.get("/api/v1/stores?type=restaurant").json()["count"] == 20
+    assert api.get("/api/v1/stores?type=grocery").json()["count"] == 5
+    assert api.get("/api/v1/stores?type=retail").json()["count"] == 5
+    assert api.get("/api/v1/offers?page_size=50").json()["count"] == 20
+    assert api.get("/api/v1/events?kind=movie&page_size=50").json()["count"] == 20
+    assert api.get("/api/v1/events?kind=event&page_size=50").json()["count"] == 20

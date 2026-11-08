@@ -2,35 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { Partner, PartnerField } from '@click/api';
-import { friendlyFirebaseError, needsNewCode } from '../firebase/errors';
-import { firebaseConfig } from '../firebase/config';
 import { canVisit } from '../session/steps';
 import { COUNTRIES, validateNational } from '../components/PhoneField';
 import { DynamicField, type FieldValue } from '../components/DynamicField';
 import { cardData, PartnerCard } from '../components/PartnerCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { visualFor, FALLBACK_VISUAL } from '../config/visuals';
-
-describe('Firebase errors', () => {
-  it('maps codes to friendly messages and never echoes raw errors', () => {
-    expect(friendlyFirebaseError({ code: 'auth/invalid-verification-code', message: 'Firebase: Error (auth/...)' }))
-      .toBe('That code isn’t correct. Please try again.');
-    expect(friendlyFirebaseError({ code: 'auth/code-expired' })).toMatch(/expired. Request a new one/);
-    expect(friendlyFirebaseError({ code: 'auth/too-many-requests' })).toMatch(/Too many attempts/);
-    expect(friendlyFirebaseError(new Error('Firebase: internal stack'))).toBe('We couldn’t verify your number right now. Please try again.');
-    expect(needsNewCode({ code: 'auth/code-expired' })).toBe(true);
-    expect(needsNewCode({ code: 'auth/invalid-verification-code' })).toBe(false);
-  });
-});
-
-describe('Firebase config', () => {
-  it('is null unless every required value is provided (no invented credentials)', () => {
-    expect(firebaseConfig({ VITE_FIREBASE_API_KEY: 'k' } as ImportMetaEnv)).toBeNull();
-    expect(firebaseConfig({
-      VITE_FIREBASE_API_KEY: 'k', VITE_FIREBASE_AUTH_DOMAIN: 'd', VITE_FIREBASE_PROJECT_ID: 'p', VITE_FIREBASE_APP_ID: 'a',
-    } as ImportMetaEnv)).toEqual({ apiKey: 'k', authDomain: 'd', projectId: 'p', appId: 'a' });
-  });
-});
 
 describe('onboarding steps', () => {
   it('allows going back but never skipping ahead of the server step', () => {
@@ -41,7 +18,7 @@ describe('onboarding steps', () => {
 });
 
 describe('phone validation', () => {
-  const IN = COUNTRIES[0];
+  const IN = COUNTRIES[0]!;
   it.each([['', /Enter your mobile/], ['98765', /all 10 digits/], ['1234567890', /doesn’t look right/]])('%s is rejected', (v, msg) => {
     expect(validateNational(IN, v)).toMatch(msg);
   });

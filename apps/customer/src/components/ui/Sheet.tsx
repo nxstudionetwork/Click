@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 /** Accessible bottom sheet (mobile) / centered dialog (desktop). */
-export function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () => void; label: string; children: ReactNode }) {
+export function Sheet({ open, onClose, label, children, variant = 'auto' }: { open: boolean; onClose: () => void; label: string; children: ReactNode; variant?: 'auto' | 'full' }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -21,7 +21,7 @@ export function Sheet({ open, onClose, label, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={ref}>
+      <div className={`sheet ${variant === 'full' ? 'sheet--full' : ''}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={ref}>
         {children}
       </div>
     </div>

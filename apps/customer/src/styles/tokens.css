@@ -63,3 +63,35 @@
   --content-max: 1120px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+/* ---- Service themes ----
+   Every theme shares Click's typography, spacing, components and motion.
+   Only the accent colours and hero gradient change, giving each service its own personality. */
+:root, [data-theme='default'] {
+  --c-theme: var(--c-brand);
+  --c-theme-strong: var(--c-brand-strong);
+  --c-theme-soft: var(--c-brand-soft);
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #8a72ff 0%, var(--c-brand) 45%, #2d1a9e 100%);
+}
+[data-theme='food'] { --c-theme: #e8590c; --c-theme-strong: #c2410c; --c-theme-soft: #fff1e6;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #ffb366 0%, #f76707 45%, #b8400a 100%); }
+[data-theme='grocery'] { --c-theme: #2f9e44; --c-theme-strong: #237a35; --c-theme-soft: #e9f7ec;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #8ce99a 0%, #37b24d 45%, #1f6f30 100%); }
+[data-theme='shopping'] { --c-theme: #3b3bd1; --c-theme-strong: #2b2ba8; --c-theme-soft: #eceefe;
+  --hero-bg: linear-gradient(135deg, #14121f 0%, #2b2b6e 55%, #4c4ce0 100%); }
+[data-theme='ride'] { --c-theme: #0c8599; --c-theme-strong: #0b6b7a; --c-theme-soft: #e3f6f8;
+  --hero-bg: linear-gradient(135deg, #0b1f26 0%, #0c5f6e 55%, #15aabf 100%); }
+[data-theme='parcel'] { --c-theme: #e67700; --c-theme-strong: #b35c00; --c-theme-soft: #fff4e0;
+  --hero-bg: linear-gradient(135deg, #3d2a10 0%, #b35c00 60%, #fab005 100%); }
+[data-theme='movies'] { --c-theme: #e03158; --c-theme-strong: #b4203f; --c-theme-soft: #fde8ed;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #6b1b2f 0%, #2a0d16 55%, #0e0a10 100%); }
+[data-theme='services'] { --c-theme: #1c7ed6; --c-theme-strong: #1864ab; --c-theme-soft: #e7f2fd;
+  --hero-bg: linear-gradient(135deg, #0d2a4a 0%, #1864ab 60%, #4dabf7 100%); }
+[data-theme='rewards'] { --c-theme: #0f9f7f; --c-theme-strong: #0b7d66; --c-theme-soft: #e3f8f2;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2bd8b0 0%, #14c8a0 35%, #0b7d66 100%); }
+[data-theme='wallet'] { --c-theme: #1f2a44; --c-theme-strong: #11182b; --c-theme-soft: #eef1f7;
+  --hero-bg: linear-gradient(135deg, #11182b 0%, #23315a 60%, #3d5a99 100%); }
+[data-theme='buzz'] { --c-theme: #d6336c; --c-theme-strong: #a61e4d; --c-theme-soft: #fdeaf1;
+  --hero-bg: linear-gradient(135deg, #5f3dc4 0%, #d6336c 60%, #f76707 100%); }
+[data-theme='buddy'] { --c-theme: var(--c-brand); --c-theme-strong: var(--c-brand-strong); --c-theme-soft: var(--c-brand-soft);
+  --hero-bg: linear-gradient(135deg, var(--c-brand) 0%, #14c8a0 100%); }

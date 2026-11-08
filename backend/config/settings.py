@@ -77,6 +77,10 @@ INSTALLED_APPS = [
     "apps.rewards",
     "apps.support",
     "apps.ai",
+    "apps.wallet",
+    "apps.bookings",
+    "apps.identity",
+    "apps.activity",
     "apps.partners",
 ]
 
@@ -137,6 +141,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# User uploads (profile photos). Local disk in development; object storage in production.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 # --- API ---------------------------------------------------------------
 REST_FRAMEWORK = {
@@ -156,7 +164,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": os.environ.get("THROTTLE_ANON", "120/min"),
         "user": os.environ.get("THROTTLE_USER", "600/min"),
-        "auth": os.environ.get("THROTTLE_AUTH", "10/min"),
+        "auth": os.environ.get("THROTTLE_AUTH", "10/min"),  # login / register (credential guessing)
+        "auth_session": os.environ.get("THROTTLE_AUTH_SESSION", "120/min"),  # refresh / logout run on every page load
         "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
@@ -205,19 +214,34 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # --- Click business configuration ------------------------------------
+CLICK_DEV_PORT = os.environ.get("CLICK_DEV_PORT", "4000")
+# DEVELOPMENT-ONLY one-click login as the seeded test customer. Hard-wired off unless DEBUG is on,
+# so it cannot be enabled in production even if the env var is set.
+CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
+CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
+
+# --- Customer identity ------------------------------------------------
+# Phone sign-in is verified by a pluggable identity provider; Click then issues its own session.
+# To change provider later: add a verifier in apps/identity and point this mapping at it.
+CLICK_IDENTITY_PROVIDERS = {
+    "firebase": "apps.identity.firebase.FirebaseIdTokenVerifier",
+}
+# Firebase project whose ID tokens are accepted (public identifier, not a secret). No service-account key is needed:
+# tokens are verified against Google's public certificates.
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "clickstartup26")
+# Local Firebase Auth Emulator (e.g. "127.0.0.1:9099"). Honoured ONLY when DEBUG is on.
+FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") if DEBUG else ""
+# Legacy email/password endpoints: development/test accounts only. Customers sign in with phone OTP.
+CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# GST on platform convenience fees (bookings).
+CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
-# Firebase Authentication (Click Partner phone sign-in). Only the public project ID
-# is needed to verify ID tokens; no service-account key is used or stored.
-FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
-# Local development only: accept unsigned tokens from the Firebase Auth Emulator.
-FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "")
-if FIREBASE_AUTH_EMULATOR_HOST and not (DEBUG or TESTING):
-    raise RuntimeError("FIREBASE_AUTH_EMULATOR_HOST must not be set in production.")
-# Dotted path to an apps.ai.providers.AIProvider implementation. Empty = AI disabled.
-CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "")
+# Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
+# (built-in, answers only from real Click data). Set to empty to disable AI.
+CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")
 
 LOGGING = {
     "version": 1,

@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5174,
     // Same-origin in development so the httpOnly refresh cookie just works.
-    proxy: { '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:8000', changeOrigin: false } },
+    proxy: { '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false } },
   },
   preview: { port: 4174 },
   build: {

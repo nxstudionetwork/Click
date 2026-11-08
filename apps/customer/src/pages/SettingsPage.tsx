@@ -8,18 +8,17 @@ export function SettingsPage() {
   const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
   const [fullName, setFullName] = useState(user?.fullName ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setFullName(user?.fullName ?? ''); setPhone(user?.phone ?? ''); }, [user]);
+  useEffect(() => { setFullName(user?.fullName ?? ''); }, [user]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setErrors({});
     try {
-      refreshUser(await api.auth.updateMe({ fullName: fullName.trim(), phone: phone.trim() }));
+      refreshUser(await api.auth.updateMe({ fullName: fullName.trim() }));
       toast('Profile saved');
     } catch (err) {
       setErrors(err instanceof ApiError ? { ...err.fieldErrors(), _: err.code === 'validation_error' ? '' : err.message } : { _: 'Could not save.' });
@@ -35,8 +34,8 @@ export function SettingsPage() {
         <h3>Profile</h3>
         <div className="form-grid">
           <TextField label="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} error={errors.fullName} autoComplete="name" maxLength={150} />
-          <TextField label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={errors.phone} autoComplete="tel" maxLength={20} />
-          <TextField className="span-2" label="Email" value={user?.email ?? ''} disabled readOnly />
+          <TextField label={user?.phoneVerified ? 'Phone (verified)' : 'Phone'} type="tel" value={user?.phone ?? ''} disabled readOnly />
+          <TextField label="Email" value={user?.email ?? ''} disabled readOnly />
         </div>
         {errors._ && <p className="field__error" role="alert">{errors._}</p>}
         <Button type="submit" loading={saving} style={{ alignSelf: 'flex-start' }}>Save changes</Button>

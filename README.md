@@ -1,5 +1,21 @@
 # Click
 
+## Run Click on Windows (easy way)
+
+**One-time installs** (keep the default options in each installer):
+1. **Node.js 22 LTS**: https://nodejs.org
+2. **Python 3.12+**: https://www.python.org/downloads/ (tick **"Add python.exe to PATH"** on the first screen)
+3. **PostgreSQL 16**: https://www.postgresql.org/download/windows/ (write down the password you choose for
+   the `postgres` user)
+
+**Every time:**
+1. Get the latest code: open the Click folder, then run `git pull` in a terminal (or GitHub Desktop → *Pull origin*).
+2. Double-click **`START-CLICK.bat`**.
+   - The first run installs everything and asks once for your PostgreSQL password.
+   - Click opens in your browser at http://localhost:5173.
+   - Two windows stay open (the API and the App). Close them to stop Click.
+3. To sign in quickly while testing, use **Login as Test Customer** on the sign-in screen.
+
 Click is a platform that brings everyday services (food, groceries, rides, deliveries and more) into one ecosystem.
 
 ## Repository layout
@@ -12,12 +28,13 @@ apps/
 packages/
   api/             @click/api: shared typed API contract, HTTP client and session client for all apps
   ui/              @click/ui: shared UI primitives and the Click logo (each app supplies its own tokens)
+  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Firebase adapter) for every app
 backend/           Django + DRF shared API (PostgreSQL)
 docs/              Architecture notes (see docs/architecture.md)
 infrastructure/    Local dev infrastructure (Postgres via docker compose)
   config/          settings (env-driven), urls
   apps/core        base models (UUID + timestamps), camelCase API contract, error envelope, permissions
-  apps/users       single identity for every actor, JWT auth (refresh in httpOnly cookie), Firebase phone identities
+  apps/users       single identity for every actor, JWT auth (refresh in httpOnly cookie)
   apps/partners    Click Partner: types/categories catalogue, partner identity, profile, location, verification, Partner ID
   apps/customers   customer profile, addresses
   apps/stores      storefronts (restaurant/grocery/retail), categories, display offers
@@ -29,7 +46,9 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/notifications in-app notification centre (order, rewards, support events)
   apps/rewards     append-only points ledger (earned on delivered orders)
   apps/support     customer support tickets
-  apps/ai          provider-agnostic Click AI layer (disabled until a provider is configured)
+  apps/wallet      Click Wallet (append-only ledger; pay + refunds)
+  apps/bookings    movies & live events: venues, shows, seat-safe bookings
+  apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
@@ -45,13 +64,13 @@ Requirements: Python 3.12+, Node 22+, PostgreSQL 16.
 createuser click -P   # password: click (dev only)
 createdb click -O click
 
-# Backend (http://localhost:8000)
+# Backend API (http://localhost:4000)
 cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
-python manage.py seed_dev_data      # dev data: 10 restaurants, 4 grocery stores, 4 shops
+python manage.py seed_dev_data      # DEVELOPMENT MOCK DATA + test customer (see docs/development-data.md)
 python manage.py runserver
 
 # Frontend (http://localhost:5173, proxies /api to Django)
@@ -59,6 +78,17 @@ npm install
 npm run dev:customer
 npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md for Firebase setup)
 ```
+
+## Customer sign-in
+
+Phone OTP via Firebase Phone Auth, verified by the Click backend, which issues Click's own session.
+Setup and provider swapping: [docs/authentication.md](docs/authentication.md). Put the Firebase web config in
+`apps/customer/.env.local` (see `apps/customer/.env.example`).
+
+## Development test login
+
+After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
+with the Firebase test number `+1 650 555 0101` (see docs). Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

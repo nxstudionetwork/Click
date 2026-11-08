@@ -3,16 +3,21 @@ One shared API for all Click products, versioned under /api/v1/.
 
   public      /api/v1/stores...               discovery (no auth)
   auth        /api/v1/auth/..., /api/v1/me    shared identity
+  bookings    /api/v1/events, /api/v1/shows   movies & live events (public)
   customer    /api/v1/customer/...            Customer App (IsCustomer + ownership)
   partner     /api/v1/partner/...             Click Partner App (resolved from request.user)
   business os /api/v1/os/...                  Phase 6
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
 from apps.ai.views import CustomerAssistantView
+from apps.bookings import views as booking_views
+from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
 from apps.catalog.views import ProductDetailView, StoreMenuView
@@ -46,6 +51,10 @@ customer_urls = [
     path("support/tickets", support_views.SupportTicketListCreateView.as_view(), name="support-tickets"),
     path("support/tickets/<uuid:pk>", support_views.SupportTicketDetailView.as_view(), name="support-ticket"),
     path("assistant/messages", CustomerAssistantView.as_view(), name="assistant"),
+    path("wallet", WalletView.as_view(), name="wallet"),
+    path("bookings", booking_views.BookingListCreateView.as_view(), name="bookings"),
+    path("bookings/<uuid:pk>", booking_views.BookingDetailView.as_view(), name="booking-detail"),
+    path("bookings/<uuid:pk>/cancel", booking_views.BookingCancelView.as_view(), name="booking-cancel"),
     *customer_router.urls,
 ]
 
@@ -56,6 +65,9 @@ api_v1 = [
     path("stores/<slug:slug>/menu", StoreMenuView.as_view(), name="store-menu"),
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
+    path("events", booking_views.EventListView.as_view(), name="events"),
+    path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),
+    path("shows/<uuid:pk>", booking_views.ShowSeatMapView.as_view(), name="show-seatmap"),
     path("offers", store_views.OfferListView.as_view(), name="offers"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
@@ -67,3 +79,5 @@ urlpatterns = [
     path("api/health", health, name="health"),
     path("api/v1/", include(api_v1)),
 ]
+if settings.DEBUG:  # development only; production serves uploads from object storage/CDN
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
