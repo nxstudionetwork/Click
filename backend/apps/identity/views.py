@@ -75,3 +75,20 @@ class IdentitySignupView(AuthView):
         response = _session_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         response.data["status"] = "authenticated"
         return response
+
+
+class PartnerSignupSerializer(serializers.Serializer):
+    signup_token = serializers.CharField(max_length=2048)
+
+
+class IdentityPartnerSignupView(AuthView):
+    """Click Partner: turn a verified phone (signup token from /exchange) into a phone-only Click account."""
+
+    def post(self, request):
+        s = PartnerSignupSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        identity = services.read_signup_token(s.validated_data["signup_token"])
+        user, created = services.complete_partner_signup(identity)
+        response = _session_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        response.data["status"] = "authenticated"
+        return response

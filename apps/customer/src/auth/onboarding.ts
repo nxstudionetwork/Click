@@ -4,7 +4,7 @@
  * backend, valid 20 min) is kept in sessionStorage so a refresh during profile setup
  * doesn't force a new OTP; it is cleared as soon as signup completes.
  */
-import type { PhoneVerification } from './phone';
+import type { PhoneVerification } from '@click/phone-auth';
 
 let pending: PhoneVerification | null = null;
 const KEY = 'click.signup';

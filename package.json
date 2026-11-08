@@ -4,6 +4,7 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev:customer": "npm run dev -w @click/customer",
+    "dev:partner": "npm run dev -w @click/partner",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"

@@ -23,16 +23,19 @@ Click is a platform that brings everyday services (food, groceries, rides, deliv
 ```
 apps/
   customer/        Customer App (React + TypeScript, Vite)       ← active
-  partner/         Partner App                                    ← Phase 5 (boundary README only)
+  partner/         Click Partner App (React + TypeScript, Vite)   ← phase 1: sign-in → onboarding → Partner ID → Home
   business-os/     Internal Click Business OS                     ← Phase 6 (boundary README only)
 packages/
-  api/             @click/api: shared typed API contract + HTTP client for all apps
+  api/             @click/api: shared typed API contract, HTTP client and session client for all apps
+  ui/              @click/ui: shared UI primitives and the Click logo (each app supplies its own tokens)
+  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Firebase adapter) for every app
 backend/           Django + DRF shared API (PostgreSQL)
 docs/              Architecture notes (see docs/architecture.md)
 infrastructure/    Local dev infrastructure (Postgres via docker compose)
   config/          settings (env-driven), urls
   apps/core        base models (UUID + timestamps), camelCase API contract, error envelope, permissions
   apps/users       single identity for every actor, JWT auth (refresh in httpOnly cookie)
+  apps/partners    Click Partner: types/categories catalogue, partner identity, profile, location, verification, Partner ID
   apps/customers   customer profile, addresses
   apps/stores      storefronts (restaurant/grocery/retail), categories, display offers
   apps/catalog     menu categories, products
@@ -49,7 +52,8 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
-`/api/v1/customer/*` (customers, ownership enforced in querysets). `/api/v1/partner/*` and `/api/v1/os/*` come later.
+`/api/v1/customer/*` (customers, ownership enforced in querysets), `/api/v1/partner/*` (partner resolved from the
+signed-in user, never from client input). `/api/v1/os/*` comes later.
 
 ## Local development
 
@@ -72,6 +76,7 @@ python manage.py runserver
 # Frontend (http://localhost:5173, proxies /api to Django)
 npm install
 npm run dev:customer
+npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md for Firebase setup)
 ```
 
 ## Customer sign-in

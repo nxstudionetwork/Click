@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { ApiError, type AddressInput, type AddressLabel } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { onboarding } from '../auth/onboarding';
-import { maskPhone } from '../auth/phone/countries';
+import { maskPhone } from '@click/phone-auth';
 import { Button, Icon, TextArea, TextField } from '../components/ui';
 import { api } from '../lib/api';
 import { AuthLayout } from './AuthLayout';

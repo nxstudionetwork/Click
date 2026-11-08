@@ -76,6 +76,7 @@ Say 'Starting Click' 'Green'
 $backendDir = Join-Path $Root 'backend'
 Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$backendDir'; `$host.UI.RawUI.WindowTitle = 'Click API (port 4000) - keep open'; & '$venvPy' manage.py runserver"
 Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$Root'; `$host.UI.RawUI.WindowTitle = 'Click Customer App (port 5173) - keep open'; npm run dev:customer"
+Start-Process powershell -ArgumentList '-NoExit', '-Command', "Set-Location '$Root'; `$host.UI.RawUI.WindowTitle = 'Click Partner App (port 5174) - keep open'; npm run dev:partner"
 
 Write-Host 'Waiting for Click to start...'
 for ($i = 0; $i -lt 60; $i++) {
@@ -84,5 +85,6 @@ for ($i = 0; $i -lt 60; $i++) {
 Start-Process 'http://localhost:5173'
 Write-Host ''
 Write-Host 'Click is running at http://localhost:5173' -ForegroundColor Green
-Write-Host 'Two windows were opened (API and App). Keep them open while you use Click; close them to stop.'
+Write-Host 'Click Partner is running at http://localhost:5174' -ForegroundColor Green
+Write-Host 'Three windows were opened (API, Customer App and Partner App). Keep them open while you use Click; close them to stop.'
 Write-Host 'Quick sign-in for testing: on the sign-in screen use "Login as Test Customer".'

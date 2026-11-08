@@ -9,8 +9,8 @@ const start = vi.fn();
 const exchange = vi.fn();
 const completeSignup = vi.fn();
 const startSession = vi.fn();
-vi.mock('../auth/phone', async () => {
-  const types = await import('../auth/phone/types');
+vi.mock('@click/phone-auth', async (importOriginal) => {
+  const types = await importOriginal<typeof import('@click/phone-auth')>();
   return { ...types, phoneAuth: { id: 'test', start: (...a: unknown[]) => start(...a), reset: vi.fn() } };
 });
 vi.mock('../lib/api', () => ({ api: { auth: {
@@ -23,7 +23,7 @@ const { LoginPage } = await import('./LoginPage');
 const { VerifyPage } = await import('./VerifyPage');
 const { SignupPage } = await import('./SignupPage');
 const { onboarding } = await import('../auth/onboarding');
-const { PhoneAuthError, FRIENDLY } = await import('../auth/phone/types');
+const { PhoneAuthError, FRIENDLY } = await import('@click/phone-auth');
 
 const flow = (route: string) => renderWithProviders(
   <Routes>

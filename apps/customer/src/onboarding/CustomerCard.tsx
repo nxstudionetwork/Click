@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { User } from '@click/api';
-import { maskPhone } from '../auth/phone/countries';
+import { maskPhone } from '@click/phone-auth';
 import { Icon } from '../components/ui';
 
 /** What the QR and the shared image contain: name + Click ID only (no phone, email or address). */
@@ -13,7 +13,7 @@ const maskEmail = (e: string) => e.replace(/^(.{2})[^@]*(@.*)$/, (_, a, b) => `$
 export function CustomerCard({ user }: { user: User }) {
   const [qr, setQr] = useState('');
   useEffect(() => { QRCode.toDataURL(qrPayload(user), { margin: 1, width: 240, color: { dark: '#14121f', light: '#ffffff' } }).then(setQr).catch(() => setQr('')); }, [user]);
-  const initial = (user.fullName || user.email).trim()[0]!.toUpperCase();
+  const initial = (user.fullName || user.email || '?').trim()[0]!.toUpperCase();
   return (
     <article className="ccard" aria-label="Your Click customer card">
       <div className="ccard__glow" aria-hidden="true" />
@@ -31,7 +31,7 @@ export function CustomerCard({ user }: { user: User }) {
       <footer className="ccard__foot">
         <div className="ccard__meta">
           <span><Icon name="shield" size={14} /> {user.phone ? maskPhone(user.phone) : 'Phone not added'}</span>
-          <span>{maskEmail(user.email)}</span>
+          {user.email && <span>{maskEmail(user.email)}</span>}
         </div>
         {qr && <img className="ccard__qr" src={qr} alt={`QR code for Click ID ${user.customerCode}`} />}
       </footer>

@@ -1,5 +1,5 @@
 import type { Dietary } from '@click/api';
-import { Icon } from './Icon';
+import { Icon } from '@click/ui';
 
 export function Rating({ value, count }: { value: string; count?: number }) {
   const n = Number(value);

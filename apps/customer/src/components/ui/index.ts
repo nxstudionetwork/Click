@@ -1,9 +1,5 @@
-export * from './Button';
-export * from './Icon';
+// Generic primitives are shared with the other Click apps via @click/ui.
+export * from '@click/ui';
 export * from './Misc';
 export * from './Sheet';
-export * from './SmartImage';
-export * from './States';
-export * from './TextField';
-export * from './Toast';
 export * from './PriceTag';

@@ -5,7 +5,7 @@ One shared API for all Click products, versioned under /api/v1/.
   auth        /api/v1/auth/..., /api/v1/me    shared identity
   bookings    /api/v1/events, /api/v1/shows   movies & live events (public)
   customer    /api/v1/customer/...            Customer App (IsCustomer + ownership)
-  partner     /api/v1/partner/...             Phase 5
+  partner     /api/v1/partner/...             Click Partner App (resolved from request.user)
   business os /api/v1/os/...                  Phase 6
 """
 
@@ -71,6 +71,7 @@ api_v1 = [
     path("offers", store_views.OfferListView.as_view(), name="offers"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
+    path("partner/", include("apps.partners.urls")),
 ]
 
 urlpatterns = [

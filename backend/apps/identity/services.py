@@ -75,3 +75,29 @@ def complete_signup(identity: VerifiedIdentity, *, full_name: str, email: str, a
     record(profile, "account.signup", {"provider": identity.provider})
     audit.info("identity.signup", extra={"user_id": str(user.id), "provider": identity.provider})
     return user, True
+
+
+def complete_partner_signup(identity: VerifiedIdentity) -> tuple[User, bool]:
+    """
+    Click Partner sign-up after phone OTP: a phone-only Click user (no email, no password)
+    linked to the provider subject. Business details live on the Partner, created during
+    onboarding. Idempotent per identity and safe against concurrent first sign-ins.
+    """
+    link = ExternalIdentity.objects.select_related("user").filter(provider=identity.provider, subject=identity.subject).first()
+    if link and not link.user.is_active:
+        raise DomainError("This account is disabled. Contact Click support.", code="account_disabled", status_code=403)
+    existing = resolve_user(identity)
+    if existing:
+        return existing, False
+    try:
+        with transaction.atomic():
+            user = User.objects.create_phone_user(identity.phone_number)
+            ExternalIdentity.objects.create(user=user, provider=identity.provider, subject=identity.subject,
+                                            phone_number=identity.phone_number, last_verified_at=timezone.now())
+    except IntegrityError:
+        existing = resolve_user(identity)  # a concurrent first sign-in won the race
+        if existing:
+            return existing, False
+        raise ConflictError("This phone is already linked to a Click account.", code="identity_conflict")
+    audit.info("identity.partner_signup", extra={"user_id": str(user.id), "provider": identity.provider})
+    return user, True

@@ -2,7 +2,7 @@ import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
-  OrderSummary, Paginated, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
@@ -18,6 +18,9 @@ export const authApi = (http: HttpClient) => ({
   /** Exchange a phone-OTP provider credential (e.g. Firebase ID token) for a Click session or a signup token. */
   exchangeIdentity: (input: { provider: string; token: string }) =>
     http.request<IdentityExchangeResult>('/auth/identity/exchange', { method: 'POST', body: input, auth: false }),
+  /** Click Partner: create the phone-only Click account for a newly verified phone (token from exchangeIdentity). */
+  partnerSignup: (signupToken: string) =>
+    http.request<Session & { status: 'authenticated' }>('/auth/identity/partner-signup', { method: 'POST', body: { signupToken }, auth: false }),
   completeSignup: (input: SignupInput) =>
     http.request<Session & { status: 'authenticated' }>('/auth/identity/signup', { method: 'POST', body: input, auth: false }),
   uploadAvatar: (file: Blob) => {
@@ -123,4 +126,17 @@ export const customerApi = (http: HttpClient) => ({
       http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
     cancel: (id: string) => http.request<Booking>(`/customer/bookings/${id}/cancel`, { method: 'POST' }),
   },
+});
+
+/** Click Partner App. The server resolves the partner from the signed-in user; no partner IDs are sent. */
+export const partnerApi = (http: HttpClient) => ({
+  catalog: () => http.request<{ types: PartnerType[] }>('/partner/categories', { auth: false }),
+  me: () => http.request<PartnerState>('/partner/me'),
+  chooseCategory: (input: { partnerType: string; category: string }) =>
+    http.request<PartnerState>('/partner/onboarding/category', { method: 'POST', body: input }),
+  saveProfile: (input: PartnerProfileInput) =>
+    http.request<PartnerState>('/partner/onboarding/profile', { method: 'PATCH', body: input }),
+  saveLocation: (input: PartnerLocationInput) =>
+    http.request<PartnerState>('/partner/onboarding/location', { method: 'PATCH', body: input }),
+  submit: () => http.request<PartnerState>('/partner/onboarding/submit', { method: 'POST' }),
 });

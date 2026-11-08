@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "apps.bookings",
     "apps.identity",
     "apps.activity",
+    "apps.partners",
 ]
 
 MIDDLEWARE = [
@@ -165,6 +166,7 @@ REST_FRAMEWORK = {
         "user": os.environ.get("THROTTLE_USER", "600/min"),
         "auth": os.environ.get("THROTTLE_AUTH", "10/min"),  # login / register (credential guessing)
         "auth_session": os.environ.get("THROTTLE_AUTH_SESSION", "120/min"),  # refresh / logout run on every page load
+        "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
     },

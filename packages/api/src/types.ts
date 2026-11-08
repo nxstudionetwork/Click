@@ -26,11 +26,12 @@ export interface ApiErrorBody {
 }
 
 // --- Identity ---------------------------------------------------------
-export type Role = 'customer' | 'staff';
+export type Role = 'customer' | 'partner' | 'staff';
 
 export interface User {
   id: UUID;
-  email: string;
+  /** Null for phone-only identities (Click Partner signs in with a Firebase-verified phone). */
+  email: string | null;
   fullName: string;
   phone: string;
   roles: Role[];
@@ -487,4 +488,126 @@ export interface Booking {
   canCancel: boolean;
   createdAt: ISODateTime;
   cancelledAt: ISODateTime | null;
+}
+
+// --- Click Partner -------------------------------------------------------------
+export type PartnerStatus =
+  | 'draft' | 'profile_completed' | 'verification_pending' | 'verified' | 'active' | 'rejected' | 'suspended' | 'inactive';
+
+export type OnboardingStep = 'category' | 'profile' | 'location' | 'review' | 'complete';
+
+export type PartnerFieldKind = 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'time';
+
+export interface PartnerFieldOption {
+  value: string;
+  label: string;
+}
+
+/** A category-specific onboarding field, defined centrally on the server. */
+export interface PartnerField {
+  key: string;
+  label: string;
+  kind: PartnerFieldKind;
+  required: boolean;
+  options?: PartnerFieldOption[];
+  placeholder?: string;
+  help?: string;
+  min?: number;
+  max?: number;
+  maxLength?: number;
+  maxItems?: number;
+  default?: string | string[] | number;
+}
+
+export interface PartnerHomeModule {
+  key: string;
+  label: string;
+  empty: string;
+}
+
+export interface PartnerCategoryConfiguration {
+  tagline: string;
+  identity: { individual: boolean; businessNameLabel: string; businessNameHelp?: string };
+  fields: PartnerField[];
+  location: { title?: string; addressLabel?: string; serviceArea: boolean; serviceRadius: boolean };
+  home: { availabilityLabel?: string; modules: PartnerHomeModule[] };
+}
+
+export interface PartnerCategory {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  imageUrl: string;
+  configuration: PartnerCategoryConfiguration;
+}
+
+export interface PartnerType {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  imageUrl: string;
+  tagline: string;
+  categories: PartnerCategory[];
+}
+
+export type PartnerDetails = Record<string, string | number | string[]>;
+
+export interface PartnerAddress {
+  line1: string;
+  line2: string;
+  landmark: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  latitude: string | null;
+  longitude: string | null;
+  serviceArea: string;
+  serviceRadiusKm: number | null;
+}
+
+export interface Partner {
+  /** Permanent Click Partner ID (CLK-PT-000001). Null until the profile is submitted. */
+  partnerCode: string | null;
+  status: PartnerStatus;
+  statusLabel: string;
+  isVerified: boolean;
+  onboardingStep: OnboardingStep;
+  partnerType: { slug: string; name: string; icon: string };
+  category: PartnerCategory;
+  businessName: string;
+  isAvailable: boolean;
+  verifiedPhone: string;
+  profile: { contactName: string; email: string; description: string; details: PartnerDetails };
+  address: PartnerAddress | null;
+  profileCompletedAt: ISODateTime | null;
+  createdAt: ISODateTime;
+}
+
+export interface PartnerState {
+  partner: Partner | null;
+  onboardingStep: OnboardingStep;
+}
+
+export interface PartnerProfileInput {
+  businessName: string;
+  contactName?: string;
+  email?: string;
+  description?: string;
+  details: PartnerDetails;
+}
+
+export interface PartnerLocationInput {
+  line1: string;
+  line2?: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  serviceArea?: string;
+  serviceRadiusKm?: number | null;
 }

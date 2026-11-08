@@ -3,8 +3,7 @@ import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-route
 import { ApiError } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { onboarding } from '../auth/onboarding';
-import { phoneAuth, PhoneAuthError } from '../auth/phone';
-import { maskPhone } from '../auth/phone/countries';
+import { maskPhone, phoneAuth, PhoneAuthError } from '@click/phone-auth';
 import { Button, Icon } from '../components/ui';
 import { api } from '../lib/api';
 import { AuthLayout } from './AuthLayout';

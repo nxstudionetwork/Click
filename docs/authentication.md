@@ -1,4 +1,7 @@
-# Customer authentication (phone OTP)
+# Click authentication (phone OTP)
+
+Customer and Partner apps share this identity layer and the `@click/phone-auth` package. The customer flow is
+shown below; the partner flow differs only after the exchange (see *Click Partner* at the end).
 
 ```
 Customer App ──(phone)──► Phone-OTP provider (Firebase Phone Auth today)
@@ -73,3 +76,12 @@ with the new provider, because their phone number is already verified.
 
 - **Login as Test Customer** on the sign-in screen (development builds only; the backend endpoint returns 404 unless `DEBUG`).
 - **Email/password** endpoints exist only for development and tests (`CLICK_PASSWORD_AUTH`, off in production).
+
+## Click Partner
+
+The Partner App uses the same exchange. For a new phone, instead of the customer profile signup it calls
+`POST /api/v1/auth/identity/partner-signup {signupToken}`, which creates a **phone-only** Click user (no email, no
+password) linked by `ExternalIdentity`. Business details are collected during partner onboarding and stored on the
+`Partner` (`apps/partners`). A phone already verified on a customer account resolves to that same user, so one
+person can be both a customer and a partner. Partner data is always resolved from the signed-in user's
+`PartnerMembership`, never from client input.

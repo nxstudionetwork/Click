@@ -9,6 +9,7 @@ import { ToastProvider } from './components/ui';
 import { LocationProvider } from './location/LocationProvider';
 import './styles/tokens.css';
 import './styles/base.css';
+import '@click/ui/ui.css';
 import './styles/ui.css';
 import './styles/layout.css';
 import './styles/features.css';
