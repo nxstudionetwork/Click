@@ -32,6 +32,7 @@ class SupportTicket(BaseModel):
     reference = models.CharField(max_length=12, unique=True, default=_reference, editable=False)
     customer = models.ForeignKey(CustomerProfile, on_delete=models.PROTECT, related_name="support_tickets")
     order = models.ForeignKey("orders.Order", on_delete=models.SET_NULL, null=True, blank=True, related_name="support_tickets")
+    parcel = models.ForeignKey("parcels.ParcelOrder", on_delete=models.SET_NULL, null=True, blank=True, related_name="support_tickets")
     category = models.CharField(max_length=20, choices=Category.choices)
     subject = models.CharField(max_length=150)
     message = models.TextField(max_length=4000)

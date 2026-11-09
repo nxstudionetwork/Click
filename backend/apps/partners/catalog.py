@@ -501,11 +501,12 @@ HOME: dict[str, dict] = {
         "quick_actions": [], "earnings_label": "Today’s revenue", "performance": [],
     },
     "logistics": {
-        "workspace": "upcoming", "location": "live", "work_noun": "delivery",
-        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""),
-        "upcoming": {"service": "Click. Parcel", "what": "pickup requests, active deliveries and delivery earnings"},
+        "workspace": "parcels", "location": "live", "work_noun": "delivery",
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable",
+                          "You’ll receive Click. Parcel delivery requests near you.", "You won’t receive delivery requests.",
+                          "You’ll stop receiving delivery requests until you go available again."),
         "metrics": ["deliveries", "completed", "earnings", "pending"],
-        "quick_actions": [], "earnings_label": "Today’s earnings", "performance": [],
+        "quick_actions": ["requests", "active", "earnings"], "earnings_label": "Today’s deliveries", "performance": [],
     },
     "services": {
         "workspace": "upcoming", "location": "business", "work_noun": "job",
@@ -519,9 +520,12 @@ HOME: dict[str, dict] = {
 # Category-level Home overrides (shallow-merged over the type's Home).
 CATEGORY_HOME: dict[str, dict] = {
     # Transport partners who don't drive Click. Ride trips themselves.
-    "delivery-rider": {"workspace": "upcoming", "upcoming": {
-        "service": "Click. Delivery", "what": "delivery requests, active deliveries and delivery earnings"},
-        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""), "work_noun": "delivery"},
+    "delivery-rider": {"workspace": "parcels", "work_noun": "delivery",
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable",
+                          "You’ll receive Click. Parcel delivery requests near you.", "You won’t receive delivery requests.",
+                          "You’ll stop receiving delivery requests until you go available again."),
+        "metrics": ["deliveries", "completed", "earnings", "pending"], "quick_actions": ["requests", "active", "earnings"],
+        "earnings_label": "Today’s deliveries", "performance": []},
     **{slug: {"workspace": "upcoming", "location": "business", "upcoming": {
         "service": "Click. Fleet", "what": "your vehicles, drivers, trips and fleet earnings"}}
        for slug in ("fleet-operator", "rental-vehicle", "transport-provider")},

@@ -47,12 +47,15 @@ export function RideMap({ pickup, drop, stops = [], driver, center, onPick, clas
     m.on('click', (e: L.LeafletMouseEvent) => pickHandler.current?.({ lat: e.latlng.lat, lng: e.latlng.lng }));
     layer.current = L.layerGroup().addTo(m);
     map.current = m;
-    return () => { m.remove(); map.current = null; };
+    const ro = new ResizeObserver(() => m.invalidateSize());
+    ro.observe(el.current);
+    return () => { ro.disconnect(); m.remove(); map.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current, g = layer.current;
     if (!m || !g) return;
+    m.invalidateSize(); // the container may have been sized after the map was created (lazy-loaded panels, sheets)
     g.clearLayers();
     const pts: [number, number][] = [];
     if (pickup) { pts.push([pickup.lat, pickup.lng]); L.marker([pickup.lat, pickup.lng], { icon: pin('pickup'), title: `Pickup: ${pickup.label}` }).addTo(g); }

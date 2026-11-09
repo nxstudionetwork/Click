@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "apps.rides",
     "apps.shop",
     "apps.groceries",
+    "apps.parcels",
 ]
 
 MIDDLEWARE = [

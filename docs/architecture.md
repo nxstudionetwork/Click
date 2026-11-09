@@ -237,6 +237,39 @@ orders are the shared orders (same status machine, payments, notifications, Acti
   and bread" into a shopping list link (it never adds to the basket or orders); Buzz shows produce a store received
   today and grocery offers.
 
+## Parcel (local pickup and drop)
+
+Customer-facing name: **Parcel** (`/parcels`; tracking pages `/parcels/<id>`, shared links `/track/<token>`). `apps/parcels`
+reuses partners (delivery riders and Parcel & Logistics partners), their reported locations (`rides.DriverLocation`),
+the route estimate of Click. Ride, payments (wallet / cash to the partner at pickup), notifications, support tickets
+and Activity.
+
+- **Configuration (admin / Business OS):** `ParcelServiceArea` (where Parcel operates), `ParcelService` (Express,
+  Same Day, Standard, Scheduled: hours, cut-offs, delivery windows, max distance, stops, cash, cancellation fee, which
+  vehicles), `ParcelVehicle` (capacity in kg and cm, base / per-km / minimum / per-stop rates, speed),
+  `ParcelCategory` (what's inside; restricted categories can't be booked), `ParcelRule` (package rules and
+  not-accepted items shown before booking).
+- **Booking:** `POST /customer/parcels/quote` prices every vehicle under a service from these records (base, distance,
+  service fee, stops, tax; straight-line route estimate, labelled). `POST /customer/parcels` re-prices and must match the
+  total the customer saw (`price_changed` otherwise), checks coverage, package rules, vehicle capacity, contacts, the
+  contents declaration and the payment method, and is idempotent. Store pickup takes the pickup point from the store's
+  Click. listing. Express is offered only when an eligible partner is online nearby.
+- **Lifecycle:** scheduled → searching → assigned → at pickup → picked up → in transit → near destination → delivered
+  (or cancelled / failed / no partner), validated server-side under a row lock with a `ParcelStatusEvent` per step and a
+  notification each time. Pickup and delivery are confirmed only with the 4-digit PINs the customer holds (never sent to
+  the Partner App); each check creates a `ParcelProof` with the time and the partner's last reported position. Cash is
+  marked collected at the PIN-verified pickup.
+- **Matching:** jobs are offered (never assigned) to verified, available partners with a fresh location, a matching
+  vehicle type, within range and not on another delivery; they appear in the partner's Home (the `parcels` workspace)
+  and become assigned only when accepted.
+- **Cancellation:** free while scheduled or searching; after assignment and before pickup the service's fee is kept
+  from wallet payments and the rest refunded; not possible after pickup (support instead).
+- **Tracking & privacy:** owner-only (others get 404, including `/customer/parcels/track?ref=`); the partner's position
+  is shown only when their app reported it recently ("Live" within 45 s). Share links are signed, expire in 7 days and
+  show status only (no phones, PINs, prices or exact addresses).
+- **Across Click.:** Buddy prepares a booking (mode, saved recipient) and reports real status but never books or pays;
+  parcels appear in Activity; help requests link to the parcel (`SupportTicket.parcel`).
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching

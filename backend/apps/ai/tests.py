@@ -128,3 +128,13 @@ def test_buddy_groceries_prepare_but_never_order(auth_api):
     from apps.orders.models import Order
 
     assert not CartItem.objects.exists() and not Order.objects.exists()
+
+
+def test_buddy_parcels_prepare_but_never_book(auth_api):
+    body = ask(auth_api, "Send this package to my brother")
+    assert body["actions"][0]["path"].startswith("/parcels?mode=send")
+    assert "don't book or pay" in body["message"]["content"]
+    assert ask(auth_api, "Pick up a parcel from my friend")["actions"][0]["path"] == "/parcels?mode=receive"
+    from apps.parcels.models import ParcelOrder
+
+    assert not ParcelOrder.objects.exists()

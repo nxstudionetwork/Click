@@ -92,3 +92,6 @@ def seed_partners(log) -> None:
     # The seeded drivers (devseed/rides.py) are online: start their availability log so online time is measurable.
     for driver in Partner.objects.filter(partner_type__slug="transport", is_available=True, availability_events__isnull=True):
         PartnerAvailabilityEvent.objects.create(partner=driver, is_available=True, note="Development seed")
+    from .parcels import seed_parcels
+
+    seed_parcels(log)  # Click. Parcel configuration and delivery riders (after the partner catalogue exists)

@@ -520,6 +520,9 @@ export interface SupportTicket {
   status: SupportStatus;
   orderId: UUID | null;
   orderNumber: string | null;
+  /** Set when the request is about a Click. Parcel delivery. */
+  parcelId?: UUID | null;
+  parcelNumber?: string | null;
   createdAt: ISODateTime;
   resolvedAt: ISODateTime | null;
 }

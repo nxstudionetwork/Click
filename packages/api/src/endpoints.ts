@@ -135,7 +135,7 @@ export const customerApi = (http: HttpClient) => ({
   support: {
     list: () => http.request<Paginated<SupportTicket>>('/customer/support/tickets'),
     get: (id: string) => http.request<SupportTicket>(`/customer/support/tickets/${id}`),
-    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null }) =>
+    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null; parcelId?: string | null }) =>
       http.request<SupportTicket>('/customer/support/tickets', { method: 'POST', body: input }),
   },
   assistant: {

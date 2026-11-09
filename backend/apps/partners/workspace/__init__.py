@@ -24,6 +24,7 @@ PROVIDERS: dict[str, str] = {
     "rides": "apps.rides.partner_workspace.RidesProvider",
     "orders": "apps.orders.partner_workspace.OrdersProvider",
     "venue": "apps.bookings.partner_workspace.VenueProvider",
+    "parcels": "apps.parcels.partner_workspace.ParcelsProvider",
     "upcoming": "apps.partners.workspace.upcoming.UpcomingProvider",
 }
 CAN_OPERATE = {Partner.Status.VERIFIED, Partner.Status.ACTIVE}

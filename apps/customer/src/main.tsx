@@ -22,6 +22,7 @@ import './styles/ride.css';
 import './styles/shop.css';
 import './styles/showtime.css';
 import './styles/groceries.css';
+import './styles/parcel.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

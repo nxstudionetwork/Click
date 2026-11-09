@@ -12,6 +12,7 @@ export function NewTicketPage() {
   const qc = useQueryClient();
   const [category, setCategory] = useState<SupportCategory>((HELP_TOPICS.find((t) => t.id === params.get('category'))?.id) ?? 'order');
   const [orderId, setOrderId] = useState(params.get('orderId') ?? '');
+  const parcelId = params.get('parcelId');
   const [subject, setSubject] = useState(params.get('subject') ?? '');
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -29,7 +30,7 @@ export function NewTicketPage() {
     if (!subject.trim()) missing.subject = 'Required';
     if (!message.trim()) missing.message = 'Required';
     setErrors(missing);
-    if (!Object.keys(missing).length) create.mutate({ category, subject: subject.trim(), message: message.trim(), orderId: orderId || null });
+    if (!Object.keys(missing).length) create.mutate({ category, subject: subject.trim(), message: message.trim(), orderId: parcelId ? null : orderId || null, parcelId: parcelId || null });
   }
 
   return (
@@ -41,14 +42,14 @@ export function NewTicketPage() {
           {HELP_TOPICS.map((t) => <button type="button" key={t.id} className="chip" aria-pressed={category === t.id} onClick={() => setCategory(t.id)}>{t.label}</button>)}
         </div>
       </div>
-      <div className="field">
+      {parcelId ? <p className="small muted">About your parcel {subject.split(' · ').pop()}</p> : <div className="field">
         <label className="field__label" htmlFor="ticket-order">Related order (optional)</label>
         <select id="ticket-order" className="field__input" value={orderId} onChange={(e) => setOrderId(e.target.value)}>
           <option value="">No specific order</option>
           {orders.data?.results.map((o) => <option key={o.id} value={o.id}>{o.number} · {o.store.name}</option>)}
         </select>
         {errors.orderId && <span className="field__error">{errors.orderId}</span>}
-      </div>
+      </div>}
       <TextField label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} error={errors.subject} maxLength={150} />
       <TextArea label="How can we help?" value={message} onChange={(e) => setMessage(e.target.value)} error={errors.message} maxLength={4000} rows={6} />
       {errors._ && <p className="field__error" role="alert">{errors._}</p>}

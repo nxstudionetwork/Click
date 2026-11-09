@@ -122,4 +122,11 @@ packaged goods of the fictional brands have no photo. Store ratings come only fr
 `seed_grocery_history` adds delivered orders for the test customer (milk and bread every ~5 days, so Buy again and
 Running low have real history) and the dev viewers (so Popular Near You and Frequently bought together have data).
 
-Parcels and home services aren't seeded because those features don't exist yet.
+Parcel (`devseed/parcels.py`, run from `devseed/partners.py`): the Bengaluru service area, 4 vehicles, 4 services,
+13 content types (4 not accepted), package rules, and 5 delivery riders (bike, scooters, 3-wheeler, mini truck) online
+with a fresh location as if their Partner App had just reported it; the dev Parcel Partner delivers by bike. Partners
+are only offered jobs while their reported location is under 10 minutes old, so re-run the seed (or report a location
+from the Partner App) to test matching. The test customer has 5 parcels (delivered, cash-paid, cancelled, failed, in
+transit) with real status events and PIN proofs, and 2 saved recipients.
+
+Home services aren't seeded because that feature doesn't exist yet.

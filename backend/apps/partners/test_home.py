@@ -79,9 +79,9 @@ def test_home_requires_sign_in_and_a_finished_profile(api, restaurant):
     ("retail-store", "orders", "Open", ["orders", "sales", "items_sold", "pending"]),
     ("cinema-hall", "venue", "Bookings open", ["shows", "tickets", "occupancy", "revenue"]),
     ("hotel", "upcoming", "Accepting bookings", []),
-    ("parcel-partner", "upcoming", "Available", []),
+    ("parcel-partner", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
     ("electrician", "upcoming", "Available", []),
-    ("delivery-rider", "upcoming", "Available", []),
+    ("delivery-rider", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
 ])
 def test_each_category_gets_its_own_home(slug, kind, on, metrics):
     partner, client = make_partner(slug, f"{slug}@click.test")

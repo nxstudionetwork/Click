@@ -292,6 +292,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .groceries import seed_grocery_history
 
     seed_grocery_history(profile, log)
+    from .parcels import seed_parcel_history
+
+    seed_parcel_history(profile, log)
     from .shop import seed_shop_history
 
     seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart

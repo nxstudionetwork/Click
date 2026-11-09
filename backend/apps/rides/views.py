@@ -133,8 +133,8 @@ class DriverView(APIView):
 
     def driver(self, request):
         partner = require_owned_partner(request.user)
-        if partner.partner_type.slug != "transport":
-            raise DomainError("Only Click drivers can do this.", code="not_a_driver", status_code=403)
+        if partner.partner_type.slug not in ("transport", "logistics"):  # drivers, riders and parcel partners report location
+            raise DomainError("Only Click drivers and delivery partners can do this.", code="not_a_driver", status_code=403)
         return partner
 
 

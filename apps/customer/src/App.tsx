@@ -48,6 +48,10 @@ import { ShopComparePage } from './pages/ShopComparePage';
 import { ShopResultsPage } from './pages/ShopResultsPage';
 import { ShoppingPage } from './pages/ShoppingPage';
 import { GroceriesPage } from './pages/GroceriesPage';
+import { ParcelDetailPage } from './pages/ParcelDetailPage';
+import { ParcelHistoryPage } from './pages/ParcelHistoryPage';
+import { ParcelPage } from './pages/ParcelPage';
+import { ParcelSharedPage } from './pages/ParcelSharedPage';
 import { GroceryBasketPage } from './pages/GroceryBasketPage';
 import { GroceryBuyAgainPage } from './pages/GroceryBuyAgainPage';
 import { GroceryCheckoutPage } from './pages/GroceryCheckoutPage';
@@ -131,7 +135,11 @@ function AppRoutes() {
         <Route path="movies/:slug" element={<ParamRedirect to="/showtime/:slug" />} />
         <Route path="rides" element={<Suspense fallback={rideFallback}><RidePage /></Suspense>} />
         <Route path="rides/:id" element={guard(<Suspense fallback={rideFallback}><RideTripPage /></Suspense>)} />
-        <Route path="parcels" element={<ServiceComingSoonPage key="parcels" serviceId="parcels" />} />
+        <Route path="parcels" element={<ParcelPage />} />
+        <Route path="parcels/history" element={guard(<ParcelHistoryPage />)} />
+        <Route path="parcels/:id" element={guard(<ParcelDetailPage />)} />
+        <Route path="track/:token" element={<ParcelSharedPage />} />
+        <Route path="parcel" element={<Navigate to="/parcels" replace />} />
         <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
         <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
         <Route path="tickets" element={guard(<BookingsPage />)} />

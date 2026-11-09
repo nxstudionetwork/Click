@@ -33,8 +33,10 @@ describe('Explore', () => {
     expect(href('Live Shows')).toBe('/showtime/search?kind=event');
     expect(href('Showtime')).toBe('/showtime');
     // Only services that genuinely haven't launched say so.
-    expect(within(links[names.indexOf('Parcels')]!).getByText('Soon')).toBeInTheDocument();
-    expect(links[names.indexOf('Parcels')]).toHaveAccessibleName(/coming soon/);
+    expect(within(links[names.indexOf('Experiences')]!).getByText('Soon')).toBeInTheDocument();
+    expect(links[names.indexOf('Experiences')]).toHaveAccessibleName(/coming soon/);
+    expect(href('Parcel')).toBe('/parcels');
+    expect(within(links[names.indexOf('Parcel')]!).queryByText('Soon')).toBeNull();
     expect(within(links[names.indexOf('Rides')]!).queryByText('Soon')).toBeNull();
     expect(within(links[names.indexOf('Food')]!).queryByText('Soon')).toBeNull();
   });
