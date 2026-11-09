@@ -6,10 +6,12 @@ This is the single place where category-specific behaviour is defined:
   identity   how to label the partner's name (individual vs business)
   fields     category-specific onboarding fields (validated by schema.py)
   location   which location inputs apply (service area / radius)
-  home       the modules a future Partner Home shows for this category
+  home       how Partner Home behaves for this category (see HOME below): the
+             workspace that supplies real work, status labels, metrics, quick
+             actions, earnings label, performance metrics and location needs
 
 A category inherits its type's configuration and may override it
-(`individual`, `defaults`, `extra_fields`, `hide_fields`, `field_labels`).
+(`individual`, `defaults`, `extra_fields`, `hide_fields`, `field_labels`, `home`).
 Data migrations and `manage.py sync_partner_catalog` upsert this into the
 PartnerType / PartnerCategory tables; apps read it from the API, so adding a
 category never requires frontend changes.
@@ -421,6 +423,123 @@ TYPES: list[dict] = [
     },
 ]
 
+# --- Partner Home ------------------------------------------------------------------------------
+# Category → workspace → Home configuration → visible modules → real backend data.
+#
+#   workspace      which provider supplies the partner's work (apps.partners.workspace.PROVIDERS):
+#                  rides (Click. Ride), orders (stores the partner operates), venue (shows and bookings),
+#                  or upcoming (the customer service doesn't exist on Click yet; Home says so honestly)
+#   status         labels for the partner-controlled availability toggle (never "Online" for everyone)
+#   location       "live" (current position while online, with permission) or "business" (saved address only)
+#   metrics        Today's overview tiles, in order, from the keys the workspace provides
+#   quick_actions  shortcut keys from the workspace (unknown or unsupported keys are dropped, never shown dead)
+#   earnings_label / performance  as named
+#   upcoming       for workspace "upcoming": what the service is called and what will appear when it launches
+
+def _status(on: str, off: str, turn_on: str, turn_off: str, on_hint: str, off_hint: str, confirm_off: str = "") -> dict:
+    return {"on": on, "off": off, "turn_on": turn_on, "turn_off": turn_off, "on_hint": on_hint, "off_hint": off_hint,
+            "confirm_off": confirm_off}
+
+
+HOME: dict[str, dict] = {
+    "transport": {
+        "workspace": "rides", "location": "live", "work_noun": "ride",
+        "status": _status("Online", "Offline", "Go online", "Go offline",
+                          "You’ll receive ride requests near you.", "You won’t receive ride requests.",
+                          "You’ll stop receiving ride requests until you go online again."),
+        "metrics": ["trips", "earnings", "distance", "online_time"],
+        "quick_actions": ["requests", "active", "trips", "earnings"],
+        "earnings_label": "Today’s earnings",
+        "performance": ["rating", "acceptance_rate", "completion_rate"],
+    },
+    "food": {
+        "workspace": "orders", "location": "business", "work_noun": "order",
+        "status": _status("Open", "Closed", "Open restaurant", "Close restaurant",
+                          "Customers can order from you now.", "Customers can’t place new orders.",
+                          "Customers won’t be able to order until you open again. Orders already placed stay in your queue."),
+        "metrics": ["orders", "sales", "completed", "pending"],
+        "quick_actions": ["new", "preparing", "ready", "earnings"],
+        "earnings_label": "Today’s sales",
+        "performance": ["rating", "acceptance_rate", "fulfilment_rate"],
+    },
+    "retail": {
+        "workspace": "orders", "location": "business", "work_noun": "order",
+        "status": _status("Open", "Closed", "Open store", "Close store",
+                          "Customers can order from your store now.", "Customers can’t place new orders.",
+                          "Customers won’t be able to order until you open again. Orders already placed stay in your queue."),
+        "metrics": ["orders", "sales", "items_sold", "pending"],
+        "quick_actions": ["new", "packing", "inventory", "earnings"],
+        "earnings_label": "Today’s sales",
+        "performance": ["rating", "acceptance_rate", "fulfilment_rate"],
+    },
+    "local": {
+        "workspace": "orders", "location": "business", "work_noun": "order",
+        "status": _status("Open", "Closed", "Open business", "Close business",
+                          "Customers can order from you now.", "Customers can’t place new orders.",
+                          "Customers won’t be able to order until you open again."),
+        "metrics": ["orders", "sales", "completed", "pending"],
+        "quick_actions": ["new", "active", "earnings"],
+        "earnings_label": "Today’s sales",
+        "performance": ["rating", "acceptance_rate", "fulfilment_rate"],
+    },
+    "entertainment": {
+        "workspace": "venue", "location": "business", "work_noun": "booking",
+        "status": _status("Bookings open", "Bookings closed", "Open bookings", "Close bookings",
+                          "Customers can book your shows.", "Customers can’t book new seats.",
+                          "Customers won’t be able to book seats for your shows until you open bookings again. "
+                          "Existing bookings stay valid."),
+        "metrics": ["shows", "tickets", "occupancy", "revenue"],
+        "quick_actions": ["shows", "bookings", "earnings"],
+        "earnings_label": "Today’s revenue",
+        "performance": ["occupancy_7d", "cancellation_rate"],
+    },
+    "hospitality": {
+        "workspace": "upcoming", "location": "business", "work_noun": "booking",
+        "status": _status("Accepting bookings", "Not accepting", "Accept bookings", "Stop bookings", "", ""),
+        "upcoming": {"service": "Click. Stays", "what": "room and venue bookings, check-ins, check-outs and revenue"},
+        "metrics": ["bookings", "check_ins", "check_outs", "revenue"],
+        "quick_actions": [], "earnings_label": "Today’s revenue", "performance": [],
+    },
+    "logistics": {
+        "workspace": "upcoming", "location": "live", "work_noun": "delivery",
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""),
+        "upcoming": {"service": "Click. Parcel", "what": "pickup requests, active deliveries and delivery earnings"},
+        "metrics": ["deliveries", "completed", "earnings", "pending"],
+        "quick_actions": [], "earnings_label": "Today’s earnings", "performance": [],
+    },
+    "services": {
+        "workspace": "upcoming", "location": "business", "work_noun": "job",
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""),
+        "upcoming": {"service": "Click. Services", "what": "service requests, your schedule, active jobs and earnings"},
+        "metrics": ["jobs", "completed", "earnings", "rating"],
+        "quick_actions": [], "earnings_label": "Today’s earnings", "performance": [],
+    },
+}
+
+# Category-level Home overrides (shallow-merged over the type's Home).
+CATEGORY_HOME: dict[str, dict] = {
+    # Transport partners who don't drive Click. Ride trips themselves.
+    "delivery-rider": {"workspace": "upcoming", "upcoming": {
+        "service": "Click. Delivery", "what": "delivery requests, active deliveries and delivery earnings"},
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""), "work_noun": "delivery"},
+    **{slug: {"workspace": "upcoming", "location": "business", "upcoming": {
+        "service": "Click. Fleet", "what": "your vehicles, drivers, trips and fleet earnings"}}
+       for slug in ("fleet-operator", "rental-vehicle", "transport-provider")},
+}
+
+for _t in TYPES:
+    _t["configuration"]["home"] = {**_t["configuration"]["home"], **HOME[_t["slug"]]}
+    for _c in _t["categories"]:
+        if _c["slug"] in CATEGORY_HOME:
+            _c["configuration"] = {**(_c.get("configuration") or {}), "home": CATEGORY_HOME[_c["slug"]]}
+
+
+def categories_with_workspace(workspace: str) -> list[str]:
+    """Category slugs whose resolved Home uses `workspace` (e.g. who may be matched to Click. Ride trips)."""
+    return [c["slug"] for t in TYPES for c in t["categories"]
+            if (CATEGORY_HOME.get(c["slug"], {}).get("workspace") or HOME[t["slug"]]["workspace"]) == workspace]
+
+
 IDENTITY_LABELS = {
     True: {"business_name_label": "Your full name", "business_name_help": "As on your government ID."},
     False: {"business_name_label": "Business name", "business_name_help": "The name customers will see."},
@@ -460,7 +579,7 @@ def resolve_configuration(type_config: dict, category_config: dict) -> dict:
         "identity": {"individual": individual, **labels},
         "fields": fields,
         "location": {"service_area": False, "service_radius": False, **(type_config.get("location") or {})},
-        "home": type_config.get("home") or {"modules": []},
+        "home": {**(type_config.get("home") or {"modules": []}), **(category_config.get("home") or {})},
     }
 
 

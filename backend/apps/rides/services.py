@@ -218,6 +218,38 @@ def driver_accept(ride: Ride, driver) -> Ride:
     return ride
 
 
+@transaction.atomic
+def driver_decline(ride: Ride, driver) -> Ride:
+    """The driver passes on an offered ride. Once nobody offered is left, the next nearest drivers get it (or no_driver)."""
+    ride = Ride.objects.select_for_update().get(pk=ride.pk)
+    offer = ride.driver_offers.filter(driver=driver, response="pending").first()
+    if offer is None or ride.status != RideStatus.SEARCHING:
+        raise ConflictError("This ride is no longer available.", code="ride_unavailable")
+    offer.response = "declined"
+    offer.save(update_fields=["response", "updated_at"])
+    _reoffer_if_unanswered(ride)
+    return ride
+
+
+def withdraw_offers(driver) -> int:
+    """A driver going offline gives up their pending offers; each affected ride is re-offered nearby."""
+    n = 0
+    for offer in driver.ride_offers.filter(response="pending", ride__status=RideStatus.SEARCHING).select_related("ride"):
+        with transaction.atomic():
+            ride = Ride.objects.select_for_update().get(pk=offer.ride_id)
+            if ride.driver_offers.filter(pk=offer.pk, response="pending").update(response="expired"):
+                _reoffer_if_unanswered(ride)
+                n += 1
+    return n
+
+
+def _reoffer_if_unanswered(ride: Ride) -> None:
+    if ride.status != RideStatus.SEARCHING or ride.driver_offers.filter(response="pending").exists():
+        return
+    if matching.offer_ride(ride) == 0:
+        transition(ride, RideStatus.NO_DRIVER, note="No driver accepted")
+
+
 def driver_step(ride: Ride, driver, to_status: str) -> Ride:
     if ride.driver_id != driver.id:
         raise DomainError("This isn't your ride.", code="not_your_ride", status_code=404)

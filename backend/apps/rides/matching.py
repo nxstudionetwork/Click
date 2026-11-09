@@ -24,6 +24,8 @@ MAX_OFFERS = 5
 
 def eligible_drivers(ride_type: RideType, point: tuple[float, float], radius_km: float = MATCH_RADIUS_KM, exclude=()):
     """[(partner, distance_km)] nearest first: online, verified, right vehicle, recently located, within radius."""
+    from apps.partners.catalog import categories_with_workspace
+
     cutoff = timezone.now() - LOCATION_FRESH_FOR
     locations = (
         DriverLocation.objects.filter(
@@ -31,6 +33,8 @@ def eligible_drivers(ride_type: RideType, point: tuple[float, float], radius_km:
             driver__is_available=True,
             driver__status__in=[Partner.Status.VERIFIED, Partner.Status.ACTIVE],
             driver__partner_type__slug="transport",
+            # Only categories that drive Click. Ride trips (not delivery riders or fleet operators).
+            driver__category__slug__in=categories_with_workspace("rides"),
         )
         .exclude(driver_id__in=exclude)
         .select_related("driver", "driver__profile")
@@ -58,10 +62,11 @@ def pickup_eta_minutes(ride_type: RideType, point: tuple[float, float]) -> int |
 
 
 def offer_ride(ride) -> int:
-    """Offer the ride to the nearest eligible drivers. Returns how many drivers were offered it."""
+    """Offer the ride to the nearest eligible drivers it hasn't been offered to yet. Returns how many were offered it."""
     from .models import RideDriverOffer
 
-    drivers = eligible_drivers(ride.ride_type, (float(ride.pickup_lat), float(ride.pickup_lng)))[:MAX_OFFERS]
+    already = list(ride.driver_offers.values_list("driver_id", flat=True))
+    drivers = eligible_drivers(ride.ride_type, (float(ride.pickup_lat), float(ride.pickup_lng)), exclude=already)[:MAX_OFFERS]
     for partner, km in drivers:
         RideDriverOffer.objects.get_or_create(ride=ride, driver=partner, defaults={"distance_km": Decimal(str(round(km, 2)))})
     return len(drivers)

@@ -2,7 +2,7 @@ import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
-  OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
@@ -175,4 +175,20 @@ export const partnerApi = (http: HttpClient) => ({
   saveLocation: (input: PartnerLocationInput) =>
     http.request<PartnerState>('/partner/onboarding/location', { method: 'PATCH', body: input }),
   submit: () => http.request<PartnerState>('/partner/onboarding/submit', { method: 'POST' }),
+  // Partner Home / operations
+  home: () => http.request<PartnerHome>('/partner/home'),
+  setAvailability: (available: boolean) =>
+    http.request<PartnerState & { availability: PartnerAvailability }>('/partner/availability', { method: 'POST', body: { available } }),
+  work: (view?: string) => http.request<PartnerWork>('/partner/work', { query: { view } }),
+  act: (item: { kind: string; id: string }, action: string, body?: { reason?: string }) =>
+    http.request<{ ok: true; item: WorkItem | null }>(`/partner/work/${item.kind}/${item.id}/${action}`, { method: 'POST', body: body ?? {} }),
+  earnings: (days: 7 | 30) => http.request<PartnerEarnings>('/partner/earnings', { query: { days } }),
+  notifications: () => http.request<{ unread: number; results: PartnerNotification[] }>('/partner/notifications'),
+  readNotification: (id: string) => http.request<{ unread: number }>(`/partner/notifications/${id}/read`, { method: 'POST' }),
+  readAllNotifications: () => http.request<{ unread: number }>('/partner/notifications/read-all', { method: 'POST' }),
+  reportDriverLocation: (lat: number, lng: number) =>
+    http.request<{ ok: boolean }>('/partner/driver/location', { method: 'POST', body: { lat, lng } }),
+  devLoginInfo: () =>
+    http.request<{ enabled: boolean; partners: { code: string; name: string; category: string }[] }>('/partner/dev-login', { auth: false }),
+  devLogin: (code: string) => http.request<Session>('/partner/dev-login', { method: 'POST', body: { code }, auth: false }),
 });

@@ -35,6 +35,12 @@ def create_booking(*, customer, show_id, seats: list[str], payment_method: str, 
         show = bookable_shows().select_for_update(of=("self",)).get(pk=show_id)
     except Show.DoesNotExist:
         raise DomainError("This show is no longer available for booking.", code="show_unavailable", status_code=404)
+    # A venue operated through Click Partner can close bookings from Partner Home (unlinked venues are unaffected).
+    from apps.partners.models import PartnerVenue
+
+    link = PartnerVenue.objects.select_related("partner").filter(venue_id=show.venue_id).first()
+    if link is not None and not link.partner.is_available:
+        raise DomainError(f"{show.venue.name} isn’t taking bookings right now.", code="venue_closed", status_code=409)
 
     labels = sorted({s.strip().upper() for s in seats})
     if not 1 <= len(labels) <= MAX_SEATS:

@@ -18,6 +18,9 @@ const LocationPage = lazy(() => import('./pages/onboarding/LocationPage').then((
 const ReviewPage = lazy(() => import('./pages/onboarding/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CardPage = lazy(() => import('./pages/CardPage').then((m) => ({ default: m.CardPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const WorkPage = lazy(() => import('./pages/WorkPage').then((m) => ({ default: m.WorkPage })));
+const EarningsPage = lazy(() => import('./pages/EarningsPage').then((m) => ({ default: m.EarningsPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 
 const SPLASH_MIN_MS = 1800;
 
@@ -96,6 +99,9 @@ export function App() {
             <Route path="onboarding/review" element={<Step step="review" element={<ReviewPage />} />} />
             <Route path="card" element={<Onboarded element={<CardPage />} />} />
             <Route path="home" element={<Onboarded element={<HomePage />} />} />
+            <Route path="work" element={<Onboarded element={<WorkPage />} />} />
+            <Route path="earnings" element={<Onboarded element={<EarningsPage />} />} />
+            <Route path="notifications" element={<Onboarded element={<NotificationsPage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

@@ -26,6 +26,8 @@ interface PartnerSessionValue {
   /** Replace the cached partner state after an onboarding write. */
   setPartnerState: (state: PartnerState) => void;
   logout: () => Promise<void>;
+  /** DEVELOPMENT ONLY: sign in as a seeded test partner (the endpoint is 404 outside DEBUG). */
+  devSignIn: (code: string) => Promise<PartnerState>;
 }
 
 const Ctx = createContext<PartnerSessionValue | null>(null);
@@ -101,6 +103,15 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
       return state;
     },
     setPartnerState: (state) => queryClient.setQueryData(PARTNER_QUERY_KEY, state),
+    devSignIn: async (code) => {
+      const s = await api.partner.devLogin(code);
+      session.set(s.access);
+      const state = await api.partner.me();
+      queryClient.setQueryData(PARTNER_QUERY_KEY, state);
+      setUser(s.user);
+      setStatus('signed_in');
+      return state;
+    },
     logout: async () => {
       signingOut.current = true;
       try {

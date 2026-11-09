@@ -153,6 +153,12 @@ class DriverAcceptView(DriverView):
         return Response(RideSummarySerializer(ride).data)
 
 
+class DriverDeclineView(DriverView):
+    def post(self, request, pk):
+        ride = services.driver_decline(get_object_or_404(Ride, pk=pk), self.driver(request))
+        return Response({"declined": True, "ride": ride.number})
+
+
 class DriverStatusView(DriverView):
     """POST /partner/rides/<id>/status {status: driver_arrived|in_progress|completed} — only for the assigned driver."""
 

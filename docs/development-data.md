@@ -91,4 +91,11 @@ python manage.py ride_driver latest start
 python manage.py ride_driver latest complete
 ```
 
+Test partners (`devseed/partners.py`): one verified partner per Partner Home configuration: a restaurant
+(Basil & Lime Thai Kitchen), grocery store (FreshCart Daily) and shop (Stride Sports Co.) linked to those seeded
+storefronts, a cinema linked to Click Cineplex Indiranagar, and a hotel, parcel partner and electrician (verification
+pending) that show the "not live yet" Home. Sign in with **Login as test partner** in the Partner App (development
+builds only; `partner/dev-login` is 404 unless DEBUG). Orders and bookings the test customer makes at those places
+appear on the partner's Home.
+
 Parcels and home services aren't seeded because those features don't exist yet.

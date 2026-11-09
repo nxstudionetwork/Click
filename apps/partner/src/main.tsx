@@ -10,6 +10,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import '@click/ui/ui.css';
 import './styles/partner.css';
+import './styles/home.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

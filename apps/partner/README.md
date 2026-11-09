@@ -23,7 +23,10 @@ Splash → Login (mobile number) → Firebase OTP → Verify
 | `/onboarding/location`   | Manual address, optional "use my current location", service area |
 | `/onboarding/review`     | Summary; creates the Partner ID |
 | `/card`                  | Partner identity card |
-| `/home`                  | Minimal Partner Home shell (category-aware empty modules) |
+| `/home`                  | Partner Home: the category-driven operations dashboard (see below) |
+| `/work`                  | Work queue for the partner's workspace (Rides / Orders / Shows & bookings), same items and actions as Home |
+| `/earnings`              | Daily totals (7 or 30 days) and recent completed work |
+| `/notifications`         | Partner notifications (new work, cancellations, verification) with read state |
 
 Routes are UX only; the API enforces sign-in and ownership on every request.
 
@@ -65,3 +68,37 @@ change (`manage.py sync_partner_catalog` or a migration); the app renders it wit
 
 Photos are real Unsplash photographs (see `public/media/CREDITS.md`), WebP at two sizes, lazy-loaded with `srcset`.
 The animated sequences are photo crossfades rather than video, so low-end phones and slow networks stay fast.
+
+## Partner Home (operations)
+
+One common Home framework, category-specific content:
+
+```
+Partner → category → resolved Home configuration (backend/apps/partners/catalog.py, HOME / CATEGORY_HOME)
+        → workspace provider (backend/apps/partners/workspace/) → real domain data → GET /api/v1/partner/home
+```
+
+| Workspace  | Categories (today)                                   | Reads                                   | Status labels |
+|------------|-------------------------------------------------------|-----------------------------------------|---------------|
+| `rides`    | Driver, Cab / Auto Driver, Bike Rider                 | Click. Ride offers, trips, ratings      | Online / Offline |
+| `orders`   | Food & Dining, Grocery & Retail, Local Business       | Orders at the storefronts the partner operates (`PartnerStore`) | Open / Closed |
+| `venue`    | Cinema & Entertainment                                | Shows and seat bookings at the partner's venues (`PartnerVenue`) | Bookings open / closed |
+| `upcoming` | Hotels & Venues, Parcel & Logistics, Manpower & Services, Delivery Rider, fleet categories | Nothing yet: Home says the service hasn't launched | shown, not switchable |
+
+- `GET /partner/home` returns every section in one request; each section is `ok`, `error` (that module only) or
+  `unavailable` (not live / not connected, with the reason). The app polls every 10 s while visible (no push channel yet).
+- Availability (`POST /partner/availability`) is persisted, audited (`PartnerAvailabilityEvent`) and applied where
+  customers see it: a store stops accepting orders, a venue stops taking bookings, a driver going offline gives up
+  pending ride requests. Drivers can't go offline mid-trip. Only verified/active partners can switch on.
+- Work actions (`POST /partner/work/<kind>/<id>/<action>`) run the domain's own state machine (`transition_order`,
+  `driver_accept` / `driver_decline` / `driver_step`); the UI updates only after the server confirms.
+- A restaurant or shop partner sees orders only once Click staff connect their storefront (Django admin → Partner →
+  Partner stores). Until then Home says so instead of showing empty numbers.
+- Drivers share live location only while online, after choosing to, while the app is open.
+- Adding a category: catalogue change. Adding a new kind of work: one provider registered in `workspace.PROVIDERS`.
+
+### Development test partners
+
+`python manage.py seed_dev_data` creates one verified test partner per Home configuration (restaurant, grocery store,
+shop, cinema linked to seeded records; hotel, parcel, electrician on the "not live yet" Home) besides the seeded
+drivers. In development builds the sign-in screen has **Login as test partner** (backend endpoint is 404 unless DEBUG).

@@ -48,8 +48,11 @@ their lifecycles differ.
 - **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
-  - Drivers (transport partners): `partner/rides/offers`, `partner/rides/<id>/accept`, `partner/rides/<id>/status`,
-    `partner/driver/location`.
+  - Drivers (transport partners): `partner/rides/offers`, `partner/rides/<id>/accept`, `partner/rides/<id>/decline`,
+    `partner/rides/<id>/status`, `partner/driver/location`.
+  - Partner Home: `partner/home` (whole dashboard, sections fail independently), `partner/availability`,
+    `partner/work?view=`, `partner/work/<kind>/<id>/<action>`, `partner/earnings?days=7|30`,
+    `partner/notifications` (+ `/read-all`, `/<id>/read`). `partner/dev-login` exists only with DEBUG.
 - **Business OS:** `os/*` (Phase 6)
 
 Rules:
@@ -224,6 +227,14 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
   `inactive`. Transitions are explicit and audited. Only staff review (Django admin today) can mark a partner verified.
 - **Isolation:** no partner endpoint accepts a partner ID; every request resolves the partner from the signed-in
   user's owner membership.
-- **Category configuration:** `apps/partners/catalog.py` defines fields, location options and Home modules per
+- **Category configuration:** `apps/partners/catalog.py` defines fields, location options and Home configuration per
   type, with category overrides. The API serves the resolved configuration, and the server validates profile
   details against it.
+- **Partner Home:** `apps/partners/workspace/` composes Home from a workspace provider chosen by the category
+  (`rides` in `apps/rides/partner_workspace.py`, `orders` in `apps/orders/partner_workspace.py`, `venue` in
+  `apps/bookings/partner_workspace.py`, `upcoming` for services Click hasn't launched). Providers read the domain
+  tables directly, so Customer App, Partner App and Business OS share one state. `PartnerStore` / `PartnerVenue` link a
+  partner to the storefronts and venues it operates (staff-created). `PartnerAvailabilityEvent` logs every
+  online/open toggle (online time is derived from it). `PartnerNotification` is created by signals on orders, bookings,
+  ride offers/cancellations and verification decisions. "Today" is the business day in `Asia/Kolkata`
+  (`CLICK_BUSINESS_TIME_ZONE`). Ride matching only offers trips to categories whose workspace is `rides`.

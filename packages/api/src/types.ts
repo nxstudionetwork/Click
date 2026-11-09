@@ -744,3 +744,111 @@ export interface RideRequestInput extends RideTripInput {
   rideType: string; paymentMethod: 'cash' | 'wallet'; idempotencyKey: string; scheduledFor?: ISODateTime | null;
   passengerName?: string; passengerPhone?: string;
 }
+
+// --- Click Partner Home (operations) -------------------------------------------------------------
+/** Each Home section is loaded and fails on its own; `unavailable` means not live/connected yet (message says why). */
+export type HomeSection<T> =
+  | { status: 'ok'; data: T }
+  | { status: 'error' | 'unavailable'; message: string };
+
+export type WorkTone = 'urgent' | 'active' | 'info' | 'success' | 'muted';
+
+export interface WorkAction {
+  key: string;
+  label: string;
+  style: 'primary' | 'secondary' | 'danger';
+  /** When set, the app asks the partner to confirm before sending. */
+  confirm: string;
+  needsReason: boolean;
+}
+
+export interface WorkItem {
+  kind: 'ride' | 'order' | 'show' | 'booking' | 'stock' | string;
+  id: string;
+  ref: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  statusLabel: string;
+  tone: WorkTone;
+  at: string | null;
+  amount: string | null;
+  currency: string;
+  fields: { label: string; value: string }[];
+  actions: WorkAction[];
+  navigate: { lat: number; lng: number; label: string } | null;
+  link: string;
+}
+
+export interface HomeMetric { key: string; label: string; value: unknown; display: string; hint: string }
+export interface HomeQuickAction { key: string; label: string; icon: string; to: string; count: number | null }
+export interface HomeActivity { id: string; title: string; body: string; at: string; amount: string | null; tone: WorkTone }
+
+export interface PartnerAvailability {
+  isOn: boolean;
+  label: string;
+  onLabel: string;
+  offLabel: string;
+  turnOn: string;
+  turnOff: string;
+  hint: string;
+  canChange: boolean;
+  blockedReason: string;
+  confirmOff: string;
+  since: string | null;
+}
+
+export interface PartnerHome {
+  generatedAt: string;
+  workspace: {
+    kind: 'rides' | 'orders' | 'venue' | 'upcoming' | string;
+    state: 'live' | 'not_connected' | 'upcoming';
+    message: string;
+    workNoun: string;
+    location: 'live' | 'business';
+    liveLocation: { reportedAt: string | null; fresh: boolean } | null;
+  };
+  greetingName: string;
+  context: string;
+  availability: PartnerAvailability;
+  actionRequired: HomeSection<WorkItem[]>;
+  active: HomeSection<WorkItem[]>;
+  incoming: HomeSection<WorkItem[]>;
+  metrics: HomeSection<HomeMetric[]>;
+  earnings: HomeSection<{ label: string; today: string; todayCount: number; week: string; weekCount: number; currency: string; note: string; countLabel: string }>;
+  performance: HomeSection<HomeMetric[]>;
+  activity: HomeSection<HomeActivity[]>;
+  quickActions: HomeQuickAction[];
+  notifications: { unread: number };
+}
+
+export interface PartnerWork {
+  state: 'live' | 'not_connected' | 'upcoming';
+  message: string;
+  views: { key: string; label: string; count: number | null }[];
+  view: string;
+  items: WorkItem[];
+}
+
+export interface PartnerEarnings {
+  state: 'live' | 'not_connected' | 'upcoming';
+  message: string;
+  label: string;
+  currency: string;
+  total: string;
+  count: number;
+  countLabel: string;
+  days: { date: string; amount: string; count: number }[];
+  recent: { ref: string; title: string; amount: string; at: string; detail: string }[];
+  note: string;
+}
+
+export interface PartnerNotification {
+  id: string;
+  category: 'work' | 'update' | 'account' | 'payment' | 'system';
+  title: string;
+  body: string;
+  linkPath: string;
+  read: boolean;
+  createdAt: string;
+}

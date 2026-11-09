@@ -7,6 +7,7 @@ import { COUNTRIES, PhoneField, validateNational } from '../components/PhoneFiel
 import { ECOSYSTEM_STORY } from '../config/visuals';
 import { phoneFlow } from '../session/phoneFlow';
 import { usePartnerSession } from '../session/PartnerSession';
+import { DevPartnerLogin } from '../dev/DevPartnerLogin';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -75,6 +76,7 @@ export function LoginPage() {
           </ul>
           <div ref={recaptchaRef} className="recaptcha-slot" />
         </form>
+        {import.meta.env.DEV && <div className="auth__form auth__dev"><DevPartnerLogin /></div>}
       </main>
     </div>
   );

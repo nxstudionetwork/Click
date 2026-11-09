@@ -15,6 +15,7 @@ customer_urlpatterns = [
 partner_urlpatterns = [
     path("rides/offers", views.DriverOffersView.as_view(), name="driver-ride-offers"),
     path("rides/<uuid:pk>/accept", views.DriverAcceptView.as_view(), name="driver-ride-accept"),
+    path("rides/<uuid:pk>/decline", views.DriverDeclineView.as_view(), name="driver-ride-decline"),
     path("rides/<uuid:pk>/status", views.DriverStatusView.as_view(), name="driver-ride-status"),
     path("driver/location", views.DriverLocationView.as_view(), name="driver-location"),
 ]
