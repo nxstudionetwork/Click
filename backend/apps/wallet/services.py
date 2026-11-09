@@ -39,3 +39,14 @@ def refund(customer, amount: Decimal, payment, description: str) -> WalletTransa
                                            payment=payment, description=description)
     notify(customer, NotificationCategory.WALLET, f"₹{amount} refunded to your Click Wallet", description, "/wallet")
     return txn
+
+
+@transaction.atomic
+def refund_return(customer, amount: Decimal, payment, description: str) -> WalletTransaction:
+    """Credit an approved item return. Callers lock the return request, so each return is refunded once;
+    unlike `refund` this allows several partial refunds against one order payment."""
+    _lock(customer)
+    txn = WalletTransaction.objects.create(customer=customer, kind=WalletTransaction.Kind.REFUND, amount=amount,
+                                           payment=payment, description=description)
+    notify(customer, NotificationCategory.WALLET, f"₹{amount} refunded to your Click Wallet", description, "/wallet")
+    return txn

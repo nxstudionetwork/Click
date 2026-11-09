@@ -88,6 +88,7 @@ export interface StoreOffer {
 /** An offer of the cart's store, with whether it applies now (decided server-side) and the saving if it does. */
 export interface CartOffer {
   id: UUID;
+  storeId: UUID;
   title: string;
   description: string;
   minOrderAmount: Money;
@@ -164,6 +165,9 @@ export interface Product {
   isFeatured: boolean;
   /** Customisation steps (size, add-ons). Empty when the item has none. */
   optionGroups: ProductOptionGroup[];
+  /** Shopping: the listing's category in the Shopping taxonomy, and whether it is sold in variants (size, colour). */
+  shopCategoryId: UUID | null;
+  hasVariants: boolean;
 }
 
 export interface ProductStore {
@@ -246,11 +250,14 @@ export interface CartTotals {
 export interface CartItem {
   id: UUID;
   product: Product;
+  storeId: UUID;
+  variant: { id: UUID; label: string; options: Record<string, string> } | null;
   options: { id: UUID; name: string; priceDelta: Money }[];
   quantity: number;
   note: string;
   unitPrice: Money;
   lineTotal: Money;
+  isAvailable: boolean;
 }
 
 export interface CartStore {
@@ -264,11 +271,47 @@ export interface CartStore {
   isOpen: boolean;
   deliveryTimeMin: number;
   deliveryTimeMax: number;
+  storeType: StoreType;
+  freeDeliveryAbove: Money | null;
+  codEnabled: boolean;
+  isVerified: boolean;
 }
+
+/** A rule-based delivery window (dispatch + distance). Always shown as an estimate range, never a promise. */
+export interface DeliveryEstimate {
+  fromDate: string;
+  toDate: string;
+  basis: 'distance' | 'same_city' | 'region';
+  fee: Money;
+  freeAbove: Money | null;
+  isEstimate: true;
+}
+
+/** The part of a cart one seller fulfils (Shopping carts can span sellers; each becomes its own order). */
+export interface CartGroup {
+  store: CartStore;
+  itemIds: UUID[];
+  subtotal: Money;
+  deliveryFee: Money;
+  tax: Money;
+  discount: Money;
+  total: Money;
+  offerTitle: string;
+  belowMinimum: boolean;
+  freeDeliveryRemaining: Money | null;
+  codAvailable: boolean;
+  deliveryEstimate: DeliveryEstimate | null;
+}
+
+export type CartMode = '' | 'store' | 'marketplace';
 
 export interface Cart {
   id: UUID;
+  /** `store`: food/groceries from one store. `marketplace`: Shopping from any number of sellers. */
+  mode: CartMode;
+  /** The single store (store mode only). */
   store: CartStore | null;
+  groups: CartGroup[];
   items: CartItem[];
   itemCount: number;
   totals: CartTotals;
@@ -284,6 +327,8 @@ export type OrderStatus =
   | 'confirmed'
   | 'preparing'
   | 'ready'
+  | 'packed'
+  | 'shipped'
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled';
@@ -306,9 +351,37 @@ export interface OrderSummary {
   createdAt: ISODateTime;
 }
 
+export type ReturnKind = 'return' | 'replacement';
+export type ReturnReason = 'damaged' | 'wrong_item' | 'not_as_described' | 'size_fit' | 'defective' | 'changed_mind';
+export interface ReturnRequest {
+  id: UUID;
+  kind: ReturnKind;
+  kindLabel: string;
+  reason: ReturnReason;
+  reasonLabel: string;
+  details: string;
+  quantity: number;
+  status: 'requested' | 'approved' | 'rejected' | 'refunded' | 'replaced';
+  statusLabel: string;
+  refundAmount: Money | null;
+  resolutionNote: string;
+  createdAt: ISODateTime;
+  resolvedAt: ISODateTime | null;
+}
+
 export interface OrderItem {
   id: UUID;
   productId: UUID | null;
+  variantId: UUID | null;
+  /** Shopping: return window (days) snapshotted at purchase; null when not returnable. */
+  returnDays: number | null;
+  replacementOnly: boolean;
+  dealPercent: number | null;
+  returns: ReturnRequest[];
+  returnUntil: ISODateTime | null;
+  canReturn: boolean;
+  /** Why it can't be returned (only for returnable items). */
+  returnNote: string | null;
   productName: string;
   /** e.g. "Large · Extra cheese" (snapshot). */
   optionsSummary: string;
@@ -346,12 +419,20 @@ export interface OrderDetail extends OrderSummary {
   discount: Money;
   offerTitle: string;
   estimatedDeliveryAt: ISODateTime | null;
+  /** Shopping: start of the estimated delivery window. */
+  estimatedDeliveryFrom: ISODateTime | null;
   cancelledAt: ISODateTime | null;
   deliveredAt: ISODateTime | null;
   canCancel: boolean;
   review: { rating: number; comment: string; createdAt: ISODateTime } | null;
   canReview: boolean;
+  /** Set when the order is one seller's part of a Shopping checkout. */
+  checkout: { id: UUID; number: string; orderCount: number } | null;
 }
+
+export interface CheckoutGroup { id: UUID; number: string; total: Money; currency: string; createdAt: ISODateTime }
+export interface CheckoutResult { checkout: CheckoutGroup | null; orders: OrderSummary[] }
+export interface ReturnRequestInput { kind: ReturnKind; reason: ReturnReason; details?: string; quantity?: number }
 
 export interface StoreRecommendation { store: Store; reason: string }
 
@@ -467,7 +548,7 @@ export interface AssistantCapabilities {
 /** One actionable Click. Buzz instant. Built from real Click records; media is never generated. */
 export interface BuzzItem {
   id: string;
-  kind: 'offer' | 'event' | 'store' | 'post';
+  kind: 'offer' | 'event' | 'store' | 'product' | 'post';
   theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'ride' | 'parcel';
   title: string;
   body: string;

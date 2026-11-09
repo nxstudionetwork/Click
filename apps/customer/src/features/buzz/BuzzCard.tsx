@@ -3,7 +3,7 @@ import type { BuzzItem } from '@click/api';
 import { Icon, type IconName } from '../../components/ui';
 import { servicePhoto } from '../../config/media';
 
-const KIND_ICON: Record<BuzzItem['kind'], IconName> = { offer: 'tag', event: 'film', store: 'store', post: 'play' };
+const KIND_ICON: Record<BuzzItem['kind'], IconName> = { offer: 'tag', event: 'film', store: 'store', product: 'bag', post: 'play' };
 const THEME_ICON: Partial<Record<BuzzItem['theme'], IconName>> = { food: 'food', grocery: 'grocery', shopping: 'shop', movies: 'film', services: 'wrench', ride: 'ride', parcel: 'parcel' };
 
 /**

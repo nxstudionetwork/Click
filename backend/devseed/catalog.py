@@ -166,3 +166,6 @@ def seed_catalog(log) -> None:
         StoreOffer.objects.get_or_create(store=Store.objects.get(slug=slug), title=title,
                                          defaults={"starts_at": now - timedelta(days=40), "ends_at": now - timedelta(days=10)})
     log(f"catalog: {len(RESTAURANTS)} restaurants, {len(SHOPS)} grocery/retail stores, offers upserted")
+    from .shop import seed_shop
+
+    seed_shop(log)  # Click. Shopping marketplace: taxonomy, brands, sellers, listings, variants, deals, campaigns

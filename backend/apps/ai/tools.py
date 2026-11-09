@@ -36,6 +36,24 @@ def search_products(q: str, cheapest: bool = False, limit: int = 4):
     return ProductWithStoreSerializer(qs[:limit], many=True).data
 
 
+def shop_search(text: str, limit: int = 4) -> dict | None:
+    """Shopping search through the same interpreter and filters as the Shopping app. None when the text isn't
+    recognisably a shopping request (no category, brand, audience or price understood)."""
+    from urllib.parse import urlencode
+
+    from apps.shop.query import interpret
+    from apps.shop.services import search
+
+    it = interpret(text)
+    if not (it.category or it.brand or it.categories or it.colour):
+        return None
+    data = search({"q": text}, None)
+    ids = [r["id"] for r in data["results"][:limit]]
+    products = sorted(public_products().filter(pk__in=ids), key=lambda p: ids.index(str(p.pk)))
+    return {"understood": [u["label"] for u in it.understood], "count": data["count"],
+            "products": ProductWithStoreSerializer(products, many=True).data, "path": "/shopping/search?" + urlencode({"q": text})}
+
+
 def find_events(q: str = "", tonight: bool = False, limit: int = 4):
     qs = public_events().filter(status="now_showing", next_show_at__isnull=False)
     if q:

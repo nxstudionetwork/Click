@@ -4,11 +4,12 @@ import { DiscoverySection } from '../features/home/DiscoverySection';
 import { HomeHero } from '../features/home/HomeHero';
 import { OfferCarousel } from '../features/home/OfferCarousel';
 import { QuickServices } from '../features/home/QuickServices';
+import { ShoppingPicks } from '../features/home/ShoppingPicks';
 import { MomentSections, NearbySection, PopularSection } from '../features/home/StoreSections';
 import { MoneyCards, RecentActivity } from '../features/home/YourClick';
 
 /**
- * Click. Home: a composition of real data from existing domains (stores, offers, events, Buzz, orders,
+ * Click. Home: a composition of real data from existing domains (stores, offers, events, Shopping, Buzz, orders,
  * bookings, rewards, wallet). Header, location and search live in the shell above it. Each section owns its
  * loading, empty and error state, so one failing service never blanks the page.
  */
@@ -23,6 +24,7 @@ export function HomePage() {
       <NearbySection />
       <PopularSection />
       <DiscoverySection />
+      <ShoppingPicks />
       <BuzzPreview />
       {authed && <RecentActivity />}
       {authed && <MoneyCards />}

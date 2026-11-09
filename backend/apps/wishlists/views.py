@@ -40,7 +40,7 @@ def _items(customer):
     return (
         WishlistItem.objects.filter(customer=customer)
         .select_related("product__store", "product__category", "store")
-        .prefetch_related("store__categories", "store__offers")
+        .prefetch_related("store__categories", "store__offers", "product__variants", "product__option_groups__options")
     )
 
 

@@ -68,9 +68,17 @@ class ClickBasicBuddy:
                               cards=[{"type": "offer", "offer": o} for o in tools.offers()], actions=[{"label": "All offers", "path": "/offers"}])
         if wants_movie:
             return self._movies(text)
+        if _has(text, "compare", "comparison", "difference between"):
+            return BuddyReply("Open the products you're deciding between and tap Compare on each. I'll line up their real specs, "
+                              "prices, ratings and return terms side by side.", actions=[{"label": "Open Shopping", "path": "/shopping"}])
+        if _has(text, "add (this|it|that) to (my )?cart", "buy (this|it|that)"):
+            return BuddyReply("Open the product, choose its size or colour if it has one, then tap Add to cart. "
+                              "I never add to your cart or pay without you.", actions=[{"label": "Open Shopping", "path": "/shopping"}])
         if _has(text, "parcel", "parcels", "plumber", "electrician", "cleaning", "repair"):
             return BuddyReply("That service isn’t live on Click yet, so I can’t book it. Food, groceries, shopping, rides and movie/event tickets are available now.",
                               actions=[{"label": "Explore Click", "path": "/explore"}])
+        if shopping := self._shopping(messages[-1].content):
+            return shopping
         return self._search(text)
 
     # --- intents ---------------------------------------------------------
@@ -85,6 +93,20 @@ class ClickBasicBuddy:
             "Confirm your pickup, pick the destination, then compare Bike, Auto and Cab fares before you confirm.")
         path = f"/rides?to={quote(dest)}" if dest else "/rides"
         return BuddyReply(lead, actions=[{"label": "Plan this ride", "path": path}])
+
+    def _shopping(self, original: str):
+        """Shopping requests ("wireless earbuds under 2000", "gift for a 10 year old") use Shopping search itself."""
+        result = tools.shop_search(original)
+        if result is None:
+            return None
+        understood = ", ".join(result["understood"])
+        if not result["products"]:
+            return BuddyReply(f"I looked in Click. Shopping for {understood.lower() or 'that'} but nothing matches right now. "
+                              "Try a wider price or another category.", actions=[{"label": "Open Shopping", "path": "/shopping"}])
+        lead = (f"Here’s what I found in Click. Shopping ({understood}). " if understood else "Here’s what I found in Click. Shopping. ") + (
+            "Open one to see sizes, delivery and reviews, then add it to your cart yourself.")
+        return BuddyReply(lead, cards=[{"type": "product", "product": p} for p in result["products"]],
+                          actions=[{"label": f"See all {result['count']} in Shopping", "path": result["path"]}])
 
     def _help(self):
         return BuddyReply(

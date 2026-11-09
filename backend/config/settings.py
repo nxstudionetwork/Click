@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Third party
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
@@ -84,6 +85,7 @@ INSTALLED_APPS = [
     "apps.partners",
     "apps.buzz",
     "apps.rides",
+    "apps.shop",
 ]
 
 MIDDLEWARE = [
@@ -172,6 +174,7 @@ REST_FRAMEWORK = {
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
         "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
+        "search": os.environ.get("THROTTLE_SEARCH", "120/min"),  # Shopping search
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -238,6 +241,8 @@ FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") 
 CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# Shopping price-discovery sections ("Under ₹499" ...), comma-separated rupee thresholds.
+CLICK_SHOP_PRICE_BANDS = [int(x) for x in os.environ.get("CLICK_SHOP_PRICE_BANDS", "499,999,1999").split(",") if x.strip()]
 # GST on platform convenience fees (bookings).
 CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))

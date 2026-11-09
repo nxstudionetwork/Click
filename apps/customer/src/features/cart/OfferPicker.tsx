@@ -9,7 +9,9 @@ import { cartKey } from './useCart';
 export function OfferPicker({ cart }: { cart: Cart }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const currency = cart.store?.currency ?? 'INR';
+  const currency = cart.groups[0]?.store.currency ?? cart.store?.currency ?? 'INR';
+  const sellers = new Map(cart.groups.map((g) => [g.store.id, g.store.name]));
+  const multi = cart.groups.length > 1;
   const onSuccess = (c: Cart) => qc.setQueryData(cartKey, c);
   const onError = (e: unknown) => toast(e instanceof ApiError ? e.message : 'Couldn’t update the offer. Try again.', 'error');
   const apply = useMutation({ mutationFn: api.customer.cart.applyOffer, onSuccess: (c) => { onSuccess(c); toast('Offer applied'); }, onError });
@@ -17,7 +19,7 @@ export function OfferPicker({ cart }: { cart: Cart }) {
   const applied = cart.offer;
 
   if (!applied && cart.offers.length === 0) {
-    return <p className="small muted">No offers from {cart.store?.name ?? 'this store'} right now.</p>;
+    return <p className="small muted">No offers from {multi ? 'these sellers' : cart.groups[0]?.store.name ?? 'this store'} right now.</p>;
   }
   return (
     <div className="offer-pick">
@@ -30,7 +32,7 @@ export function OfferPicker({ cart }: { cart: Cart }) {
           <div key={o.id} className={`offer-pick__row ${on ? 'is-on' : ''} ${o.problem ? 'is-off' : ''}`}>
             <span className="offer-pick__icon"><Icon name="tag" size={18} /></span>
             <span className="offer-pick__text">
-              <strong>{o.title}</strong>
+              <strong>{o.title}{multi && <span className="muted" style={{ fontWeight: 400 }}> · {sellers.get(o.storeId)}</span>}</strong>
               <span>{on ? `Applied · you save ${formatMoney(cart.totals.discount, currency)}` : o.problem ?? (o.saving ? `Save ${formatMoney(o.saving, currency)} on this order` : o.description)}</span>
             </span>
             {on ? (

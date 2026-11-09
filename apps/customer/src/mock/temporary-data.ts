@@ -106,7 +106,7 @@ export const MOCK_MENUS: Record<string, MenuCategory[]> = Object.fromEntries(
         dietary,
         isAvailable: !(ci === 0 && pi === 2 && store.slug === 'tandoor-republic'),
         isFeatured: pi === 0,
-        optionGroups: [],
+        optionGroups: [], shopCategoryId: null, hasVariants: false,
       })),
     })),
   ]),

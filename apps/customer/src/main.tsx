@@ -19,6 +19,7 @@ import './styles/explore.css';
 import './styles/profile.css';
 import './styles/service.css';
 import './styles/ride.css';
+import './styles/shop.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -3,6 +3,7 @@ import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  CheckoutResult, ReturnRequestInput,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 
@@ -81,9 +82,10 @@ export const customerApi = (http: HttpClient) => ({
     remove: (id: string) => http.request<void>(`/customer/addresses/${id}`, { method: 'DELETE' }),
   },
   cart: {
-    get: () => http.request<Cart>('/customer/cart'),
+    /** `addressId` (the customer's own address) adds per-seller delivery estimates to Shopping carts. */
+    get: (addressId?: string | null) => http.request<Cart>('/customer/cart', { query: { address: addressId ?? undefined } }),
     clear: () => http.request<Cart>('/customer/cart', { method: 'DELETE' }),
-    addItem: (input: { productId: string; quantity: number; note?: string; optionIds?: string[] }) =>
+    addItem: (input: { productId: string; quantity: number; note?: string; optionIds?: string[]; variantId?: string | null }) =>
       http.request<Cart>('/customer/cart/items', { method: 'POST', body: input }),
     /** Apply an offer (validated server-side) / remove it. */
     applyOffer: (offerId: string) => http.request<Cart>('/customer/cart/offer', { method: 'POST', body: { offerId } }),
@@ -98,6 +100,11 @@ export const customerApi = (http: HttpClient) => ({
     reorder: (id: string) => http.request<ReorderResult>(`/customer/orders/${id}/reorder`, { method: 'POST' }),
     get: (id: string) => http.request<OrderDetail>(`/customer/orders/${id}`),
     place: (input: PlaceOrderInput) => http.request<OrderDetail>('/customer/orders', { method: 'POST', body: input }),
+    /** Place the whole cart: a Shopping cart becomes one order per seller under one checkout. */
+    checkout: (input: PlaceOrderInput) => http.request<CheckoutResult>('/customer/checkout', { method: 'POST', body: input }),
+    getCheckout: (id: string) => http.request<CheckoutResult>(`/customer/checkouts/${id}`),
+    requestReturn: (orderId: string, itemId: string, input: ReturnRequestInput) =>
+      http.request<OrderDetail>(`/customer/orders/${orderId}/items/${itemId}/return`, { method: 'POST', body: input }),
     cancel: (id: string, reason = '') =>
       http.request<OrderDetail>(`/customer/orders/${id}/cancel`, { method: 'POST', body: { reason } }),
     review: (id: string, input: { rating: number; comment?: string }) =>

@@ -67,6 +67,14 @@ class Store(BaseModel):
     min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     currency = models.CharField(max_length=3, default=settings.CLICK_DEFAULT_CURRENCY)
 
+    # Marketplace seller settings (retail). Shipping is per seller: one parcel and one fee per seller per checkout.
+    verified_at = models.DateTimeField(null=True, blank=True, help_text="Set by Click staff after verifying the seller's business.")
+    free_delivery_above = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                              help_text="Order value from this seller above which delivery is free.")
+    dispatch_days = models.PositiveSmallIntegerField(default=1, help_text="Working days to pack and hand over an order.")
+    cod_enabled = models.BooleanField(default=True, help_text="Seller accepts cash on delivery.")
+    return_policy = models.CharField(max_length=300, blank=True, help_text="Seller's return terms shown to customers.")
+
     class Meta:
         ordering = ["-rating_average", "name"]
         indexes = [

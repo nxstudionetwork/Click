@@ -6,9 +6,13 @@ import { OrderReview } from '../features/orders/OrderReview';
 import { serviceForStoreType } from '../config/services';
 import { Totals } from '../features/cart/Totals';
 import { cartKey } from '../features/cart/useCart';
-import { isTerminal, PAYMENT_LABEL, PROGRESS, STATUS_LABEL, statusTone } from '../features/orders/status';
+import { isTerminal, PAYMENT_LABEL, progressFor, statusLabel, statusTone } from '../features/orders/status';
+import { ReturnSheet } from '../features/orders/ReturnSheet';
 import { api } from '../lib/api';
 import { formatDateTime, formatMoney, formatTime } from '../lib/format';
+import { useState } from 'react';
+
+const day = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 
 export function OrderPage() {
   const { id = '' } = useParams();
@@ -24,6 +28,7 @@ export function OrderPage() {
     refetchInterval: (q) => (q.state.data && !isTerminal(q.state.data.status) ? 15_000 : false),
   });
   const navigate = useNavigate();
+  const [returning, setReturning] = useState<string | null>(null);
   const reorder = useMutation({
     mutationFn: () => api.customer.orders.reorder(id),
     onSuccess: (r) => {
@@ -47,7 +52,12 @@ export function OrderPage() {
   if (order.isPending) return <div className="stack"><Skeleton height={28} width="40%" /><Skeleton height={200} /></div>;
   const o: OrderDetail = order.data;
   const reached = new Map(o.events.map((e) => [e.toStatus, e.createdAt]));
-  const currentIdx = PROGRESS.indexOf(o.status === 'ready' ? 'preparing' : o.status);
+  const retail = o.store.storeType === 'retail';
+  const progress = progressFor(o.store.storeType);
+  const currentIdx = progress.indexOf(o.status === 'ready' ? 'preparing' : o.status);
+  const eta = retail && o.estimatedDeliveryFrom && o.estimatedDeliveryAt
+    ? `Estimated delivery ${day(o.estimatedDeliveryFrom)} – ${day(o.estimatedDeliveryAt)}`
+    : o.estimatedDeliveryAt ? `Estimated arrival by ${formatTime(o.estimatedDeliveryAt)}` : null;
   const address = o.deliveryAddress;
 
   return (
@@ -58,11 +68,12 @@ export function OrderPage() {
             <span className="placed__check" aria-hidden="true"><Icon name="check" size={30} /></span>
             <h2 id="placed-h">Order placed</h2>
             <p>{o.store.name} will confirm it shortly.</p>
+            {o.checkout && o.checkout.orderCount > 1 && <p className="small">Part of checkout {o.checkout.number} · <Link to={`/checkout/done/${o.checkout.id}`} style={{ textDecoration: 'underline' }}>see all {o.checkout.orderCount} orders</Link></p>}
             <dl className="placed__facts">
               <div><dt>Order ID</dt><dd>{o.number}</dd></div>
               <div><dt>Total</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
               <div><dt>Payment</dt><dd>{o.payments[0] ? `${o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : 'Click. Wallet'} · ${PAYMENT_LABEL[o.payments[0].status]}` : '—'}</dd></div>
-              {o.estimatedDeliveryAt && <div><dt>Estimated arrival</dt><dd>by {formatTime(o.estimatedDeliveryAt)}</dd></div>}
+              {eta && <div><dt>{retail ? 'Delivery' : 'Estimated arrival'}</dt><dd>{eta.replace(/^Estimated (delivery|arrival) /, '')}</dd></div>}
               <div className="placed__wide"><dt>Delivering to</dt><dd>{[o.deliveryAddress.line1, o.deliveryAddress.line2, o.deliveryAddress.city].filter(Boolean).join(', ')}</dd></div>
             </dl>
             <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -77,7 +88,7 @@ export function OrderPage() {
             <h1>{o.store.name}</h1>
             <span className="muted small">{o.number} · {formatDateTime(o.createdAt)}</span>
           </div>
-          <span className={`badge ${statusTone(o.status)}`}>{STATUS_LABEL[o.status]}</span>
+          <span className={`badge ${statusTone(o.status)}`}>{statusLabel(o.status, o.store.storeType)}</span>
         </div>
 
         <section className="card card--pad stack" aria-label="Order status" id="order-status">
@@ -85,11 +96,12 @@ export function OrderPage() {
             <p>This order was cancelled{o.cancelledAt ? ` at ${formatTime(o.cancelledAt)}` : ''}.</p>
           ) : (
             <>
-              {o.estimatedDeliveryAt && o.status !== 'delivered' && <p className="small">Estimated arrival by <strong>{formatTime(o.estimatedDeliveryAt)}</strong></p>}
+              {eta && o.status !== 'delivered' && <p className="small"><strong>{eta}</strong>{retail && <span className="muted"> · an estimate until the seller ships</span>}</p>}
+              {o.checkout && o.checkout.orderCount > 1 && <p className="small muted">One of {o.checkout.orderCount} orders from checkout {o.checkout.number}. <Link to={`/checkout/done/${o.checkout.id}`} style={{ color: 'var(--c-theme-strong)' }}>See all</Link></p>}
               <ol className="timeline">
-                {PROGRESS.map((s, i) => (
+                {progress.map((s, i) => (
                   <li key={s} className={`${i <= currentIdx ? 'done' : ''} ${i === currentIdx ? 'current' : ''}`}>
-                    <div className="spread"><span>{STATUS_LABEL[s]}</span>{reached.get(s) && <span className="small muted">{formatTime(reached.get(s)!)}</span>}</div>
+                    <div className="spread"><span>{statusLabel(s, o.store.storeType)}</span>{reached.get(s) && <span className="small muted">{formatTime(reached.get(s)!)}</span>}</div>
                   </li>
                 ))}
               </ol>
@@ -112,14 +124,35 @@ export function OrderPage() {
         <section className="card card--pad stack">
           <h3>Items</h3>
           {o.items.map((i) => (
-            <div key={i.id} className="spread small">
-              <span>{i.quantity} × {i.productName}{i.optionsSummary && <span className="muted"> ({i.optionsSummary})</span>}{i.note && <span className="muted"> — “{i.note}”</span>}</span>
-              <span>{formatMoney(i.lineTotal, o.currency)}</span>
+            <div key={i.id} className="stack" style={{ gap: 6 }}>
+              <div className="spread small">
+                <span>{i.quantity} × {retail && i.productId ? <Link to={`/products/${i.productId}`}>{i.productName}</Link> : i.productName}
+                  {i.optionsSummary && <span className="muted"> ({i.optionsSummary})</span>}{i.note && <span className="muted"> — “{i.note}”</span>}</span>
+                <span>{formatMoney(i.lineTotal, o.currency)}</span>
+              </div>
+              {retail && (
+                <div className="row small" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <span className="muted">{i.returnDays ? `${i.returnDays}-day ${i.replacementOnly ? 'replacement' : 'return'}${i.returnUntil ? ` · until ${day(i.returnUntil)}` : ''}` : 'Not returnable'}</span>
+                  {i.canReturn && <Button size="sm" variant="outline" onClick={() => setReturning(i.id)}>{i.replacementOnly ? 'Request replacement' : 'Return or replace'}</Button>}
+                  {!i.canReturn && i.returnNote && o.status === 'delivered' && i.returns.length === 0 && <span className="muted">{i.returnNote}</span>}
+                </div>
+              )}
+              {i.returns.map((rr) => (
+                <div key={rr.id} className="ret">
+                  <strong>{rr.kindLabel} · {rr.statusLabel}</strong>
+                  <span>{rr.reasonLabel} · {rr.quantity} item{rr.quantity === 1 ? '' : 's'} · {formatDateTime(rr.createdAt)}</span>
+                  {rr.refundAmount && <span>{formatMoney(rr.refundAmount, o.currency)} refunded to your Click. Wallet</span>}
+                  {rr.resolutionNote && <span>{rr.resolutionNote}</span>}
+                </div>
+              ))}
             </div>
           ))}
           {o.customerNote && <p className="small muted">Note: {o.customerNote}</p>}
         </section>
-        <OrderReview order={o} />
+        {retail ? o.status === 'delivered' && (
+          <p className="small muted">Rate the products you received on each product’s page{o.items[0]?.productId ? <> · <Link to={`/products/${o.items[0].productId}#reviews`} style={{ color: 'var(--c-theme-strong)' }}>review {o.items[0].productName}</Link></> : null}.</p>
+        ) : <OrderReview order={o} />}
+        <ReturnSheet order={o} itemId={returning} onClose={() => setReturning(null)} onDone={(next) => qc.setQueryData(key, next)} />
       </div>
 
       <aside className="checkout__aside stack">
@@ -127,7 +160,7 @@ export function OrderPage() {
           <h3>Bill</h3>
           <Totals totals={{ subtotal: o.subtotal, deliveryFee: o.deliveryFee, tax: o.tax, discount: o.discount, total: o.total }} currency={o.currency} offerTitle={o.offerTitle} />
           {o.payments[0] && (
-            <p className="small muted">Payment: {o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : o.payments[0].method} · {PAYMENT_LABEL[o.payments[0].status]}</p>
+            <p className="small muted">Payment: {o.payments[0].method === 'cash_on_delivery' ? 'Cash on delivery' : o.payments[0].method === 'wallet' ? 'Click. Wallet' : o.payments[0].method} · {PAYMENT_LABEL[o.payments[0].status]}</p>
           )}
         </div>
         <div className="card card--pad stack" style={{ gap: 4 }}>

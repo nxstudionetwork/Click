@@ -40,6 +40,11 @@ import { ServicePage } from './pages/ServicePage';
 import { StorePage } from './pages/StorePage';
 import { TicketPage } from './pages/TicketPage';
 import { WishlistPage } from './pages/WishlistPage';
+import { CheckoutDonePage } from './pages/CheckoutDonePage';
+import { ShopBrandsPage } from './pages/ShopBrandsPage';
+import { ShopComparePage } from './pages/ShopComparePage';
+import { ShopResultsPage } from './pages/ShopResultsPage';
+import { ShoppingPage } from './pages/ShoppingPage';
 
 const guard = (el: React.ReactNode) => <RequireAuth>{el}</RequireAuth>;
 // The Click card (QR rendering) is only needed after signup / from Account, so it loads on demand.
@@ -89,7 +94,12 @@ function AppRoutes() {
         <Route path="search" element={<SearchPage />} />
         <Route path="food" element={<ServicePage key="restaurant" storeType="restaurant" />} />
         <Route path="groceries" element={<ServicePage key="grocery" storeType="grocery" />} />
-        <Route path="shopping" element={<ServicePage key="retail" storeType="retail" />} />
+        <Route path="shopping" element={<ShoppingPage />} />
+        <Route path="shopping/search" element={<ShopResultsPage key="search" mode="search" />} />
+        <Route path="shopping/c/:slug" element={<ShopResultsPage key="category" mode="category" />} />
+        <Route path="shopping/brands" element={<ShopBrandsPage />} />
+        <Route path="shopping/brands/:slug" element={<ShopResultsPage key="brand" mode="brand" />} />
+        <Route path="shopping/compare" element={<ShopComparePage />} />
         <Route path="shop" element={<Navigate to="/shopping" replace />} />
         <Route path="stores/:slug" element={<StorePage />} />
         <Route path="products/:id" element={<ProductPage />} />
@@ -115,6 +125,7 @@ function AppRoutes() {
         <Route path="explore" element={guard(<ExplorePage />)} />
         <Route path="cart" element={guard(<CartPage />)} />
         <Route path="checkout" element={guard(<CheckoutPage />)} />
+        <Route path="checkout/done/:id" element={guard(<CheckoutDonePage />)} />
         <Route path="orders" element={guard(<OrdersPage />)} />
         <Route path="orders/:id" element={guard(<OrderPage />)} />
         <Route path="wishlist" element={guard(<WishlistPage />)} />

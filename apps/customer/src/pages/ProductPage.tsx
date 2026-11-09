@@ -10,6 +10,7 @@ import { useAddToCart } from '../features/menu/useAddToCart';
 import { ProductCard } from '../features/stores/ProductCard';
 import { WishlistButton } from '../features/wishlist/WishlistButton';
 import { api } from '../lib/api';
+import { ShopProductPage } from './ShopProductPage';
 import { etaLabel, formatMoney } from '../lib/format';
 
 const useProductQuery = (id: string) => useQuery({ queryKey: ['products', id], queryFn: () => api.catalog.product(id) });
@@ -27,6 +28,8 @@ export function ProductPage() {
       ? <EmptyState icon="alert" title="Product not found" message="It may no longer be sold on Click." action={<Link to="/explore" className="btn btn--outline">Explore</Link>} />
       : <ErrorState error={product.error} onRetry={() => product.refetch()} />;
   }
+  // Shopping listings get the marketplace product page (gallery, variants, delivery, seller, reviews, compare).
+  if (product.data?.store.storeType === 'retail' && product.data.shopCategoryId) return <ShopProductPage id={id} />;
   if (product.isPending) return <div className="pdp"><Skeleton height={360} radius={22} /><div className="stack"><Skeleton height={32} width="70%" /><Skeleton height={20} width="40%" /><Skeleton height={80} /></div></div>;
 
   return <ProductDetail p={product.data} addToCart={addToCart} isAdding={isAdding} qty={qty} setQty={setQty} added={added} setAdded={setAdded} />;

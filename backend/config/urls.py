@@ -18,6 +18,7 @@ from rest_framework.routers import SimpleRouter
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
 from apps.buzz.views import BuzzFeedView
+from apps.shop.urls import customer_urls as shop_customer_urls, public_urls as shop_public_urls
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
@@ -38,6 +39,7 @@ customer_router.register("addresses", AddressViewSet, basename="address")
 customer_urls = [
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     *ride_customer_urls,
+    *shop_customer_urls,
     path("recommendations/stores", store_views.RecommendedStoresView.as_view(), name="recommended-stores"),
     path("cart", cart_views.CartView.as_view(), name="cart"),
     path("cart/items", cart_views.CartItemsView.as_view(), name="cart-items"),
@@ -48,6 +50,9 @@ customer_urls = [
     path("orders/<uuid:pk>/cancel", order_views.OrderCancelView.as_view(), name="order-cancel"),
     path("orders/<uuid:pk>/reorder", order_views.OrderReorderView.as_view(), name="order-reorder"),
     path("orders/<uuid:pk>/review", order_views.OrderReviewView.as_view(), name="order-review"),
+    path("orders/<uuid:pk>/items/<uuid:item_id>/return", order_views.ReturnRequestView.as_view(), name="order-item-return"),
+    path("checkout", order_views.CheckoutView.as_view(), name="checkout"),
+    path("checkouts/<uuid:pk>", order_views.CheckoutDetailView.as_view(), name="checkout-detail"),
     path("wishlist", wishlist_views.WishlistView.as_view(), name="wishlist"),
     path("wishlist/<uuid:pk>", wishlist_views.WishlistItemView.as_view(), name="wishlist-item"),
     path("notifications", notification_views.NotificationListView.as_view(), name="notifications"),
@@ -74,6 +79,7 @@ api_v1 = [
     path("stores/<slug:slug>/menu", StoreMenuView.as_view(), name="store-menu"),
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
+    path("shop/", include(shop_public_urls)),
     path("events", booking_views.EventListView.as_view(), name="events"),
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),
     path("shows/<uuid:pk>", booking_views.ShowSeatMapView.as_view(), name="show-seatmap"),

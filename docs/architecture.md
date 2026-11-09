@@ -131,6 +131,36 @@ and support tickets. Frontend route guards are UX only.
   places and Click. stores. No external geocoder is connected yet.
 - **Updates:** the trip page polls every 5 seconds while a ride is active (no push channel yet).
 
+## Shopping (marketplace)
+
+- **Listings:** retail `Store`s are sellers; a `Product` with a `shop_category` (two-level `ShopCategory` tree) is a
+  marketplace listing. Brands (`Brand`), specs as category `AttributeDefinition`s with per-product
+  `ProductAttributeValue`s (no per-category columns), purchasable `ProductVariant`s (size/colour, own price and stock),
+  a photo gallery (`ProductImage`: uploads re-encoded to 320/640/1280 px WebP in media storage, never in PostgreSQL),
+  time-boxed `ProductDeal`s (optionally limited by quantity) and policies (return window, replacement-only, warranty, COD).
+- **Pricing:** `apps/catalog/pricing.py` is the only place a price is decided (variant price, active deal, genuine
+  compare-at reference). Cards, product page, cart and order lines all use it.
+- **Cart:** one Click. cart with two modes. `store` (food/groceries) holds one store; `marketplace` (Shopping) holds any
+  number of sellers, priced per seller (delivery fee, free-delivery threshold, tax, that seller's offer). Mixing the
+  two asks the customer first (`cart_store_conflict`).
+- **Checkout:** `POST /customer/checkout` turns a marketplace cart into one order per seller under a `CheckoutGroup`, in
+  one transaction (stock per variant, deal quantity, cash-on-delivery eligibility, wallet balance), idempotent per key.
+  Retail orders move `placed → confirmed → packed → shipped → out_for_delivery → delivered`.
+- **Delivery estimate:** rule-based (seller dispatch days + distance band), always shown as a date range and labelled an
+  estimate. No courier is connected yet.
+- **Returns:** `ReturnRequest` per delivered item within its snapshotted window; staff approve in admin (refund of the
+  paid share to the Click Wallet, or a replacement).
+- **Reviews:** `shop.ProductReview`, verified purchases only (delivered order), one per customer, editable; moderation
+  hides without deleting; product rating is recomputed from published reviews.
+- **Discovery:** `GET /shop/home` returns only sections with real content (deals, Just for You from the customer's own
+  views/wishlist/purchases, trending from 7-day activity and orders, best sellers from units sold, configurable price
+  bands `CLICK_SHOP_PRICE_BANDS`, new arrivals, brands, buy again). `/shop/feed` is cursor-paginated.
+- **Search:** `apps/shop/query.py` interprets natural language (price, colour, brand, category word, gift/age) and
+  reports only what it understood; filters/facets come from the category's attributes and variant options; trigram
+  indexes (`pg_trgm`) back name search and "Did you mean". Buddy uses the same search.
+- **Image search:** behind `CLICK_VISION_PROVIDER` (`apps/shop/vision.py`); with none configured the camera button is
+  hidden and `/shop/visual-search` returns 503.
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching

@@ -17,7 +17,7 @@ class StoreMenuView(APIView):
 
     def get(self, request, slug):
         store = get_object_or_404(Store, slug=slug, status=Store.Status.ACTIVE)
-        visible = Product.objects.filter(is_active=True).prefetch_related(OPTIONS)
+        visible = Product.objects.filter(is_active=True).prefetch_related(OPTIONS, "variants")
         categories = (
             MenuCategory.objects.filter(store=store, is_active=True)
             .prefetch_related(Prefetch("products", queryset=visible, to_attr="visible_products"))
@@ -32,7 +32,7 @@ OPTIONS = "option_groups__options"
 
 def public_products():
     return (Product.objects.filter(is_active=True, store__status=Store.Status.ACTIVE)
-            .select_related("store", "category").prefetch_related(OPTIONS))
+            .select_related("store", "category").prefetch_related(OPTIONS, "variants"))
 
 
 class ProductDetailView(APIView):

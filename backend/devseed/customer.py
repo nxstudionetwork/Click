@@ -73,6 +73,9 @@ ORDERS = [
     ("brew-ritual-cafe", [("Cold Brew Tonic", 2), ("Almond Croissant", 2)], "cash_on_delivery", "placed", 0, ""),
 ]
 PATH = [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]
+RETAIL_PATH = [OrderStatus.CONFIRMED, OrderStatus.PACKED, OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]
+# Food steps map onto the Shopping steps for retail orders (preparing -> packed, ready -> shipped).
+RETAIL_EQUIVALENT = {"preparing": "packed", "ready": "shipped"}
 
 TICKETS = [
     ("order", "Missing raita with biryani", "The raita wasn’t in the bag.", "resolved"),
@@ -108,6 +111,19 @@ WISHLIST_PRODUCTS = [("volt-electronics", "Wireless Earbuds Pro"), ("volt-electr
 def default_options(product) -> list:
     """The first choice of each required customisation group (what a customer must pick at minimum)."""
     return [g.options.first().id for g in product.option_groups.filter(min_select__gt=0) if g.options.exists()]
+
+
+def default_variant(product):
+    """The first in-stock variant of a product sold in variants (size, colour), else None."""
+    v = product.variants.filter(is_active=True).exclude(stock_quantity=0).first()
+    return v.id if v else None
+
+
+def status_path(order, final: str) -> list:
+    if order.store.store_type == "retail":
+        final = RETAIL_EQUIVALENT.get(final, final)
+        return RETAIL_PATH[: RETAIL_PATH.index(final) + 1]
+    return PATH[: PATH.index(final) + 1]
 
 
 def _key(label: str) -> uuid.UUID:
@@ -170,13 +186,13 @@ def seed_orders(profile, log) -> None:
             cart_services.clear_cart(cart)
             for name, qty in items:
                 product = Product.objects.get(store=store, name=name)
-                cart_services.add_item(profile, product.id, qty, option_ids=default_options(product))
+                cart_services.add_item(profile, product.id, qty, option_ids=default_options(product), variant_id=default_variant(product))
             order, _ = order_services.place_order(customer=profile, address_id=address.id, payment_method=method,
                                                   idempotency_key=_key(f"order-{i}"), customer_note=note)
             if final == "cancelled":
                 order_services.cancel_by_customer(order, user=profile.user, reason="Changed my mind (seed)")
             elif final != "placed":
-                for step in PATH[: PATH.index(final) + 1]:
+                for step in status_path(order, final):
                     order = order_services.transition_order(order, step)
             order.refresh_from_db()
             _shift(order, days)
@@ -255,6 +271,9 @@ def seed_test_customer(log) -> CustomerProfile:
     seed_wallet(profile, log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
+    from .shop import seed_shop_history
+
+    seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart
     seed_cart(profile, log)
     seed_wishlist(profile, log)
     seed_support(profile, log)

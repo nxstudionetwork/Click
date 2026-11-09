@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -10,16 +11,22 @@ from .models import Cart, CartItem
 from .serializers import AddCartItemSerializer, ApplyOfferSerializer, CartSerializer, UpdateCartItemSerializer
 
 
-def _cart_response(customer, code=status.HTTP_200_OK):
+def _cart_response(customer, code=status.HTTP_200_OK, request=None):
     cart = Cart.objects.select_related("store", "offer").get(pk=services.get_or_create_cart(customer).pk)
-    return Response(CartSerializer(cart).data, status=code)
+    # `?address=<id>` (the customer's own address) adds per-seller delivery estimates.
+    address_id = request.query_params.get("address") if request is not None else None
+    address = customer.addresses.filter(pk=address_id).first() if address_id else None
+    return Response(CartSerializer(cart, context={"address": address}).data, status=code)
 
 
 class CartView(APIView):
     permission_classes = [IsCustomer]
 
     def get(self, request):
-        return _cart_response(request.user.customer_profile)
+        try:
+            return _cart_response(request.user.customer_profile, request=request)
+        except (ValueError, DjangoValidationError):
+            return _cart_response(request.user.customer_profile)
 
     def delete(self, request):
         services.clear_cart(services.get_or_create_cart(request.user.customer_profile))

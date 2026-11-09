@@ -66,6 +66,21 @@ const PATHS = {
   copy: 'M8 8h11v13H8V8Zm-3 8H4V3h11v1',
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   eyeOff: 'M3 3l18 18M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6A16.6 16.6 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2',
+  // Shopping categories and tools
+  book: 'M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2V5Zm0 15a2 2 0 0 0 2 2h13v-4M8 7h7',
+  shoe: 'M3 17v-5l4-1 3-4 2 1-1 3 4 2 6 1v3H3Zm0 0v2h18v-2',
+  toy: 'M4 10h7v10H4V10Zm9 4h7v6h-7v-6Zm-6-4V6a3 3 0 0 1 6 0v8',
+  gem: 'M6 4h12l3 5-9 11L3 9l3-5Zm-3 5h18M9 4l3 16m3-16-3 16',
+  sofa: 'M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M2 12a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v6H2v-6Zm2 6v2m16-2v2',
+  paw: 'M12 20c-3 0-5-1.5-5-3.5S9.5 12 12 12s5 2.5 5 4.5S15 20 12 20ZM6 10a1.5 2 0 1 0 0-.1M18 10a1.5 2 0 1 0 0-.1M9.5 6a1.5 2 0 1 0 0-.1M14.5 6a1.5 2 0 1 0 0-.1',
+  beauty: 'M9 21h6v-9H9v9Zm1-9V7l4-3v8M8 12h8',
+  appliance: 'M6 3h12v18H6V3Zm0 6h12M9 6h.01M12 15a2 2 0 1 0 0-.1',
+  dumbbell: 'M3 10v4m3-6v8m0-4h12m0-4v8m3-6v4',
+  baby: 'M12 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm-2.5-7h.01M14.5 14h.01M10 17a3 3 0 0 0 4 0M12 7a2 2 0 0 1 2-2',
+  headphones: 'M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H5a1 1 0 0 1-1-1v-4Zm16 0h-3v5h2a1 1 0 0 0 1-1v-4Z',
+  compare: 'M8 3v18m8-18v18M4 7h4m8 0h4M4 17h4m8 0h4',
+  filter: 'M4 5h16l-6 8v6l-4-2v-4L4 5Z',
+  sort: 'M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3',
 } as const;
 
 export type IconName = keyof typeof PATHS;

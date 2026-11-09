@@ -4,16 +4,20 @@ from apps.catalog.serializers import ProductSerializer
 from apps.stores.models import Store
 
 from .models import MAX_ITEM_QUANTITY, Cart, CartItem
-from .services import compute_totals, offer_discount, offer_problem, unit_price
+from .services import cart_items, compute_totals, offer_discount, offer_problem, seller_groups, unit_price
 
 
 class CartStoreSerializer(serializers.ModelSerializer):
     is_open = serializers.BooleanField(read_only=True)
+    is_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = Store
-        fields = ["id", "slug", "name", "image_url", "delivery_fee", "min_order_amount", "currency", "is_open",
-                  "delivery_time_min", "delivery_time_max"]
+        fields = ["id", "slug", "name", "image_url", "store_type", "delivery_fee", "min_order_amount", "currency", "is_open",
+                  "delivery_time_min", "delivery_time_max", "free_delivery_above", "cod_enabled", "is_verified"]
+
+    def get_is_verified(self, s) -> bool:
+        return s.verified_at is not None
 
 
 class CartItemOptionSerializer(serializers.Serializer):
@@ -25,12 +29,23 @@ class CartItemOptionSerializer(serializers.Serializer):
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
     options = CartItemOptionSerializer(many=True, read_only=True)
+    variant = serializers.SerializerMethodField()
+    store_id = serializers.UUIDField(source="product.store_id", read_only=True)
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
+    is_available = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ["id", "product", "options", "quantity", "note", "unit_price", "line_total"]
+        fields = ["id", "product", "store_id", "variant", "options", "quantity", "note", "unit_price", "line_total", "is_available"]
+
+    def get_variant(self, item):
+        v = item.variant
+        return {"id": str(v.id), "label": v.label, "options": v.options} if v else None
+
+    def get_is_available(self, item) -> bool:
+        ok = item.variant.is_orderable if item.variant else item.product.is_orderable
+        return ok and item.product.store.is_open
 
     def get_unit_price(self, item) -> str:
         return f"{unit_price(item):.2f}"
@@ -40,58 +55,87 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 
 class CartOfferSerializer(serializers.Serializer):
-    """An offer of the cart's store, with whether it applies right now (decided by the server)."""
+    """An offer of a seller in the cart, with whether it applies right now (decided by the server)."""
 
     id = serializers.UUIDField()
+    store_id = serializers.UUIDField()
     title = serializers.CharField()
     description = serializers.CharField()
     min_order_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
     ends_at = serializers.DateTimeField(allow_null=True)
 
 
+def _money(v) -> str:
+    return f"{v:.2f}"
+
+
 class CartSerializer(serializers.ModelSerializer):
+    """Contract mirrored by `Cart` in packages/api/src/types.ts. `context["address"]` adds delivery estimates."""
+
     store = CartStoreSerializer(read_only=True)
     items = serializers.SerializerMethodField()
+    groups = serializers.SerializerMethodField()
     totals = serializers.SerializerMethodField()
     item_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Cart
-        fields = ["id", "store", "items", "item_count", "totals", "offer", "offers"]
-
     offer = serializers.SerializerMethodField()
     offers = serializers.SerializerMethodField()
 
+    class Meta:
+        model = Cart
+        fields = ["id", "mode", "store", "items", "groups", "item_count", "totals", "offer", "offers"]
+
     def _items(self, cart: Cart):
         if not hasattr(self, "_cached_items"):
-            self._cached_items = list(
-                cart.items.select_related("product").prefetch_related("options", "product__option_groups__options").order_by("created_at")
-            )
+            self._cached_items = cart_items(cart)
         return self._cached_items
 
-    def _subtotal(self, cart):
-        return compute_totals(cart, self._items(cart)).subtotal
+    def _groups(self, cart):
+        if not hasattr(self, "_cached_groups"):
+            self._cached_groups = seller_groups(cart, self._items(cart)) if self._items(cart) else []
+        return self._cached_groups
+
+    def _group_for_store(self, cart, store_id):
+        return next((g for g in self._groups(cart) if g.store.id == store_id), None)
 
     def get_offer(self, cart):
-        """The applied offer and, if it no longer applies (e.g. cart dropped below its minimum), why."""
+        """The applied offer and, if it no longer applies (e.g. dropped below its minimum), why."""
         if not cart.offer_id:
             return None
         o = cart.offer
-        return {**CartOfferSerializer(o).data, "problem": offer_problem(o, cart.store, self._subtotal(cart))}
+        g = self._group_for_store(cart, o.store_id)
+        return {**CartOfferSerializer(o).data, "problem": offer_problem(o, g.store if g else None, g.subtotal if g else 0)}
 
     def get_offers(self, cart):
-        """Redeemable offers of the cart's store, each marked applicable or not (with the reason)."""
-        if not cart.store_id or not self._items(cart):
-            return []
+        """Redeemable offers of the sellers in the cart, each marked applicable or not (with the reason)."""
         from apps.stores.views import active_offers
 
-        subtotal = self._subtotal(cart)
-        totals = compute_totals(cart, self._items(cart))
         out = []
-        for o in active_offers().filter(store_id=cart.store_id).exclude(discount_type=""):
-            problem = offer_problem(o, cart.store, subtotal)
-            out.append({**CartOfferSerializer(o).data, "problem": problem,
-                        "saving": None if problem else f"{offer_discount(o, subtotal, totals.delivery_fee):.2f}"})
+        for g in self._groups(cart):
+            for o in active_offers().filter(store_id=g.store.id).exclude(discount_type=""):
+                problem = offer_problem(o, g.store, g.subtotal)
+                out.append({**CartOfferSerializer(o).data, "problem": problem,
+                            "saving": None if problem else _money(offer_discount(o, g.subtotal, g.delivery_fee))})
+        return out
+
+    def get_groups(self, cart):
+        from apps.shop.delivery import estimate
+
+        address = self.context.get("address")
+        out = []
+        for g in self._groups(cart):
+            est = estimate(g.store, address=address) if address is not None else None
+            cod = g.store.cod_enabled and all(i.product.is_cod_available for i in g.items)
+            out.append({
+                "store": CartStoreSerializer(g.store).data,
+                "item_ids": [str(i.id) for i in g.items],
+                "subtotal": _money(g.subtotal), "delivery_fee": _money(g.delivery_fee), "tax": _money(g.tax),
+                "discount": _money(g.discount), "total": _money(g.total), "offer_title": g.offer.title if g.offer else "",
+                "below_minimum": g.subtotal < g.store.min_order_amount,
+                "free_delivery_remaining": (_money(g.store.free_delivery_above - g.subtotal)
+                                            if g.store.free_delivery_above is not None and g.subtotal < g.store.free_delivery_above else None),
+                "cod_available": cod,
+                "delivery_estimate": est,
+            })
         return out
 
     def get_items(self, cart):
@@ -102,11 +146,12 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_totals(self, cart):
         t = compute_totals(cart, self._items(cart))
-        return {k: f"{v:.2f}" for k, v in t.__dict__.items()}
+        return {k: _money(v) for k, v in t.__dict__.items()}
 
 
 class AddCartItemSerializer(serializers.Serializer):
     product_id = serializers.UUIDField()
+    variant_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     quantity = serializers.IntegerField(min_value=1, max_value=MAX_ITEM_QUANTITY, default=1)
     note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
     option_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list, max_length=20)

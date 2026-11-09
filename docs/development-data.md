@@ -98,4 +98,11 @@ pending) that show the "not live yet" Home. Sign in with **Login as test partner
 builds only; `partner/dev-login` is 404 unless DEBUG). Orders and bookings the test customer makes at those places
 appear on the partner's Home.
 
+Shopping (`devseed/shop.py`, run with the catalogue): 16 categories / 38 subcategories with attributes, 38 fictional
+brands, 12 retail sellers (one in Mumbai, one unverified, one prepaid-only), about 200 listings with variants and
+stock, 14 deals with real end times, redeemable seller offers and campaigns (one ended, one not started). Six dev
+reviewers (`reviewer.<name>@click.local`) buy and receive orders through the real checkout and review them, so
+ratings, best sellers and trending come from records. The test customer gets a delivered two-seller checkout
+(returnable) and a shipped order. Listings have no photos (the app shows a placeholder); upload real ones in admin.
+
 Parcels and home services aren't seeded because those features don't exist yet.

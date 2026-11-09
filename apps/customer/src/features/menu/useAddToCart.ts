@@ -29,7 +29,7 @@ export function useAddToCart() {
       return false;
     }
     // Items with required choices (size, portion…) are added from their picker, never with silent defaults.
-    if (optionIds === undefined && needsChoices(product)) {
+    if (optionIds === undefined && (needsChoices(product) || product.hasVariants)) {
       navigate(`/products/${product.id}`);
       return false;
     }
@@ -42,7 +42,7 @@ export function useAddToCart() {
       if (isStoreConflict(e)) {
         const ok = await confirm({
           title: 'Start a new cart?',
-          message: 'Your cart contains items from another restaurant. Clear the cart and add this item?',
+          message: `${e instanceof ApiError ? e.message.replace(/ Clear it to add this (item|product)\.$/, '') : 'Your cart has items from another store.'} Clear the cart and add this item?`,
           confirmLabel: 'Clear cart and add',
           cancelLabel: 'Keep my cart',
         });

@@ -3,15 +3,59 @@ from rest_framework import serializers
 from apps.payments.models import PaymentMethod
 from apps.payments.serializers import PaymentSerializer
 
-from .models import CUSTOMER_CANCELLABLE, Order, OrderItem, OrderStatusEvent
+from .models import CUSTOMER_CANCELLABLE, CheckoutGroup, Order, OrderItem, OrderStatusEvent, ReturnRequest
+from .returns import return_deadline, return_problem
+
+
+class ReturnSerializer(serializers.ModelSerializer):
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    kind_label = serializers.CharField(source="get_kind_display", read_only=True)
+    reason_label = serializers.CharField(source="get_reason_display", read_only=True)
+
+    class Meta:
+        model = ReturnRequest
+        fields = ["id", "kind", "kind_label", "reason", "reason_label", "details", "quantity", "status", "status_label",
+                  "refund_amount", "resolution_note", "created_at", "resolved_at"]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_id = serializers.UUIDField(read_only=True, allow_null=True)
+    variant_id = serializers.UUIDField(read_only=True, allow_null=True)
+    returns = ReturnSerializer(many=True, read_only=True)
+    return_until = serializers.SerializerMethodField()
+    can_return = serializers.SerializerMethodField()
+    return_note = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ["id", "product_id", "product_name", "options_summary", "unit_price", "quantity", "line_total", "note"]
+        fields = ["id", "product_id", "variant_id", "product_name", "options_summary", "unit_price", "quantity", "line_total", "note",
+                  "return_days", "replacement_only", "deal_percent", "returns", "return_until", "can_return", "return_note"]
+
+    def get_return_until(self, item):
+        d = return_deadline(item)
+        return d.isoformat() if d else None
+
+    def get_can_return(self, item) -> bool:
+        return return_problem(item) is None
+
+    def get_return_note(self, item) -> str | None:
+        """Why the item can't be returned, only when that's useful to say (returnable items after delivery)."""
+        if item.return_days is None:
+            return None
+        return return_problem(item)
+
+
+class CheckoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckoutGroup
+        fields = ["id", "number", "total", "currency", "created_at"]
+
+
+class ReturnRequestInputSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=ReturnRequest.Kind.choices)
+    reason = serializers.ChoiceField(choices=ReturnRequest.Reason.choices)
+    details = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    quantity = serializers.IntegerField(min_value=1, max_value=50, default=1)
 
 
 class OrderStatusEventSerializer(serializers.ModelSerializer):
@@ -64,9 +108,15 @@ class OrderDetailSerializer(OrderSummarySerializer):
     class Meta(OrderSummarySerializer.Meta):
         fields = OrderSummarySerializer.Meta.fields + [
             "items", "events", "payments", "delivery_address", "customer_note", "subtotal", "delivery_fee",
-            "tax", "discount", "offer_title", "estimated_delivery_at", "cancelled_at", "delivered_at", "can_cancel",
-            "review", "can_review",
+            "tax", "discount", "offer_title", "estimated_delivery_at", "estimated_delivery_from", "cancelled_at", "delivered_at",
+            "can_cancel", "review", "can_review", "checkout",
         ]
+
+    checkout = serializers.SerializerMethodField()
+
+    def get_checkout(self, order):
+        c = order.checkout
+        return {"id": str(c.id), "number": c.number, "order_count": c.orders.count()} if c else None
 
     def get_review(self, order):
         r = getattr(order, "review", None) if hasattr(order, "review") else None
