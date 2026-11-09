@@ -20,6 +20,7 @@ import './styles/profile.css';
 import './styles/service.css';
 import './styles/ride.css';
 import './styles/shop.css';
+import './styles/showtime.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

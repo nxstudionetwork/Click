@@ -110,3 +110,11 @@ def test_buddy_hands_ride_requests_to_ride_without_booking(auth_api):
     body = r.json()
     assert r.status_code == 200 and "airport" in body["message"]["content"]
     assert body["actions"] == [{"label": "Plan this ride", "path": "/rides?to=airport"}]
+
+
+def test_buddy_tells_watching_from_buying_a_watch(auth_api):
+    tonight = ask(auth_api, "What should I watch tonight?")
+    assert "Shopping" not in tonight["message"]["content"]
+    assert any(a["path"].startswith("/showtime") for a in tonight["actions"])
+    watch = ask(auth_api, "find me a watch under 3000")
+    assert not any(a["path"].startswith("/showtime") for a in watch.get("actions", []))

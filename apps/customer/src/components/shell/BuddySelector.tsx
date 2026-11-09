@@ -9,7 +9,7 @@ import { Icon, Sheet } from '../ui';
 
 type Step = 'choose' | 'go';
 
-const GO_PROMPTS = ['Find me a good biryani nearby', 'Movies tonight', 'Where is my order?', 'Show me groceries nearby'];
+const GO_PROMPTS = ['Find me a good biryani nearby', 'What’s on tonight?', 'Where is my order?', 'Show me groceries nearby'];
 
 /**
  * Header Buddy entry. Opens a choice between:

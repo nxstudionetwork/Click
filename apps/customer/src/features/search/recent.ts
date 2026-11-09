@@ -28,6 +28,6 @@ export const SEARCH_HINTS: { label: string; to: string; theme: string }[] = [
   { label: 'Pizza', to: '/search?q=pizza', theme: 'food' },
   { label: 'Groceries', to: '/groceries', theme: 'grocery' },
   { label: 'Earbuds', to: '/search?q=earbuds', theme: 'shopping' },
-  { label: 'Movies', to: '/movies', theme: 'movies' },
+  { label: 'Showtime', to: '/showtime', theme: 'movies' },
   { label: 'Offers', to: '/offers', theme: 'rewards' },
 ];

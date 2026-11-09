@@ -166,8 +166,10 @@
   --hero-bg: radial-gradient(120% 140% at 100% 0%, #67e8f9 0%, #0ea5e9 42%, #0b3d6e 100%); }
 [data-theme='parcel'] { --c-theme: #8b5cf6; --c-theme-solid: #6d3fd8; --c-theme-soft: rgb(139 92 246 / 12%); --c-theme-deep: #5a2fbf; --c-theme-tint: #ddd2ff; --c-theme-rgb: 139 92 246;
   --hero-bg: radial-gradient(120% 140% at 100% 0%, #c4b5fd 0%, #8b5cf6 45%, #3b1d8f 100%); }
-[data-theme='movies'] { --c-theme: #e0306f; --c-theme-solid: #c41f5f; --c-theme-soft: rgb(224 48 111 / 11%); --c-theme-deep: #a01a4e; --c-theme-tint: #ffb8d2; --c-theme-rgb: 224 48 111;
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #f472b6 0%, #c41f5f 42%, #3b0a2a 100%); }
+/* Showtime: cinematic near-black with crimson / wine accents and a restrained glow. */
+[data-theme='movies'] { --c-theme: #e5294b; --c-theme-solid: #c81e3f; --c-theme-soft: rgb(229 41 75 / 11%); --c-theme-deep: #8a1230; --c-theme-tint: #ffc1cc; --c-theme-rgb: 229 41 75;
+  --st-ink: #0b0a0f; --st-ink-2: #15121b; --st-ink-3: #201a27; --st-line: rgb(255 255 255 / 8%); --st-wine: #5b0f24; --st-violet: #3b1d5c;
+  --hero-bg: radial-gradient(70% 90% at 90% 0%, rgb(229 41 75 / 38%) 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(91 33 182 / 28%) 0%, transparent 65%), linear-gradient(160deg, #1a0f18 0%, #0f0b12 55%, #08070b 100%); }
 [data-theme='services'] { --c-theme: #0d9488; --c-theme-solid: #0b7d73; --c-theme-soft: rgb(13 148 136 / 11%); --c-theme-deep: #0a6058; --c-theme-tint: #a7f5ea; --c-theme-rgb: 13 148 136;
   --hero-bg: radial-gradient(120% 140% at 100% 0%, #5eead4 0%, #0d9488 45%, #073b38 100%); }
 [data-theme='rewards'] { --c-theme: #f5a400; --c-theme-solid: #b97800; --c-theme-soft: rgb(251 191 36 / 16%); --c-theme-deep: #8a5a00; --c-theme-tint: #fde68a; --c-theme-rgb: 251 191 36;

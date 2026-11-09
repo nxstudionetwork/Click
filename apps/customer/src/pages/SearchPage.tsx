@@ -15,7 +15,7 @@ const SCOPES: { id: SearchScope; label: string }[] = [
   { id: 'grocery', label: 'Groceries' },
   { id: 'retail', label: 'Shopping' },
   { id: 'products', label: 'Products & dishes' },
-  { id: 'events', label: 'Movies & events' },
+  { id: 'events', label: 'Showtime' },
 ];
 const RECENT_KEY = 'click.recentSearches';
 
@@ -118,7 +118,7 @@ export function SearchPage() {
           )}
           {results.data.events.length > 0 && (
             <section className="stack" data-theme="movies">
-              <h2>Movies & events <span className="muted small">({results.data.events.length})</span></h2>
+              <h2>Showtime <span className="muted small">({results.data.events.length})</span></h2>
               <div className="event-grid">{results.data.events.map((e) => <EventCard key={e.id} event={e} />)}</div>
             </section>
           )}

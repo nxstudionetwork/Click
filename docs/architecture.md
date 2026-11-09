@@ -161,6 +161,40 @@ and support tickets. Frontend route guards are UX only.
 - **Image search:** behind `CLICK_VISION_PROVIDER` (`apps/shop/vision.py`); with none configured the camera button is
   hidden and `/shop/visual-search` returns 503.
 
+## Showtime (cinema and live shows)
+
+Customer-facing name: **Showtime** (`/showtime`; old `/movies` and `/bookings` links redirect). It extends the
+bookings domain (`apps/bookings`); nothing was rebuilt.
+
+- **Records:** `Event` (a title: film or live show, with poster/backdrop/trailer URLs and a licence credit),
+  `Credit` (cast & crew), `Venue` (coordinates, facilities) with `Screen`s (the real seat layout as JSON: rows front to
+  back, tiers such as Classic/Prime/Recliner, aisles, accessible and out-of-service seats, supported formats, sound),
+  `Show` (one showtime on a screen with `tier_prices`; legacy rows x seats still work), `ConcessionItem` (a venue's food
+  & drinks), `ShowOffer`, `ShowFeature` (editorial hero with priority and date window), `ShowReview`, `ShowInterest`.
+- **Booking flow:** seats -> `SeatHold` (8 minutes; `HeldSeat` unique per show seat; expired holds are released under
+  the show's row lock) -> quote -> book from the hold (`BookedSeat` unique while active) -> payment (pay at venue or
+  Click Wallet). The server re-validates seats, hold, food & drinks (that venue's, available), offer rules (dates,
+  venue/title, minimum seats/amount, payment method) and prices; idempotent per key. A wallet shortfall rolls back and
+  the hold survives for a retry.
+- **Bill:** tickets + ₹20/seat convenience fee + food & drinks + tax (service-fee tax on the fee, `CLICK_TAX_RATE` on
+  food) - offer discount (on tickets).
+- **Tickets:** a signed code (`django.core.signing`) shown as a QR; venues verify it with
+  `POST /partner/tickets/verify` (only the partner operating that venue, around show time; first scan checks in).
+  Cancellation up to 2 hours before; wallet payments are refunded; the terms are shown before confirming.
+- **Discovery:** `GET /showtime/home?lat&lng` (featured, highlights, tonight, now showing, coming soon, trending from
+  7-day bookings/interest/views, top rated once 3+ reviews exist, trailers, live shows, cinemas by distance, special
+  formats, offers; sections only with content). `/showtime/search` interprets language, genre, format, "tonight /
+  today / tomorrow / this weekend", "near me", cast/crew and cinema names, and reports what it understood.
+  `/showtime/titles/<slug>?date&format&language&lat&lng` loads one day of showtimes at a time, nearest cinema first.
+- **Reviews and ratings:** only from customers whose booking's show has started; one per title; moderation hides.
+  Titles show a rating only from `RATING_MIN` (3) reviews.
+- **Interest:** "I'm interested" is stored; a `post_save` signal on new showtimes notifies followers once when booking
+  opens.
+- **Dates:** customer-facing days use `CLICK_LOCAL_TIMEZONE` (Asia/Kolkata); the server stays on UTC.
+- **Across Click.:** Buddy uses the same search interpretation (it never books); Buzz shows trailers and titles that
+  open the title page; the ticket offers a ride to the cinema (Ride's place search includes venues) and restaurants
+  near the cinema; bookings appear in Activity and My Tickets (`/tickets`).
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching

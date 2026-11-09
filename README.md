@@ -47,7 +47,7 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/rewards     append-only points ledger (earned on delivered orders)
   apps/support     customer support tickets
   apps/wallet      Click Wallet (append-only ledger; pay + refunds)
-  apps/bookings    movies & live events: venues, shows, seat-safe bookings
+  apps/bookings    Showtime: titles, cinemas, screens and seat layouts, showtimes, seat holds, food & drinks, offers, tickets, reviews
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
   apps/rides       rides: ride types, upfront pricing, driver matching, trip lifecycle, safety, ratings

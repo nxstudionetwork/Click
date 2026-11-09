@@ -271,6 +271,9 @@ def seed_test_customer(log) -> CustomerProfile:
     seed_wallet(profile, log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
+    from .showtime import seed_showtime_history
+
+    seed_showtime_history(profile, log)
     from .shop import seed_shop_history
 
     seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart

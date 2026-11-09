@@ -25,12 +25,13 @@ describe('Explore', () => {
     const names = links.map((l) => l.querySelector('.xfeature__name')!.textContent!);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
     expect(names).toEqual(CLICK_FEATURES.map((f) => f.name));
-    for (const n of ['Activity', 'Buddy', 'Buzz', 'Food', 'Groceries', 'Movies', 'Offers', 'Rewards', 'Shopping', 'Wallet']) expect(names).toContain(n);
+    for (const n of ['Activity', 'Buddy', 'Buzz', 'Food', 'Groceries', 'Live Shows', 'Offers', 'Rewards', 'Shopping', 'Showtime', 'Wallet']) expect(names).toContain(n);
     const href = (n: string) => links[names.indexOf(n)]!.getAttribute('href');
     expect(href('Food')).toBe('/food');
     expect(href('Buzz')).toBe('/buzz');
     expect(href('Wallet')).toBe('/wallet');
-    expect(href('Events')).toBe('/movies?tab=events');
+    expect(href('Live Shows')).toBe('/showtime/search?kind=event');
+    expect(href('Showtime')).toBe('/showtime');
     // Only services that genuinely haven't launched say so.
     expect(within(links[names.indexOf('Parcels')]!).getByText('Soon')).toBeInTheDocument();
     expect(links[names.indexOf('Parcels')]).toHaveAccessibleName(/coming soon/);
@@ -72,6 +73,6 @@ describe('Explore', () => {
   });
 
   it('banner actions point at real routes', () => {
-    for (const b of EXPLORE_BANNERS) if (b.action) expect(b.action.to).toMatch(/^\/(food|shopping|buzz|movies|offers|rides|groceries)/);
+    for (const b of EXPLORE_BANNERS) if (b.action) expect(b.action.to).toMatch(/^\/(food|shopping|buzz|showtime|offers|rides|groceries)/);
   });
 });

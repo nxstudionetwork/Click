@@ -45,7 +45,7 @@ describe('AppShell', () => {
     const { unmount } = renderWithProviders(<AppShell />, { route: '/' });
     expect(screen.getAllByRole('button', { name: /Change location/ }).length).toBeGreaterThan(0);
     unmount();
-    for (const route of ['/rides', '/food', '/shopping', '/movies']) {
+    for (const route of ['/rides', '/food', '/shopping', '/showtime']) {
       const r = renderWithProviders(<AppShell />, { route });
       expect(screen.queryByRole('button', { name: /Change location/ })).toBeNull();
       r.unmount();

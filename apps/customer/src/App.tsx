@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider';
 import { LoginPage } from './onboarding/LoginPage';
 import { SignupPage } from './onboarding/SignupPage';
@@ -15,9 +15,11 @@ import { BookingsPage } from './pages/BookingsPage';
 import { BuddyPage } from './pages/BuddyPage';
 import { BuzzPage } from './pages/BuzzPage';
 import { useAppearance } from './appearance';
-import { EventPage } from './pages/EventPage';
-import { MoviesPage } from './pages/MoviesPage';
 import { ShowPage } from './pages/ShowPage';
+import { ShowtimeCheckoutPage } from './pages/ShowtimeCheckoutPage';
+import { ShowtimePage } from './pages/ShowtimePage';
+import { ShowtimeSearchPage } from './pages/ShowtimeSearchPage';
+import { ShowtimeTitlePage } from './pages/ShowtimeTitlePage';
 import { WalletPage } from './pages/WalletPage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
@@ -104,15 +106,21 @@ function AppRoutes() {
         <Route path="stores/:slug" element={<StorePage />} />
         <Route path="products/:id" element={<ProductPage />} />
         <Route path="offers" element={<OffersPage />} />
-        <Route path="movies" element={<MoviesPage />} />
-        <Route path="movies/:slug" element={<EventPage />} />
+        <Route path="showtime" element={<ShowtimePage />} />
+        <Route path="showtime/search" element={<ShowtimeSearchPage />} />
+        <Route path="showtime/checkout/:holdId" element={guard(<ShowtimeCheckoutPage />)} />
+        <Route path="showtime/:slug" element={<ShowtimeTitlePage />} />
         <Route path="shows/:id" element={<ShowPage />} />
+        {/* Old Movies links keep working */}
+        <Route path="movies" element={<MoviesRedirect />} />
+        <Route path="movies/:slug" element={<ParamRedirect to="/showtime/:slug" />} />
         <Route path="rides" element={<Suspense fallback={rideFallback}><RidePage /></Suspense>} />
         <Route path="rides/:id" element={guard(<Suspense fallback={rideFallback}><RideTripPage /></Suspense>)} />
         <Route path="parcels" element={<ServiceComingSoonPage key="parcels" serviceId="parcels" />} />
         <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
         <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
-        <Route path="tickets" element={<Navigate to="/movies" replace />} />
+        <Route path="tickets" element={guard(<BookingsPage />)} />
+        <Route path="tickets/:id" element={guard(<BookingPage />)} />
         <Route path="deliveries" element={<Navigate to="/parcels" replace />} />
         <Route path="help" element={<HelpPage />} />
         <Route path="assistant" element={<Navigate to="/buddy" replace />} />
@@ -136,8 +144,8 @@ function AppRoutes() {
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />
-        <Route path="bookings" element={guard(<BookingsPage />)} />
-        <Route path="bookings/:id" element={guard(<BookingPage />)} />
+        <Route path="bookings" element={<Navigate to="/tickets" replace />} />
+        <Route path="bookings/:id" element={<ParamRedirect to="/tickets/:id" />} />
         <Route path="activity" element={guard(<ActivityPage />)} />
         <Route path="help/new" element={guard(<NewTicketPage />)} />
         <Route path="help/tickets/:id" element={guard(<TicketPage />)} />
@@ -145,4 +153,15 @@ function AppRoutes() {
       </Route>
     </Routes>
   );
+}
+
+/** /movies?tab=events -> live shows; /movies -> Showtime. */
+function MoviesRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={search.includes('tab=events') ? '/showtime/search?kind=event' : '/showtime'} replace />;
+}
+
+function ParamRedirect({ to }: { to: string }) {
+  const params = useParams();
+  return <Navigate to={to.replace(/:(\w+)/g, (_, k: string) => params[k] ?? '')} replace />;
 }

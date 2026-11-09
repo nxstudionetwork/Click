@@ -54,6 +54,21 @@ def shop_search(text: str, limit: int = 4) -> dict | None:
             "products": ProductWithStoreSerializer(products, many=True).data, "path": "/shopping/search?" + urlencode({"q": text})}
 
 
+def showtime_search(text: str, limit: int = 4) -> dict:
+    """Showtime search with the same plain-language interpretation as the app (language, genre, format, tonight)."""
+    from urllib.parse import urlencode
+
+    from apps.bookings import showtime
+
+    it = showtime.interpret(text)
+    params = {"q": text}
+    data = showtime.search(params, None)
+    slugs = [t["slug"] for t in data["titles"][:limit]]
+    events = sorted(public_events().filter(slug__in=slugs), key=lambda e: slugs.index(e.slug))
+    return {"understood": [u["label"] for u in it["understood"]], "count": data["count"],
+            "events": EventSerializer(events, many=True).data, "path": "/showtime/search?" + urlencode(params)}
+
+
 def find_events(q: str = "", tonight: bool = False, limit: int = 4):
     qs = public_events().filter(status="now_showing", next_show_at__isnull=False)
     if q:

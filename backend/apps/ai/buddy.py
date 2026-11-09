@@ -49,7 +49,9 @@ class ClickBasicBuddy:
             return self._help()
 
         wants_food = _has(text, "dinner", "lunch", "breakfast", "eat", "food", "hungry", "biryani", "pizza", "burger", "dosa", "restaurant")
-        wants_movie = _has(text, "movie", "movies", "film", "cinema", "show", "shows", "tickets?", "event", "events", "concert")
+        movie_text = re.sub(r"\bshow (me|us)\b", "", text)  # "show me smart watches" is not about shows
+        wants_movie = _has(movie_text, "movie", "movies", "film", "films", "cinema", "show", "shows", "showtime", "playing", "imax", "4dx", "tickets?", "event", "events", "concert") or bool(re.search(
+            r"\b(what|something)\b.{0,20}\bwatch\b|\bwatch\b.{0,12}\b(tonight|today|tomorrow|this weekend|movie|film|show)\b", text))
 
         if wants_food and wants_movie:
             return self._dinner_and_movie(text)
@@ -110,7 +112,7 @@ class ClickBasicBuddy:
 
     def _help(self):
         return BuddyReply(
-            "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, show movies playing tonight, "
+            "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, find what’s on in Showtime tonight, "
             "check your orders and bookings, and explain your wallet and rewards. I prepare things for you; you always review and pay yourself.",
             actions=[{"label": "Find biryani", "prompt": "Find me a good biryani"}, {"label": "Movies tonight", "prompt": "Movies tonight"},
                      {"label": "Where is my order?", "prompt": "Where is my order?"}, {"label": "Dinner and a movie", "prompt": "Plan dinner and a movie tonight"}],
@@ -149,7 +151,7 @@ class ClickBasicBuddy:
     def _bookings(self, customer):
         data = tools.upcoming_bookings(customer)
         if not data:
-            return BuddyReply("You have no upcoming bookings.", actions=[{"label": "Browse movies", "path": "/movies"}])
+            return BuddyReply("You have no upcoming tickets.", actions=[{"label": "Open Showtime", "path": "/showtime"}])
         return BuddyReply(f"You have {len(data)} upcoming booking{'s' if len(data) > 1 else ''}.",
                           cards=[{"type": "booking", "booking": b} for b in data], actions=[{"label": "All bookings", "path": "/bookings"}])
 
@@ -164,13 +166,24 @@ class ClickBasicBuddy:
                           actions=[{"label": "Open rewards", "path": "/rewards"}])
 
     def _movies(self, text):
+        """Showtime: search with the app's own interpretation. Buddy suggests; the customer picks the showtime,
+        seats and payment themselves (Buddy never books)."""
+        if _has(text, "book", "seats?", "tickets?") and re.search(r"\b\d{1,2}(:\d{2})?\s*(am|pm)\b", text):
+            lead = "I can’t pick seats or pay for you. Open the show, choose the time and your seats, then confirm. "
+        else:
+            lead = ""
         tonight = _has(text, "tonight", "today")
-        genre = next((g for g in ("comedy", "drama", "thriller", "action", "sci-fi", "romance", "music") if g in text), "")
-        events = tools.find_events(genre, tonight=tonight)
-        if not events:
-            return BuddyReply("I couldn’t find shows matching that" + (" tonight" if tonight else "") + ".", actions=[{"label": "Browse movies & events", "path": "/movies"}])
-        return BuddyReply(("Playing tonight" if tonight else "Now showing") + (f" ({genre})" if genre else "") + ". Pick one to choose a showtime and seats.",
-                          cards=[{"type": "event", "event": e} for e in events], actions=[{"label": "All movies & events", "path": "/movies"}])
+        result = tools.showtime_search(text)
+        if not result["events"]:
+            result = tools.showtime_search("tonight" if tonight else "")
+            if not result["events"]:
+                return BuddyReply("I couldn’t find shows matching that" + (" tonight" if tonight else "") + ".",
+                                  actions=[{"label": "Open Showtime", "path": "/showtime"}])
+            lead += "Nothing matched exactly, so here’s what’s playing. "
+        understood = ", ".join(result["understood"])
+        lead += (f"Here’s what’s on ({understood})." if understood else "Here’s what’s on.") + " Pick one to see cinemas, times and seats."
+        return BuddyReply(lead, cards=[{"type": "event", "event": e} for e in result["events"]],
+                          actions=[{"label": f"See all {result['count']} in Showtime", "path": result["path"]}])
 
     def _dinner_and_movie(self, text):
         cuisine = _keywords(re.sub(r"\b(dinner|movie|movies|film|plan|tonight|and|then|after|before)\b", " ", text))
@@ -178,10 +191,10 @@ class ClickBasicBuddy:
         events = tools.find_events(tonight=True, limit=3)
         if not events:
             return BuddyReply("I found restaurants, but there are no more shows tonight. Here are dinner options:",
-                              cards=[{"type": "store", "store": s} for s in stores], actions=[{"label": "Browse movies", "path": "/movies"}])
+                              cards=[{"type": "store", "store": s} for s in stores], actions=[{"label": "Open Showtime", "path": "/showtime"}])
         return BuddyReply(
             "Here’s a plan: order dinner from one of these open restaurants (delivery times shown), then pick a show tonight. "
             "Leave about an hour between delivery and showtime. I’ll take you to the restaurant and the show; you confirm and pay in each checkout.",
             cards=[{"type": "store", "store": s} for s in stores] + [{"type": "event", "event": e} for e in events],
-            actions=[{"label": "Movies tonight", "path": "/movies"}],
+            actions=[{"label": "Tonight in Showtime", "path": "/showtime/search?when=tonight"}],
         )

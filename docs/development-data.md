@@ -105,4 +105,12 @@ reviewers (`reviewer.<name>@click.local`) buy and receive orders through the rea
 ratings, best sellers and trending come from records. The test customer gets a delivered two-seller checkout
 (returnable) and a shipped order. Listings have no photos (the app shows a placeholder); upload real ones in admin.
 
+Showtime (`devseed/showtime.py`, run after `devseed/events.py`): 5 cinemas with real screen layouts (IMAX, 4DX,
+Dolby Atmos screens), food & drinks menus, a week of showtimes in local time with titles in each of their languages,
+offers (one ended), an editorial feature (one ended), cast & crew, and three Creative Commons films by the Blender
+Foundation (Big Buck Bunny, Sintel, Elephants Dream) whose real posters/trailers are hotlinked from blender.org with
+attribution. Other titles are fictional and have no artwork (the app shows a typographic poster). Ratings are not
+seeded: eight dev viewers (`viewer.<name>@click.local`) attended past shows and reviewed them, and follow upcoming
+titles. The test customer attended The Last Lighthouse yesterday (so they can write a review).
+
 Parcels and home services aren't seeded because those features don't exist yet.

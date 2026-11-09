@@ -317,4 +317,8 @@ def search_places(customer, q: str, limit: int = 12) -> list[dict]:
         stores = Store.objects.filter(status=Store.Status.ACTIVE, latitude__isnull=False).filter(Q(name__icontains=q) | Q(locality__icontains=q))
         for s in stores[:10]:
             add("place", s.name, ", ".join(filter(None, [s.locality, s.city])), s.latitude, s.longitude)
+        from apps.bookings.models import Venue  # cinemas and venues (Showtime "Get a ride")
+
+        for v in Venue.objects.filter(latitude__isnull=False).filter(Q(name__icontains=q) | Q(locality__icontains=q))[:5]:
+            add("place", v.name, ", ".join(filter(None, [v.address, v.locality, v.city])), v.latitude, v.longitude)
     return out[:limit]

@@ -53,7 +53,7 @@ export function ActivityPage() {
         : loading ? <Skeleton height={200} radius={16} />
           : items.length === 0 ? (
             <EmptyState icon="history" title="No activity yet." message={filter.id === 'all' ? 'Your Click. orders, rides and bookings will appear here.' : `Nothing in ${filter.label} yet.`}
-              action={<Link to={filter.id === 'bookings' ? '/movies' : filter.id === 'rides' ? '/rides' : '/food'} className="btn btn--primary">{filter.id === 'bookings' ? 'Book a show' : filter.id === 'rides' ? 'Book a ride' : 'Order food'}</Link>} />
+              action={<Link to={filter.id === 'bookings' ? '/showtime' : filter.id === 'rides' ? '/rides' : '/food'} className="btn btn--primary">{filter.id === 'bookings' ? 'Book a show' : filter.id === 'rides' ? 'Book a ride' : 'Order food'}</Link>} />
           ) : <div className="card">{items.map((it, i) => <div key={it.key} style={i ? { borderTop: '1px solid var(--c-line)' } : undefined}>{it.node}</div>)}</div>}
     </div>
   );

@@ -21,9 +21,9 @@ export function DiscoverySection() {
 
   const tiles: Tile[] = [];
   const m = movies.data?.results[0];
-  if (m) tiles.push({ key: m.id, to: `/movies/${m.slug}`, theme: 'movies', tag: 'Now showing', title: m.title, text: m.tagline || m.genres.join(' · '), icon: 'film', cta: 'Book seats', photo: true });
+  if (m) tiles.push({ key: m.id, to: `/showtime/${m.slug}`, theme: 'movies', tag: 'Now showing', title: m.title, text: m.tagline || m.genres.join(' · '), icon: 'film', cta: 'Book seats', photo: true });
   const e = live.data?.results[0];
-  if (e) tiles.push({ key: e.id, to: `/movies/${e.slug}`, theme: 'movies', tag: 'Live event', title: e.title, text: e.tagline || e.genres.join(' · '), icon: 'ticket', cta: 'Get tickets', photo: true });
+  if (e) tiles.push({ key: e.id, to: `/showtime/${e.slug}`, theme: 'movies', tag: 'Live event', title: e.title, text: e.tagline || e.genres.join(' · '), icon: 'ticket', cta: 'Get tickets', photo: true });
   for (const s of (fresh.data?.results ?? []).slice(0, 2)) {
     const svc = serviceForStoreType(s.storeType);
     tiles.push({ key: s.id, to: `/stores/${s.slug}`, theme: svc.theme, tag: 'New on Click.', title: s.name, text: `${s.categories.map((c) => c.name).slice(0, 2).join(', ')} · ${s.locality || s.city}`, icon: svc.icon, cta: svc.id === 'food' ? 'Order now' : 'Shop now' });

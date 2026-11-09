@@ -241,6 +241,8 @@ FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") 
 CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# Local time for customer-facing dates (Showtime days, "Tonight"); the server itself stays on UTC.
+CLICK_LOCAL_TIMEZONE = os.environ.get("CLICK_LOCAL_TIMEZONE", "Asia/Kolkata")
 # Shopping price-discovery sections ("Under ₹499" ...), comma-separated rupee thresholds.
 CLICK_SHOP_PRICE_BANDS = [int(x) for x in os.environ.get("CLICK_SHOP_PRICE_BANDS", "499,999,1999").split(",") if x.strip()]
 # GST on platform convenience fees (bookings).

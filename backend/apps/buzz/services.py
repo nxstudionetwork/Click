@@ -38,7 +38,7 @@ class BuzzAction:
 @dataclass(frozen=True)
 class BuzzItem:
     id: str
-    kind: str  # "offer" | "event" | "store" | "product" (later: "post")
+    kind: str  # "offer" | "event" | "trailer" | "store" | "product" (later: "post")
     theme: str  # Click service theme, so the client can style it
     title: str
     body: str
@@ -62,6 +62,16 @@ def _offer_items(limit):
         )
 
 
+def _trailer_items(limit):
+    """Titles with a licensed trailer: watch in Buzz, then open the title to book."""
+    for e in public_events().exclude(trailer_url="").order_by("title")[:limit]:
+        yield BuzzItem(
+            id=f"trailer:{e.id}", kind="trailer", theme="movies", title=e.title, body=e.tagline or e.genres.replace(",", " ·"),
+            tag="Trailer", source=BuzzSource("Click. Showtime", "showtime"), media_url=e.trailer_url, media_type="video",
+            action=BuzzAction("See showtimes", f"/showtime/{e.slug}"), published_at=e.created_at.isoformat(),
+        )
+
+
 def _event_items(limit):
     events = public_events().filter(status=Event.Status.NOW_SHOWING, next_show_at__isnull=False).order_by("next_show_at")
     for e in events[:limit]:
@@ -69,8 +79,8 @@ def _event_items(limit):
         yield BuzzItem(
             id=f"event:{e.id}", kind="event", theme="movies", title=e.title,
             body=e.tagline or e.genres.replace(",", " ·"), tag="Now showing" if e.kind == Event.Kind.MOVIE else "Live event",
-            source=BuzzSource("Click. Movies & Events", "click"), media_url=e.poster_url, media_type="image" if e.poster_url else "",
-            action=BuzzAction(verb, f"/movies/{e.slug}"), published_at=e.created_at.isoformat(),
+            source=BuzzSource("Click. Showtime", "showtime"), media_url=e.poster_url, media_type="image" if e.poster_url else "",
+            action=BuzzAction(verb, f"/showtime/{e.slug}"), published_at=e.created_at.isoformat(),
         )
 
 
@@ -114,7 +124,7 @@ def build_feed(limit: int = 12) -> list[dict]:
     """Interleave sources so the feed alternates between offers, shows and places."""
     limit = max(1, min(limit, MAX_ITEMS))
     per_source = limit
-    sources = [list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)),
+    sources = [list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
                list(_store_items(per_source))]
     mixed = [item for item in chain.from_iterable(zip_longest(*sources)) if item is not None]
     return [asdict(i) for i in mixed[:limit]]

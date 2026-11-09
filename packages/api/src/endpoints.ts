@@ -1,11 +1,12 @@
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
-  CheckoutResult, ReturnRequestInput,
+  CheckoutResult, ReturnRequestInput, CreateBookingInput,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
+import type { ShowtimeSeatMap } from './showtime';
 
 /** Auth is shared across every Click app. */
 export const authApi = (http: HttpClient) => ({
@@ -51,7 +52,7 @@ export const eventsApi = (http: HttpClient) => ({
   list: (q: { kind?: 'movie' | 'event'; status?: 'now_showing' | 'coming_soon'; city?: string; search?: string } = {}) =>
     http.request<Paginated<ClickEvent>>('/events', { query: q, auth: false }),
   get: (slug: string, city?: string) => http.request<EventDetail>(`/events/${encodeURIComponent(slug)}`, { query: { city }, auth: false }),
-  seatMap: (showId: string) => http.request<ShowSeatMap>(`/shows/${showId}`, { auth: false }),
+  seatMap: (showId: string) => http.request<ShowtimeSeatMap>(`/shows/${showId}`),
 });
 
 /** Public discovery. The customer app may swap this for a mock source (same interface). */
@@ -163,10 +164,10 @@ export const customerApi = (http: HttpClient) => ({
       http.request<{ recorded: boolean }>(`/customer/rides/${id}/safety`, { method: 'POST', body: { kind, note } }),
   },
   bookings: {
-    list: (when?: 'upcoming' | 'past') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
+    list: (when?: 'upcoming' | 'past' | 'completed' | 'cancelled') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
     get: (id: string) => http.request<Booking>(`/customer/bookings/${id}`),
-    create: (input: { showId: string; seats: string[]; paymentMethod: 'pay_at_venue' | 'wallet'; idempotencyKey: string }) =>
-      http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
+    /** Book from a seat hold (Showtime) or, for older callers, from a show and seats. Everything is re-priced by the server. */
+    create: (input: CreateBookingInput) => http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
     cancel: (id: string) => http.request<Booking>(`/customer/bookings/${id}/cancel`, { method: 'POST' }),
   },
 });

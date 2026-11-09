@@ -548,7 +548,7 @@ export interface AssistantCapabilities {
 /** One actionable Click. Buzz instant. Built from real Click records; media is never generated. */
 export interface BuzzItem {
   id: string;
-  kind: 'offer' | 'event' | 'store' | 'product' | 'post';
+  kind: 'offer' | 'event' | 'trailer' | 'store' | 'product' | 'post';
   theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'ride' | 'parcel';
   title: string;
   body: string;
@@ -586,6 +586,9 @@ export interface Venue {
   city: string;
   locality: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
+  facilities: string[];
 }
 
 export interface ClickEvent {
@@ -597,6 +600,8 @@ export interface ClickEvent {
   tagline: string;
   description: string;
   posterUrl: string;
+  backdropUrl: string;
+  trailerUrl: string;
   languages: string[];
   genres: string[];
   certification: string;
@@ -625,33 +630,44 @@ export interface EventDetail extends ClickEvent {
   shows: Show[];
 }
 
-export interface SeatRow {
-  row: string;
-  tier: 'standard' | 'premium';
-  seats: { label: string; available: boolean }[];
-}
-
-export interface ShowSeatMap extends Show {
-  event: ClickEvent;
-  layout: { rows: SeatRow[]; maxPerBooking: number };
-}
-
+/** A Showtime ticket. */
 export interface Booking {
   id: UUID;
   reference: string;
   status: 'confirmed' | 'cancelled';
+  /** For My Tickets: upcoming, completed (the show has ended) or cancelled. */
+  state: 'upcoming' | 'completed' | 'cancelled';
   event: ClickEvent;
   show: Show;
   seats: { label: string; tier: string; price: Money }[];
+  concessions: { name: string; unitPrice: Money; quantity: number; lineTotal: Money }[];
   subtotal: Money;
   convenienceFee: Money;
+  concessionsTotal: Money;
   tax: Money;
+  discount: Money;
+  offerTitle: string;
   total: Money;
   currency: string;
   payments: Payment[];
   canCancel: boolean;
+  /** What cancelling would do (same rules as the server applies). Null once cancelled. */
+  cancellation: { allowed: boolean; cutoffHours: number; deadline: ISODateTime; refundAmount: Money; refundMethod: string; charges: Money } | null;
+  /** Signed code for the QR on the ticket; venues verify it through Click Partner. Only for upcoming tickets. */
+  ticketCode: string | null;
+  checkedInAt: ISODateTime | null;
   createdAt: ISODateTime;
   cancelledAt: ISODateTime | null;
+}
+
+export interface CreateBookingInput {
+  holdId?: string;
+  showId?: string;
+  seats?: string[];
+  concessions?: { id: string; quantity: number }[];
+  offerId?: string | null;
+  paymentMethod: 'pay_at_venue' | 'wallet';
+  idempotencyKey: string;
 }
 
 // --- Click Partner -------------------------------------------------------------

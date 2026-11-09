@@ -19,7 +19,7 @@ type Turn = { role: 'user'; content: string } | { role: 'assistant'; reply: Budd
 const historyOf = (turns: Turn[]): AssistantMessage[] =>
   turns.map((t): AssistantMessage => (t.role === 'user' ? t : { role: 'assistant', content: t.reply.message.content })).slice(-20);
 
-const SUGGESTIONS = ['Find me a good biryani', 'Movies tonight', 'Where is my order?', 'Plan dinner and a movie tonight', 'Cheapest rice', 'What’s my wallet balance?'];
+const SUGGESTIONS = ['Find me a good biryani', 'What’s on tonight?', 'Where is my order?', 'Plan dinner and a movie tonight', 'Cheapest rice', 'What’s my wallet balance?'];
 
 /**
  * Buddy MAN: the full conversation with Click.'s assistant. Own layout (no app header or bottom navigation).
