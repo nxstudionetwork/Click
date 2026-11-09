@@ -29,6 +29,20 @@ export function OrderPage() {
   });
   const navigate = useNavigate();
   const [returning, setReturning] = useState<string | null>(null);
+  const groceryReorder = useMutation({
+    mutationFn: () => api.groceries.reorder(id),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: cartKey });
+      qc.invalidateQueries({ queryKey: ['customer', 'groceries'] });
+      const notes = [
+        r.skipped.length ? `Not available now: ${r.skipped.join(', ')}` : '',
+        r.priceChanges.length ? `New prices: ${r.priceChanges.map((c) => `${c.name} ${formatMoney(c.from)} → ${formatMoney(c.to)}`).join(', ')}` : '',
+      ].filter(Boolean);
+      toast(notes.length ? notes.join('. ') : `Added ${r.added.length} item${r.added.length === 1 ? '' : 's'} at today’s prices`);
+      navigate('/groceries/basket');
+    },
+    onError: (e) => toast(e instanceof Error ? e.message : 'Could not reorder.', 'error'),
+  });
   const reorder = useMutation({
     mutationFn: () => api.customer.orders.reorder(id),
     onSuccess: (r) => {
@@ -54,9 +68,11 @@ export function OrderPage() {
   const reached = new Map(o.events.map((e) => [e.toStatus, e.createdAt]));
   const retail = o.store.storeType === 'retail';
   const progress = progressFor(o.store.storeType);
-  const currentIdx = progress.indexOf(o.status === 'ready' ? 'preparing' : o.status);
+  const currentIdx = progress.indexOf(o.status === 'ready' && !progress.includes('ready') ? 'preparing' : o.status);
+  const grocery = o.store.storeType === 'grocery' ? o.grocery ?? null : null;
   const eta = retail && o.estimatedDeliveryFrom && o.estimatedDeliveryAt
     ? `Estimated delivery ${day(o.estimatedDeliveryFrom)} – ${day(o.estimatedDeliveryAt)}`
+    : o.grocery?.slotStart && o.grocery.slotEnd ? `Scheduled delivery ${day(o.grocery.slotStart)}, ${formatTime(o.grocery.slotStart)} – ${formatTime(o.grocery.slotEnd)}`
     : o.estimatedDeliveryAt ? `Estimated arrival by ${formatTime(o.estimatedDeliveryAt)}` : null;
   const address = o.deliveryAddress;
 
@@ -114,19 +130,41 @@ export function OrderPage() {
                 Cancel order
               </Button>
             )}
-            {isTerminal(o.status) && (
+            {isTerminal(o.status) && (grocery ? (
+              <Button variant="secondary" size="sm" loading={groceryReorder.isPending} onClick={() => groceryReorder.mutate()}>Buy again</Button>
+            ) : (
               <Button variant="secondary" size="sm" loading={reorder.isPending} onClick={() => reorder.mutate()}>Reorder</Button>
-            )}
+            ))}
             <Link to={`/help/new?orderId=${o.id}&category=order`} className="btn btn--outline btn--sm">Get help</Link>
           </div>
         </section>
+
+        {grocery && (
+          <section className="card card--pad stack" aria-label="Delivery details">
+            <h3>Delivery</h3>
+            <div className="spread small"><span>Method</span><strong>{grocery.deliveryModeLabel}</strong></div>
+            {grocery.slotStart && grocery.slotEnd && <div className="spread small"><span>Slot</span><strong>{day(grocery.slotStart)}, {formatTime(grocery.slotStart)} – {formatTime(grocery.slotEnd)}</strong></div>}
+            {grocery.distanceKm && <div className="spread small"><span>Distance from store</span><span>{grocery.distanceKm} km</span></div>}
+            <div className="spread small"><span>If an item is unavailable</span><span>{grocery.substitutionLabel}</span></div>
+            {grocery.substitutionNote && <p className="small muted">Your preference: “{grocery.substitutionNote}”</p>}
+            {grocery.refund && <p className="small"><strong>Refund:</strong> {formatMoney(grocery.refund.amount, o.currency)} returned to your {grocery.refund.to}.</p>}
+            {o.status === 'cancelled' && !grocery.refund && o.payments[0]?.method === 'cash_on_delivery' && <p className="small muted">Nothing was charged for this order (cash on delivery).</p>}
+            <p className="small muted"><Icon name="clock" size={14} /> You’ll see each step as the store records it. Live rider tracking isn’t available yet.</p>
+            {o.status !== 'cancelled' && (
+              <div className="row small" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <Link to="/food">Need dinner instead? Food</Link>
+                <Link to="/groceries/lists">Something else? Shopping list</Link>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="card card--pad stack">
           <h3>Items</h3>
           {o.items.map((i) => (
             <div key={i.id} className="stack" style={{ gap: 6 }}>
               <div className="spread small">
-                <span>{i.quantity} × {retail && i.productId ? <Link to={`/products/${i.productId}`}>{i.productName}</Link> : i.productName}
+                <span>{i.quantity} × {retail && i.productId ? <Link to={`/products/${i.productId}`}>{i.productName}</Link> : grocery && i.productId ? <Link to={`/groceries/p/${i.productId}`}>{i.productName}</Link> : i.productName}
                   {i.optionsSummary && <span className="muted"> ({i.optionsSummary})</span>}{i.note && <span className="muted"> — “{i.note}”</span>}</span>
                 <span>{formatMoney(i.lineTotal, o.currency)}</span>
               </div>

@@ -58,7 +58,7 @@ def _offer_items(limit):
             id=f"offer:{o.id}", kind="offer", theme=THEME[s.store_type], title=o.title,
             body=o.description or f"At {s.name}, {s.locality or s.city}.", tag="Offer",
             source=BuzzSource(s.name, s.slug), media_url=s.image_url, media_type="image" if s.image_url else "",
-            action=BuzzAction(STORE_VERB[s.store_type], f"/stores/{s.slug}"), published_at=o.created_at.isoformat(),
+            action=BuzzAction(STORE_VERB[s.store_type], (f"/groceries/store/{s.slug}" if s.store_type == StoreType.GROCERY else f"/stores/{s.slug}")), published_at=o.created_at.isoformat(),
         )
 
 
@@ -92,7 +92,7 @@ def _store_items(limit):
             id=f"store:{s.id}", kind="store", theme=THEME[s.store_type], title=s.name,
             body=f"{cats} · rated {s.rating_average} by {s.rating_count:,} customers", tag="Top rated",
             source=BuzzSource(s.name, s.slug), media_url=s.image_url, media_type="image" if s.image_url else "",
-            action=BuzzAction(STORE_VERB[s.store_type], f"/stores/{s.slug}"), published_at=s.created_at.isoformat(),
+            action=BuzzAction(STORE_VERB[s.store_type], (f"/groceries/store/{s.slug}" if s.store_type == StoreType.GROCERY else f"/stores/{s.slug}")), published_at=s.created_at.isoformat(),
         )
 
 
@@ -120,11 +120,33 @@ def _product_deal_items(limit):
             break
 
 
+def _grocery_items(limit):
+    """Produce a local store actually received today (from its stock records), opening that listing."""
+    from apps.groceries.catalog import orderable_listings
+    from apps.groceries.delivery import now_local
+
+    seen = set()
+    rows = orderable_listings().filter(received_on=now_local().date()).exclude(grocery_item__image_url="").order_by("-units_sold")
+    for p in rows[:60]:
+        if p.store_id in seen:
+            continue
+        seen.add(p.store_id)
+        item = p.grocery_item
+        yield BuzzItem(
+            id=f"grocery:{p.id}", kind="product", theme="grocery", title=f"Fresh {item.name.lower()} at {p.store.name}",
+            body=f"Received today · {item.size_label} for ₹{p.price:.0f}", tag="Fresh today",
+            source=BuzzSource(p.store.name, p.store.slug), media_url=item.image_url, media_type="image",
+            action=BuzzAction("View", f"/groceries/p/{p.id}"), published_at=p.updated_at.isoformat(),
+        )
+        if len(seen) >= limit:
+            break
+
+
 def build_feed(limit: int = 12) -> list[dict]:
     """Interleave sources so the feed alternates between offers, shows and places."""
     limit = max(1, min(limit, MAX_ITEMS))
     per_source = limit
     sources = [list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
-               list(_store_items(per_source))]
+               list(_grocery_items(per_source)), list(_store_items(per_source))]
     mixed = [item for item in chain.from_iterable(zip_longest(*sources)) if item is not None]
     return [asdict(i) for i in mixed[:limit]]

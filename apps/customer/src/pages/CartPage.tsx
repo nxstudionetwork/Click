@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import type { Cart, CartGroup } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, QuantityStepper, Skeleton, SmartImage, useToast } from '../components/ui';
 import { Totals } from '../features/cart/Totals';
@@ -19,6 +19,8 @@ export function CartPage() {
   if (cart.isPending) return <div className="stack"><Skeleton height={28} width="30%" /><Skeleton height={180} /></div>;
 
   const c = cart.data;
+  // Grocery baskets have their own page (per-store delivery, substitutions, price checks).
+  if (c.mode === 'basket' && c.items.length > 0) return <Navigate to="/groceries/basket" replace />;
   if (c.items.length === 0) {
     return (
       <EmptyState icon="bag" title="Your cart is waiting for something great." message="Add something from Food, Groceries or Shopping."

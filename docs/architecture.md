@@ -195,6 +195,48 @@ bookings domain (`apps/bookings`); nothing was rebuilt.
   open the title page; the ticket offers a ride to the cinema (Ride's place search includes venues) and restaurants
   near the cinema; bookings appear in Activity and My Tickets (`/tickets`).
 
+## Groceries (local vendor marketplace)
+
+Customer-facing name: **Groceries** (`/groceries`). Built on the shared records (`apps/groceries` adds only what
+groceries need): a vendor's storefront is a `stores.Store` (type grocery), each listing is a `catalog.Product` owned by
+exactly one store with its own price, MRP, stock, availability and freshness date, the cart is the shared cart and
+orders are the shared orders (same status machine, payments, notifications, Activity, Partner workspace).
+
+- **Records:** `GroceryCategory` (registry with merchandising order, section, icon, search synonyms), `GroceryItem`
+  (the canonical product: name, brand, pack size and unit; `Product.grocery_item` links each store's listing to it, which
+  is what makes same-item same-size price comparison possible), `GroceryStoreSettings` (delivery radius, base km and
+  per-km fee, prep minutes, pace, capacity, fast/standard/scheduled modes, slot length/capacity), `StoreHours`,
+  `GroceryOrderDetails` (delivery mode, slot, substitution preference, distance, estimate), `StockAlert` ("notify me",
+  sent once by a signal), `ShoppingList` / `ShoppingListItem`.
+- **Basket:** cart mode `basket` holds items from several grocery stores; checkout makes one order per store under a
+  `CheckoutGroup`, all in one transaction (any store's failure creates nothing). Each store's part has its own minimum
+  order, delivery mode and fee. Food, Shopping and Groceries never share a cart (switching asks first).
+- **Delivery (`apps/groceries/delivery.py`):** store status (open / closing soon / closed / temporarily unavailable)
+  from hours and the partner's availability; distance from the customer's saved address pin; fee = store base fee
+  (waived above its free-delivery threshold) + per-km beyond the base distance + fast surcharge; estimate = packing time +
+  distance x pace + a queue allowance when the store is busy (labelled as an estimate; no live rider tracking exists).
+  Scheduled slots come from opening hours and per-slot capacity (counted from orders; the store row is locked at
+  checkout). An address without a map pin gets no time promise and no fast delivery.
+- **Checkout checks (server):** live price vs the price the customer saw (`CartItem.price_seen`; a change must be
+  acknowledged), stock (taken atomically at placement, restored on cancellation), store status, delivery mode and slot,
+  minimum order, offer rules, payment (cash on delivery or Click Wallet), idempotency.
+- **Discovery:** `GET /groceries/home` (stores near you, categories with stock, fresh / essentials / dairy / snacks /
+  home / personal / more sections, deals, fast stores, Support Local, buy again, running low), `/groceries/search`
+  (products grouped one card per item with the best nearby listing, stores, brands, categories, filters and sorts),
+  `/groceries/stores/<slug>` (+ `/products`), `/groceries/products/<id>` (compare the same pack across stores,
+  frequently bought together from 3+ real orders, similar items). Badges only from rules: Local Store (independent),
+  Verified Vendor (verified by Click), Popular Near You (5+ orders in 30 days, top 3), Fresh Today (stock received today).
+- **Personal:** buy again and "running low" (an item in 3+ delivered orders whose usual gap has passed; phrased as
+  "you may be ready to reorder") from delivered orders only; reorder adds at today's prices and reports changes.
+- **Shopping list:** "Find everything" matches each line to in-stock listings at stores that deliver to the customer
+  and ranks stores by coverage, then total incl. delivery, then time and distance; a split plan when no single store has
+  everything. Nothing is added to the basket until the customer chooses.
+- **Vendors:** `GET/PATCH /partner/grocery/listings[/<id>]` lets a partner change price, MRP, stock, availability and
+  received date only for storefronts it operates (others are 404); orders move through the shared Partner workspace.
+- **Across Click.:** Buddy finds items, compares the same pack, lists open stores, shows buy-again and turns "I need milk
+  and bread" into a shopping list link (it never adds to the basket or orders); Buzz shows produce a store received
+  today and grocery offers.
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching

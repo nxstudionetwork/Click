@@ -169,3 +169,6 @@ def seed_catalog(log) -> None:
     from .shop import seed_shop
 
     seed_shop(log)  # Click. Shopping marketplace: taxonomy, brands, sellers, listings, variants, deals, campaigns
+    from .groceries import seed_groceries
+
+    seed_groceries(log)  # Click. Groceries: category registry, items, local vendors, hours, delivery settings

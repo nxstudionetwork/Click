@@ -174,6 +174,20 @@ def seed_wallet(profile, log) -> None:
     log("wallet: 3 promotional credits")
 
 
+def _grocery_delivery(profile, store, address):
+    """Grocery orders need a real delivery choice: the first address the store delivers to and its first open option."""
+    if store.store_type != "grocery":
+        return address, None
+    from apps.groceries import delivery as dl
+
+    for addr in [address, *profile.addresses.exclude(pk=address.pk)]:
+        for o in dl.options(store, dl.address_point(addr))["_objects"]:
+            if o.available:
+                return addr, {"delivery": {str(store.id): {"mode": o.mode, "slot_start": o.slots[0]["start"] if o.slots else None}},
+                              "substitution": "similar"}
+    return address, None
+
+
 def seed_orders(profile, log) -> None:
     if profile.orders.exists():
         return
@@ -187,8 +201,9 @@ def seed_orders(profile, log) -> None:
             for name, qty in items:
                 product = Product.objects.get(store=store, name=name)
                 cart_services.add_item(profile, product.id, qty, option_ids=default_options(product), variant_id=default_variant(product))
-            order, _ = order_services.place_order(customer=profile, address_id=address.id, payment_method=method,
-                                                  idempotency_key=_key(f"order-{i}"), customer_note=note)
+            addr, grocery = _grocery_delivery(profile, store, address)
+            order, _ = order_services.place_order(customer=profile, address_id=addr.id, payment_method=method,
+                                                  idempotency_key=_key(f"order-{i}"), customer_note=note, grocery=grocery)
             if final == "cancelled":
                 order_services.cancel_by_customer(order, user=profile.user, reason="Changed my mind (seed)")
             elif final != "placed":
@@ -274,6 +289,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .showtime import seed_showtime_history
 
     seed_showtime_history(profile, log)
+    from .groceries import seed_grocery_history
+
+    seed_grocery_history(profile, log)
     from .shop import seed_shop_history
 
     seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart

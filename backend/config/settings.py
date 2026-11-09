@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "apps.buzz",
     "apps.rides",
     "apps.shop",
+    "apps.groceries",
 ]
 
 MIDDLEWARE = [

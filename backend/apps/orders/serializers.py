@@ -109,8 +109,25 @@ class OrderDetailSerializer(OrderSummarySerializer):
         fields = OrderSummarySerializer.Meta.fields + [
             "items", "events", "payments", "delivery_address", "customer_note", "subtotal", "delivery_fee",
             "tax", "discount", "offer_title", "estimated_delivery_at", "estimated_delivery_from", "cancelled_at", "delivered_at",
-            "can_cancel", "review", "can_review", "checkout",
+            "can_cancel", "review", "can_review", "checkout", "grocery",
         ]
+
+    grocery = serializers.SerializerMethodField()
+
+    def get_grocery(self, order):
+        """Groceries: delivery mode/slot, substitution preference and the refund status a cancellation produced."""
+        d = getattr(order, "grocery", None) if hasattr(order, "grocery") else None
+        if d is None:
+            return None
+        refunded = [p for p in order.payments.all() if p.status == "refunded"]
+        return {
+            "delivery_mode": d.delivery_mode, "delivery_mode_label": d.get_delivery_mode_display(),
+            "slot_start": d.slot_start.isoformat() if d.slot_start else None, "slot_end": d.slot_end.isoformat() if d.slot_end else None,
+            "substitution": d.substitution, "substitution_label": d.get_substitution_display(), "substitution_note": d.substitution_note,
+            "distance_km": f"{d.distance_km:.1f}" if d.distance_km is not None else None, "eta_min": d.eta_min, "eta_max": d.eta_max,
+            "refund": {"amount": f"{sum(p.amount for p in refunded):.2f}", "to": "Click Wallet", "status": "refunded"} if refunded else None,
+            "tracking": "status_only",
+        }
 
     checkout = serializers.SerializerMethodField()
 

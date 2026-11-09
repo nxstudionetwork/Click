@@ -258,6 +258,8 @@ export interface CartItem {
   unitPrice: Money;
   lineTotal: Money;
   isAvailable: boolean;
+  /** The live price differs from the one shown when the item was added (groceries require acknowledging it). */
+  priceChange: { from: Money; to: Money } | null;
 }
 
 export interface CartStore {
@@ -303,7 +305,7 @@ export interface CartGroup {
   deliveryEstimate: DeliveryEstimate | null;
 }
 
-export type CartMode = '' | 'store' | 'marketplace';
+export type CartMode = '' | 'store' | 'marketplace' | 'basket';
 
 export interface Cart {
   id: UUID;
@@ -428,6 +430,24 @@ export interface OrderDetail extends OrderSummary {
   canReview: boolean;
   /** Set when the order is one seller's part of a Shopping checkout. */
   checkout: { id: UUID; number: string; orderCount: number } | null;
+  /** Groceries: delivery mode/slot, substitution preference and any refund. */
+  grocery?: GroceryOrderInfo | null;
+}
+
+export interface GroceryOrderInfo {
+  deliveryMode: 'fast' | 'standard' | 'scheduled';
+  deliveryModeLabel: string;
+  slotStart: ISODateTime | null;
+  slotEnd: ISODateTime | null;
+  substitution: 'none' | 'similar' | 'store_choice';
+  substitutionLabel: string;
+  substitutionNote: string;
+  distanceKm: string | null;
+  etaMin: number | null;
+  etaMax: number | null;
+  refund: { amount: Money; to: string; status: string } | null;
+  /** No live rider tracking exists: the app shows the order's status timeline only. */
+  tracking: 'status_only';
 }
 
 export interface CheckoutGroup { id: UUID; number: string; total: Money; currency: string; createdAt: ISODateTime }
@@ -516,7 +536,9 @@ export type BuddyCard =
   | { type: 'event'; event: ClickEvent }
   | { type: 'order'; order: OrderSummary }
   | { type: 'booking'; booking: Booking }
-  | { type: 'offer'; offer: OfferWithStore };
+  | { type: 'offer'; offer: OfferWithStore }
+  | { type: 'grocery'; listing: import('./groceries').GroceryListing }
+  | { type: 'grocery_store'; store: import('./groceries').GroceryStoreCard };
 
 export type BuddyAction = { label: string; path: string } | { label: string; prompt: string };
 

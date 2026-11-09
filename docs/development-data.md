@@ -113,4 +113,13 @@ attribution. Other titles are fictional and have no artwork (the app shows a typ
 seeded: eight dev viewers (`viewer.<name>@click.local`) attended past shows and reviewed them, and follow upcoming
 titles. The test customer attended The Last Lighthouse yesterday (so they can write a review).
 
+Groceries (`devseed/groceries.py`, run from `devseed/catalog.py`): 17 categories, 81 canonical items, 10 vendors in
+Bengaluru (5 existing grocery stores plus Sri Lakshmi Provisions, Gokul Dairy Corner, Bake Street Breads, Green Basket
+Farm Produce and Metro Mart, which is temporarily unavailable) with opening hours, delivery settings, verification
+state, offers and deals; each store lists the items it carries at its own price, MRP, stock (some sold out or low) and
+received date. Loose produce uses 25 licensed Wikimedia Commons photos with credits (`devseed/grocery_media.py`);
+packaged goods of the fictional brands have no photo. Store ratings come only from dev customers' order reviews:
+`seed_grocery_history` adds delivered orders for the test customer (milk and bread every ~5 days, so Buy again and
+Running low have real history) and the dev viewers (so Popular Near You and Frequently bought together have data).
+
 Parcels and home services aren't seeded because those features don't exist yet.

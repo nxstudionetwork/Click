@@ -140,6 +140,11 @@ class Product(BaseModel):
     warranty = models.CharField(max_length=120, blank=True, help_text="e.g. '1 year manufacturer warranty'.")
     is_cod_available = models.BooleanField(default=True, help_text="Cash on delivery allowed for this item.")
 
+    # Groceries: the canonical product this listing sells (same item + size across stores), freshness and weighing.
+    grocery_item = models.ForeignKey("groceries.GroceryItem", on_delete=models.SET_NULL, null=True, blank=True, related_name="listings")
+    received_on = models.DateField(null=True, blank=True, help_text="Date the vendor received this stock (fresh produce).")
+    variable_weight = models.BooleanField(default=False, help_text="Weighed at packing; the customer never pays more than shown.")
+
     class Meta:
         ordering = ["position", "name"]
         indexes = [
@@ -147,6 +152,7 @@ class Product(BaseModel):
             models.Index(fields=["shop_category", "is_active"], name="catalog_product_shopcat_idx"),
             models.Index(fields=["-created_at"], name="catalog_product_recent_idx"),
             models.Index(fields=["-units_sold"], name="catalog_product_sold_idx"),
+            models.Index(fields=["grocery_item", "is_active"], name="catalog_product_gitem_idx"),
             GinIndex(OpClass(Upper("name"), name="gin_trgm_ops"), name="catalog_product_name_trgm"),
         ]
         constraints = [

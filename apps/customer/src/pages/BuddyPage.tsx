@@ -12,6 +12,7 @@ import { OfferCard } from '../features/offers/OfferCard';
 import { OrderCard } from '../features/orders/OrderCard';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
+import { ProductCard as GroceryCard, StoreCard as GroceryStoreCard } from '../features/groceries/parts';
 import { api } from '../lib/api';
 
 type Turn = { role: 'user'; content: string } | { role: 'assistant'; reply: BuddyReply };
@@ -70,6 +71,8 @@ export function BuddyPage() {
       case 'order': return <div key={i} className="card"><OrderCard order={c.order} /></div>;
       case 'booking': return <div key={i} className="card"><BookingCard booking={c.booking} /></div>;
       case 'offer': return <OfferCard key={i} offer={c.offer} />;
+      case 'grocery': return <div key={i} className="gr-scope"><GroceryCard l={c.listing} /></div>;
+      case 'grocery_store': return <div key={i} className="gr-scope"><GroceryStoreCard s={c.store} /></div>;
     }
   };
 

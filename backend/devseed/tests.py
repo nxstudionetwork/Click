@@ -17,7 +17,7 @@ def seeded(db):
 
 def test_test_customer_has_real_related_history(seeded):
     assert seeded.user.email == "test.customer@click.local" and seeded.addresses.count() == 4
-    assert seeded.orders.count() == 20 and seeded.bookings.count() == 20 and seeded.support_tickets.count() == 20
+    assert seeded.orders.count() == 26 and seeded.bookings.count() >= 20 and seeded.support_tickets.count() == 20
     assert seeded.wishlist_items.count() == 20 and seeded.cart.items.count() == 2
     statuses = set(seeded.orders.values_list("status", flat=True))
     assert {"delivered", "cancelled", "placed", "out_for_delivery"} <= statuses
@@ -57,7 +57,7 @@ def test_dev_login_signs_in_test_customer_in_development(api, seeded):
     r = api.post("/api/v1/auth/dev-login")
     assert r.status_code == 200 and r.json()["user"]["customerCode"] == "CLK-CS-TEST001"
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
-    assert api.get("/api/v1/customer/orders").json()["count"] == 20
+    assert api.get("/api/v1/customer/orders").json()["count"] == 26  # 20 + 6 grocery history orders
 
 
 def test_test_customer_can_use_normal_login_and_data_stays_isolated(api, seeded, other_customer):

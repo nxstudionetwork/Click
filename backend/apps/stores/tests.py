@@ -41,9 +41,9 @@ def test_seed_dev_data_catalog_is_idempotent(api):
     call_command("seed_dev_data", "--catalog-only")
     call_command("seed_dev_data", "--catalog-only")
     assert api.get("/api/v1/stores?type=restaurant").json()["count"] == 20
-    assert api.get("/api/v1/stores?type=grocery").json()["count"] == 5
+    assert api.get("/api/v1/stores?type=grocery").json()["count"] == 10  # incl. Groceries vendors (devseed.groceries)
     assert api.get("/api/v1/stores?type=retail").json()["count"] == 12  # Shopping sellers (devseed.shop)
-    assert api.get("/api/v1/offers?page_size=50").json()["count"] == 23  # incl. 3 redeemable Shopping seller offers
+    assert api.get("/api/v1/offers?page_size=50").json()["count"] == 26  # incl. 3 Shopping seller offers + 3 new Groceries vendor offers
     assert api.get("/api/v1/events?kind=movie&page_size=50").json()["count"] == 23  # incl. 3 Open Cinema CC films (devseed.showtime)
     assert api.get("/api/v1/events?kind=event&page_size=50").json()["count"] == 20
 

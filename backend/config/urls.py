@@ -19,6 +19,7 @@ from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, Cu
 from apps.bookings import views as booking_views
 from apps.buzz.views import BuzzFeedView
 from apps.shop.urls import customer_urls as shop_customer_urls, public_urls as shop_public_urls
+from apps.groceries import urls as grocery_urls
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
@@ -37,6 +38,7 @@ customer_router = SimpleRouter(trailing_slash=False)
 customer_router.register("addresses", AddressViewSet, basename="address")
 
 customer_urls = [
+    path("groceries/", include(grocery_urls.customer)),
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     *ride_customer_urls,
     *shop_customer_urls,
@@ -85,6 +87,8 @@ api_v1 = [
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
     path("shop/", include(shop_public_urls)),
+    path("groceries/", include(grocery_urls.public)),
+    path("partner/grocery/", include(grocery_urls.partner_urls)),
     path("events", booking_views.EventListView.as_view(), name="events"),
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),
     path("shows/<uuid:pk>", booking_views.ShowSeatMapView.as_view(), name="show-seatmap"),

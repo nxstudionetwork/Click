@@ -156,8 +156,9 @@
 }
 [data-theme='food'] { --c-theme: #f76b1c; --c-theme-solid: #e2540f; --c-theme-soft: rgb(247 107 28 / 12%); --c-theme-deep: #b23f05; --c-theme-tint: #ffbf9f; --c-theme-rgb: 247 107 28;
   --hero-bg: radial-gradient(120% 140% at 100% 0%, #ffb366 0%, #f76707 45%, #9a3507 100%); }
-[data-theme='grocery'] { --c-theme: #16a34a; --c-theme-solid: #15803d; --c-theme-soft: rgb(22 163 74 / 11%); --c-theme-deep: #116a33; --c-theme-tint: #a7f3d0; --c-theme-rgb: 22 163 74;
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #86efac 0%, #22a35a 45%, #0f5a32 100%); }
+/* Groceries: fresh green / lime on deep charcoal (the page canvas is set in styles/groceries.css). */
+[data-theme='grocery'] { --c-theme: #2fbf68; --c-theme-solid: #1f9d53; --c-theme-soft: rgb(47 191 104 / 12%); --c-theme-deep: #116a33; --c-theme-tint: #b6ef5a; --c-theme-rgb: 47 191 104;
+  --hero-bg: radial-gradient(70% 90% at 100% 0%, rgb(182 239 90 / 40%) 0%, transparent 60%), linear-gradient(155deg, #1d2a22 0%, #131a16 60%, #0f1211 100%); }
 /* Shopping: electric violet on graphite, with a restrained magenta for deals. */
 [data-theme='shopping'] { --c-theme: #7047ff; --c-theme-solid: #5b30ea; --c-theme-soft: rgb(112 71 255 / 11%); --c-theme-deep: #3d1ca8; --c-theme-tint: #d8ccff; --c-theme-rgb: 112 71 255;
   --shop-deal: #e3337f; --shop-deal-soft: rgb(227 51 127 / 12%); --shop-ink: #15131f; --shop-ink-2: #221d33; --shop-line: rgb(255 255 255 / 9%);

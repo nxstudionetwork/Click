@@ -5,6 +5,8 @@ Server-side cart: one per customer. Prices are never stored here; they are alway
 Two modes behind one Click. cart:
   store        food and groceries: items from a single store (switching stores asks the customer first)
   marketplace  shopping: items from any number of retail sellers; checkout splits it into one order per seller
+  basket       groceries: items from one or more local grocery stores; each store is its own sub-basket and
+               becomes its own order (own minimum, delivery fee, delivery mode and slot)
 """
 
 from django.db import models
@@ -23,6 +25,7 @@ class Cart(BaseModel):
         EMPTY = "", "Empty"
         STORE = "store", "Single store"
         MARKETPLACE = "marketplace", "Marketplace"
+        BASKET = "basket", "Grocery basket"
 
     customer = models.OneToOneField(CustomerProfile, on_delete=models.CASCADE, related_name="cart")
     mode = models.CharField(max_length=12, choices=Mode.choices, blank=True, default="")
@@ -42,6 +45,9 @@ class CartItem(BaseModel):
     # Chosen customisations. `options_key` (sorted option ids) keeps one line per product + choice combination.
     options = models.ManyToManyField(ProductOption, blank=True, related_name="+")
     options_key = models.CharField(max_length=400, blank=True, default="")
+    # Groceries: the unit price the customer last saw for this line. A different live price must be acknowledged
+    # before checkout (it is never silently charged).
+    price_seen = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["created_at"]

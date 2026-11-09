@@ -47,6 +47,14 @@ import { ShopBrandsPage } from './pages/ShopBrandsPage';
 import { ShopComparePage } from './pages/ShopComparePage';
 import { ShopResultsPage } from './pages/ShopResultsPage';
 import { ShoppingPage } from './pages/ShoppingPage';
+import { GroceriesPage } from './pages/GroceriesPage';
+import { GroceryBasketPage } from './pages/GroceryBasketPage';
+import { GroceryBuyAgainPage } from './pages/GroceryBuyAgainPage';
+import { GroceryCheckoutPage } from './pages/GroceryCheckoutPage';
+import { GroceryListsPage } from './pages/GroceryListsPage';
+import { GroceryProductPage } from './pages/GroceryProductPage';
+import { GrocerySearchPage } from './pages/GrocerySearchPage';
+import { GroceryStorePage } from './pages/GroceryStorePage';
 
 const guard = (el: React.ReactNode) => <RequireAuth>{el}</RequireAuth>;
 // The Click card (QR rendering) is only needed after signup / from Account, so it loads on demand.
@@ -95,7 +103,14 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="food" element={<ServicePage key="restaurant" storeType="restaurant" />} />
-        <Route path="groceries" element={<ServicePage key="grocery" storeType="grocery" />} />
+        <Route path="groceries" element={<GroceriesPage />} />
+        <Route path="groceries/search" element={<GrocerySearchPage />} />
+        <Route path="groceries/store/:slug" element={<GroceryStorePage />} />
+        <Route path="groceries/p/:id" element={<GroceryProductPage />} />
+        <Route path="groceries/basket" element={guard(<GroceryBasketPage />)} />
+        <Route path="groceries/checkout" element={guard(<GroceryCheckoutPage />)} />
+        <Route path="groceries/lists" element={guard(<GroceryListsPage />)} />
+        <Route path="groceries/buy-again" element={guard(<GroceryBuyAgainPage />)} />
         <Route path="shopping" element={<ShoppingPage />} />
         <Route path="shopping/search" element={<ShopResultsPage key="search" mode="search" />} />
         <Route path="shopping/c/:slug" element={<ShopResultsPage key="category" mode="category" />} />

@@ -118,3 +118,13 @@ def test_buddy_tells_watching_from_buying_a_watch(auth_api):
     assert any(a["path"].startswith("/showtime") for a in tonight["actions"])
     watch = ask(auth_api, "find me a watch under 3000")
     assert not any(a["path"].startswith("/showtime") for a in watch.get("actions", []))
+
+
+def test_buddy_groceries_prepare_but_never_order(auth_api):
+    body = ask(auth_api, "I need milk and bread")
+    assert body["actions"][0]["path"] == "/groceries/lists?items=milk%2Cbread"
+    assert "add items yourself" in body["message"]["content"]
+    from apps.carts.models import CartItem
+    from apps.orders.models import Order
+
+    assert not CartItem.objects.exists() and not Order.objects.exists()

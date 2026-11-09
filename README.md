@@ -52,6 +52,7 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
   apps/rides       rides: ride types, upfront pricing, driver matching, trip lifecycle, safety, ratings
   apps/shop        Shopping marketplace: campaigns, discovery, search interpretation, reviews, delivery estimates
+  apps/groceries   Groceries: category registry, canonical items, vendor delivery settings and hours, slots, buy again, lists, vendor listings API
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),

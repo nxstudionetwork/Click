@@ -34,10 +34,12 @@ class CartItemSerializer(serializers.ModelSerializer):
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
     is_available = serializers.SerializerMethodField()
+    price_change = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ["id", "product", "store_id", "variant", "options", "quantity", "note", "unit_price", "line_total", "is_available"]
+        fields = ["id", "product", "store_id", "variant", "options", "quantity", "note", "unit_price", "line_total", "is_available",
+                  "price_change"]
 
     def get_variant(self, item):
         v = item.variant
@@ -46,6 +48,15 @@ class CartItemSerializer(serializers.ModelSerializer):
     def get_is_available(self, item) -> bool:
         ok = item.variant.is_orderable if item.variant else item.product.is_orderable
         return ok and item.product.store.is_open
+
+    def get_price_change(self, item):
+        """The live price differs from the one the customer saw when adding: {from, to} until they acknowledge it."""
+        from apps.catalog.pricing import price_of
+
+        now = price_of(item.product, item.variant).price
+        if item.price_seen is None or now == item.price_seen:
+            return None
+        return {"from": f"{item.price_seen:.2f}", "to": f"{now:.2f}"}
 
     def get_unit_price(self, item) -> str:
         return f"{unit_price(item):.2f}"

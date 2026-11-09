@@ -48,6 +48,11 @@ class ClickBasicBuddy:
         if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
             return self._help()
 
+        from . import grocery_buddy
+
+        if grocery_buddy.wants_groceries(text) and not _has(text, "restaurant", "dinner", "lunch", "biryani", "pizza", "dish", "meal"):
+            if (grocery := grocery_buddy.reply(text, customer)) is not None:
+                return grocery
         wants_food = _has(text, "dinner", "lunch", "breakfast", "eat", "food", "hungry", "biryani", "pizza", "burger", "dosa", "restaurant")
         movie_text = re.sub(r"\bshow (me|us)\b", "", text)  # "show me smart watches" is not about shows
         wants_movie = _has(movie_text, "movie", "movies", "film", "films", "cinema", "show", "shows", "showtime", "playing", "imax", "4dx", "tickets?", "event", "events", "concert") or bool(re.search(

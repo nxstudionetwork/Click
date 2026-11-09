@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type PaymentMethod } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -70,6 +70,7 @@ export function CheckoutPage() {
   const codAvailable = !c || c.groups.every((g) => g.codAvailable);
   useEffect(() => { if (!codAvailable && payment === 'cash_on_delivery') setPayment('wallet'); }, [codAvailable, payment]);
 
+  if (c?.mode === 'basket') return <Navigate to="/groceries/checkout" replace />;
   if (cart.isError) return <ErrorState error={cart.error} onRetry={() => cart.refetch()} />;
   if (cart.isPending || addresses.isPending) return <div className="stack"><Skeleton height={28} width="30%" /><Skeleton height={220} /></div>;
   if (!c || c.items.length === 0) {

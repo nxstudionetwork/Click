@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, Navigate } from 'react-router-dom';
 import type { Product } from '@click/api';
 import { ApiError } from '@click/api';
 import { EmptyState, ErrorState, Icon, Rating, Skeleton, SmartImage, useToast } from '../components/ui';
@@ -45,6 +45,7 @@ export function StorePage() {
   if (store.isPending) return <div className="stack"><Skeleton height={200} radius={22} /><Skeleton height={28} width="60%" /><Skeleton height={60} /></div>;
 
   const s = store.data;
+  if (s.storeType === 'grocery') return <Navigate to={`/groceries/store/${s.slug}`} replace />;
   const service = serviceForStoreType(s.storeType);
   const isRestaurant = s.storeType === 'restaurant';
   // Customisable dishes can sit on several cart lines (one per choice combination); the row shows their total.

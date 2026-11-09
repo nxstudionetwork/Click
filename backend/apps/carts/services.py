@@ -150,7 +150,11 @@ def resolve_variant(product: Product, variant_id) -> ProductVariant | None:
 
 
 def _mode_for(product: Product) -> str:
-    return Cart.Mode.MARKETPLACE if product.store.store_type == StoreType.RETAIL else Cart.Mode.STORE
+    return {StoreType.RETAIL: Cart.Mode.MARKETPLACE, StoreType.GROCERY: Cart.Mode.BASKET}.get(product.store.store_type, Cart.Mode.STORE)
+
+
+MULTI_STORE = (Cart.Mode.MARKETPLACE, Cart.Mode.BASKET)
+_MODE_NOUN = {Cart.Mode.STORE: "food", Cart.Mode.MARKETPLACE: "shopping", Cart.Mode.BASKET: "grocery"}
 
 
 @transaction.atomic
@@ -166,10 +170,9 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
     mode = _mode_for(product)
     has_items = cart.items.exists()
     if has_items and cart.mode and cart.mode != mode:
-        # Shopping parcels and food/grocery deliveries are checked out separately; ask before clearing.
-        message = ("Your cart has food or grocery items. Clear it to add this product."
-                   if mode == Cart.Mode.MARKETPLACE else "Your cart has shopping items. Clear it to add this item.")
-        raise ConflictError(message, code="cart_store_conflict", details={"cart_mode": cart.mode})
+        # Food, shopping parcels and grocery baskets are checked out separately; ask before clearing.
+        raise ConflictError(f"Your cart has {_MODE_NOUN.get(cart.mode, 'other')} items. Clear it to add this item.",
+                            code="cart_store_conflict", details={"cart_mode": cart.mode})
     if mode == Cart.Mode.STORE and cart.store_id and cart.store_id != product.store_id and has_items:
         raise ConflictError(
             "Your cart has items from another store. Clear it to add this item.",
@@ -196,12 +199,15 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
     existing = CartItem.objects.filter(cart=cart, product=product, variant=variant, options_key=options_key).first()
     new_quantity = min((existing.quantity if existing else 0) + quantity, MAX_ITEM_QUANTITY)
     _ensure_line_stock(cart, product, variant, new_quantity, exclude=getattr(existing, "pk", None))
+    seen = price_of(product, variant).price  # the price the customer is looking at when they add
     if existing:
         existing.quantity = new_quantity
         existing.note = note or existing.note
-        existing.save(update_fields=["quantity", "note", "updated_at"])
+        existing.price_seen = seen
+        existing.save(update_fields=["quantity", "note", "price_seen", "updated_at"])
         return existing
-    item = CartItem.objects.create(cart=cart, product=product, variant=variant, quantity=new_quantity, note=note, options_key=options_key)
+    item = CartItem.objects.create(cart=cart, product=product, variant=variant, quantity=new_quantity, note=note,
+                                   options_key=options_key, price_seen=seen)
     item.options.set(options)
     return item
 
@@ -237,7 +243,7 @@ def _reset_if_empty(cart: Cart) -> None:
     if not cart.items.exists():
         cart.mode, cart.store, cart.offer = Cart.Mode.EMPTY, None, None
         cart.save(update_fields=["mode", "store", "offer", "updated_at"])
-    elif cart.offer_id and cart.mode == Cart.Mode.MARKETPLACE and not cart.items.filter(product__store_id=cart.offer.store_id).exists():
+    elif cart.offer_id and cart.mode in MULTI_STORE and not cart.items.filter(product__store_id=cart.offer.store_id).exists():
         cart.offer = None  # the offer's seller is no longer in the cart
         cart.save(update_fields=["offer", "updated_at"])
 

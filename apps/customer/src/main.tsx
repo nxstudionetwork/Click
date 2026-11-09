@@ -21,6 +21,7 @@ import './styles/service.css';
 import './styles/ride.css';
 import './styles/shop.css';
 import './styles/showtime.css';
+import './styles/groceries.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

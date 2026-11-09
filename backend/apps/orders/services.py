@@ -24,16 +24,17 @@ from .models import ALLOWED_TRANSITIONS, CUSTOMER_CANCELLABLE, CheckoutGroup, Or
 audit = logging.getLogger("click.audit")
 
 
-def place_order(*, customer: CustomerProfile, address_id, payment_method: str, idempotency_key, customer_note: str = "") -> tuple[Order, bool]:
+def place_order(*, customer: CustomerProfile, address_id, payment_method: str, idempotency_key, customer_note: str = "",
+                grocery: dict | None = None) -> tuple[Order, bool]:
     """Single-order view of `place_checkout` (food, groceries; first order of a marketplace checkout)."""
     _, orders, created = place_checkout(customer=customer, address_id=address_id, payment_method=payment_method,
-                                        idempotency_key=idempotency_key, customer_note=customer_note)
+                                        idempotency_key=idempotency_key, customer_note=customer_note, grocery=grocery)
     return orders[0], created
 
 
 @transaction.atomic
 def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str, idempotency_key,
-                   customer_note: str = "") -> tuple[CheckoutGroup | None, list[Order], bool]:
+                   customer_note: str = "", grocery: dict | None = None) -> tuple[CheckoutGroup | None, list[Order], bool]:
     """
     Converts the customer's cart into orders, recomputing every price server-side. A single-store cart becomes one
     order; a marketplace cart becomes one order per seller under a CheckoutGroup. Everything happens in one
@@ -57,7 +58,7 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
     if address is None:
         raise DomainError("Choose a valid delivery address.", code="invalid_address")
 
-    marketplace = cart.mode == Cart.Mode.MARKETPLACE
+    marketplace = cart.mode in (Cart.Mode.MARKETPLACE, Cart.Mode.BASKET)
     if not marketplace and (cart.store is None or not cart.store.is_open):
         raise DomainError("This store isn't accepting orders right now.", code="store_closed")
 
@@ -66,6 +67,12 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
         raise ConflictError("Some items are no longer available.", code="items_unavailable", details={"items": unavailable})
 
     groups = seller_groups(cart, items)
+    if cart.mode == Cart.Mode.BASKET:
+        # Groceries: each store's delivery mode/slot, distance-based fee, live prices and opening hours are checked
+        # (and the fee, ETA and slot attached to its group) before anything is created.
+        from apps.groceries.checkout import prepare_basket
+
+        prepare_basket(cart, groups, address, grocery or {})
     for g in groups:
         if g.subtotal < g.store.min_order_amount:
             raise DomainError(f"Minimum order for {g.store.name} is {g.store.min_order_amount} {g.store.currency}.",
@@ -156,8 +163,12 @@ def _create_order(customer, g, address, key, customer_note, payment_method, chec
         offer_title=g.offer.title if g.offer and g.discount else "", total=g.total, currency=store.currency,
         idempotency_key=key,
         estimated_delivery_from=est_from,
-        estimated_delivery_at=est_to or (timezone.now() + timedelta(minutes=store.delivery_time_max)),
+        estimated_delivery_at=est_to or getattr(g, "estimated_at", None) or (timezone.now() + timedelta(minutes=store.delivery_time_max)),
     )
+    if getattr(g, "grocery", None):
+        from apps.groceries.checkout import record_details
+
+        record_details(order, g)
     lines = []
     for i in g.items:
         price, deal = unit_price(i), deal_for(i.product)

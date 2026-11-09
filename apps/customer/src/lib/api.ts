@@ -1,4 +1,4 @@
-import { authApi, catalogApi, createClickClient, customerApi, eventsApi, shopApi, showtimeApi, storesApi } from '@click/api';
+import { authApi, catalogApi, createClickClient, customerApi, eventsApi, groceriesApi, shopApi, showtimeApi, storesApi } from '@click/api';
 
 /** Session wiring (in-memory access token, httpOnly refresh cookie) is shared via @click/api. */
 const client = createClickClient({ baseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1', clientId: 'customer-web' });
@@ -13,4 +13,5 @@ export const api = {
   customer: customerApi(http),
   shop: shopApi(http),
   showtime: showtimeApi(http),
+  groceries: groceriesApi(http),
 };

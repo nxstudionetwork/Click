@@ -81,6 +81,18 @@ const PATHS = {
   compare: 'M8 3v18m8-18v18M4 7h4m8 0h4M4 17h4m8 0h4',
   filter: 'M4 5h16l-6 8v6l-4-2v-4L4 5Z',
   sort: 'M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3',
+  // Groceries (category rail and sections)
+  leaf: 'M5 19c0-8 5-14 15-15-1 10-7 15-15 15Zm0 0 7-7',
+  apple: 'M12 7c-2-1.5-7-1.5-7 4.5S8.5 21 12 19.5c3.5 1.5 7-2 7-8S14 5.5 12 7Zm0 0c0-2 1-3.5 3-4',
+  milk: 'M8 3h8M9 3v3L7 9v12h10V9l-2-3V3M7 13h10',
+  bread: 'M5 20V11a3.5 3.5 0 0 1-1-6.5C6 3 10 3 12 3s6 0 8 1.5A3.5 3.5 0 0 1 19 11v9H5Z',
+  wheat: 'M12 21V8m0 4c-2.5 0-4-1.5-4-4 2.5 0 4 1.5 4 4Zm0 0c2.5 0 4-1.5 4-4-2.5 0-4 1.5-4 4Zm0 4c-2.5 0-4-1.5-4-4 2.5 0 4 1.5 4 4Zm0 0c2.5 0 4-1.5 4-4-2.5 0-4 1.5-4 4ZM12 8c-1.2-1-1.2-3 0-5 1.2 2 1.2 4 0 5Z',
+  oil: 'M10 3h4v3l2 3v12H8V9l2-3V3Zm-2 9h8',
+  drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z',
+  spray: 'M8 9h6v12H8V9Zm1 0V6h4v3M13 4h4l-1 2M18 8h.01M20 6h.01M20 10h.01',
+  egg: 'M12 3c3.5 0 6 6 6 10a6 6 0 0 1-12 0c0-4 2.5-10 6-10Z',
+  cookie: 'M12 3a9 9 0 1 0 9 9 3 3 0 0 1-3-3 3 3 0 0 1-3-3 3 3 0 0 1-3-3Zm-3 8h.01M14 15h.01M9 16h.01',
+  spice: 'M9 8h6v13H9V8Zm1-5h4v5h-4V3Zm-1 9h6',
 } as const;
 
 export type IconName = keyof typeof PATHS;
