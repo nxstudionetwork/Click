@@ -80,7 +80,7 @@ def test_home_requires_sign_in_and_a_finished_profile(api, restaurant):
     ("cinema-hall", "venue", "Bookings open", ["shows", "tickets", "occupancy", "revenue"]),
     ("hotel", "upcoming", "Accepting bookings", []),
     ("parcel-partner", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
-    ("electrician", "upcoming", "Available", []),
+    ("electrician", "services", "Available", ["jobs", "completed", "earnings", "rating"]),
     ("delivery-rider", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
 ])
 def test_each_category_gets_its_own_home(slug, kind, on, metrics):
@@ -88,6 +88,11 @@ def test_each_category_gets_its_own_home(slug, kind, on, metrics):
     if kind == "orders":
         from conftest import make_store
         PartnerStore.objects.create(partner=partner, store=make_store(f"Store {slug}"))
+    if kind == "services":
+        from apps.professionals.models import ProviderProfile, ServiceCategory
+
+        cat = ServiceCategory.objects.create(slug=f"cat-{slug}", name="Electrical", profession="Electrician", group="home")
+        ProviderProfile.objects.create(partner=partner, category=cat)
     if kind == "venue":
         PartnerVenue.objects.create(partner=partner, venue=Venue.objects.create(name="Hall", slug=f"hall-{slug}", kind="cinema", city="B"))
     home = client.get("/api/v1/partner/home").json()

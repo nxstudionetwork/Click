@@ -270,6 +270,40 @@ and Activity.
 - **Across Click.:** Buddy prepares a booking (mode, saved recipient) and reports real status but never books or pays;
   parcels appear in Activity; help requests link to the parcel (`SupportTicket.parcel`).
 
+## Services (local professionals)
+
+Customer-facing name: **Services** (`/services`, `/services/:category`, `/services/pro/:id`, `/services/book`,
+`/services/bookings/:id`). `apps/professionals` turns Partner App partners in the service categories (plumber,
+electrician, cleaner…) into bookable professionals and reuses addresses, payments (wallet / cash), notifications,
+wishlists (My Professionals), support tickets, Activity and the Partner App workspace framework.
+
+- **Catalog (admin / Business OS):** `ServiceCategory` (group, icon, accent, synonyms for search, which partner
+  categories do it) and `ServiceJob` (common jobs with a pricing model — fixed, starting price, hourly with a minimum,
+  or quote after inspection with an optional visit fee — duration, includes / not included, now and/or scheduled).
+- **Professionals:** `ProviderProfile` (one per partner: their own photo or a monogram, about, experience, skills,
+  languages, quote jobs, listed), the services they do, their own price per job, weekly hours, certificates (shown once
+  verified) and portfolio photos (EXIF stripped, resized). "Verified" means an approved partner verification. Ratings,
+  jobs completed and response / completion rates come only from bookings (rates appear after 5 data points).
+- **Availability:** "available now" needs the partner's online toggle, instant jobs enabled, being inside working hours
+  and not on a job; slots are 60-minute starts inside working hours, from 90 minutes ahead, 7 days, without overlap.
+- **Booking:** `POST /customer/services/estimate` computes price, offer, 18% tax, who can take it and free slots
+  (for "any available", the union of eligible professionals' slots). `POST /customer/services/bookings` re-estimates and
+  must match the amount the customer saw (`price_changed`), is idempotent and attaches up to 5 of the customer's own
+  photos. A named professional gets the request; otherwise up to 5 eligible ones are offered it and the first to accept
+  wins. Offers expire (10 min for now, up to 2 h for scheduled) and the booking closes as unassigned, uncharged.
+- **Lifecycle:** requested → confirmed → on the way → arrived → (quote pending) → in progress → completed → paid, or
+  cancelled / unassigned, validated under a row lock with a status event and a notification each time. Work can't start
+  before arrival or while a quote waits; quote jobs need an approved quote; a higher price on a starting-price job
+  needs the customer's approval (declining keeps the booked price; declining an inspection-only quote charges only the
+  visit fee); hourly jobs are never billed beyond the booked hours unless a quote was approved.
+- **Payment:** after completion only — wallet (captured immediately) or cash (closed when the professional confirms
+  receipt). Cancellation is free until the professional is on the way; after that, support.
+- **Reviews:** one per paid/completed booking, overall plus quality, behaviour and timeliness; only booked customers.
+- **Across Click.:** Buddy maps a problem ("my kitchen tap is leaking") to a service and job and lists real professionals
+  with real availability and pricing, but never books or pays; "Can't find your service?" stores a `ServiceNeed` for
+  Click.'s team; the Partner App Home for service categories uses the `services` workspace (requests, active jobs,
+  quote, start, complete, cash received).
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching
@@ -313,7 +347,7 @@ and Activity.
   ends the Click. session server-side and clears all cached customer data). Account deletion is not offered: there is
   no backend deletion workflow yet.
 - **Activity (`/activity`):** a timeline read from the source domains (orders, bookings, rides), filterable by Rides,
-  Food, Groceries, Shopping and Bookings; parcels and service bookings join as those services launch.
+  Food, Groceries, Shopping, Bookings, Parcels and Services.
 - **Ride (`/rides`, `/rides/:id`):** map first, then pickup (starts at the active location), up to 2 stops and the
   drop, quick chips (Home, Work, Recent, Schedule, For someone), ride options with server fares and pickup ETAs,
   offers, payment (cash or wallet), then Confirm. The trip page shows status, the driver card, safety tools, the

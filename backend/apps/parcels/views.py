@@ -55,7 +55,7 @@ class OptionsView(APIView):
 
 class QuoteView(APIView):
     permission_classes = [IsCustomer]
-    throttle_scope = "order_placement"
+    throttle_scope = "quote"
 
     def post(self, request):
         s = QuoteInput(data=request.data)

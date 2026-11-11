@@ -509,11 +509,12 @@ HOME: dict[str, dict] = {
         "quick_actions": ["requests", "active", "earnings"], "earnings_label": "Today’s deliveries", "performance": [],
     },
     "services": {
-        "workspace": "upcoming", "location": "business", "work_noun": "job",
-        "status": _status("Available", "Unavailable", "Go available", "Go unavailable", "", ""),
-        "upcoming": {"service": "Click. Services", "what": "service requests, your schedule, active jobs and earnings"},
+        "workspace": "services", "location": "business", "work_noun": "job",
+        "status": _status("Available", "Unavailable", "Go available", "Go unavailable",
+                          "Customers near you can book you for jobs now.", "You won’t get ‘as soon as possible’ requests.",
+                          "You won’t get new ‘as soon as possible’ requests until you go available again. Scheduled jobs stay booked."),
         "metrics": ["jobs", "completed", "earnings", "rating"],
-        "quick_actions": [], "earnings_label": "Today’s earnings", "performance": [],
+        "quick_actions": ["requests", "active", "earnings"], "earnings_label": "Today’s jobs", "performance": [],
     },
 }
 

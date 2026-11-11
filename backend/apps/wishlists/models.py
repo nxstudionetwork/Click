@@ -13,15 +13,20 @@ class WishlistItem(BaseModel):
     customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE, related_name="wishlist_items")
     store = models.ForeignKey(Store, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    # Services: a saved professional ("My Professionals").
+    provider = models.ForeignKey("professionals.ProviderProfile", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
 
     class Meta:
         ordering = ["-created_at"]
         constraints = [
             # Exactly one target per row (new saveable entities add a column + extend this check).
             models.CheckConstraint(
-                condition=(Q(store__isnull=False) & Q(product__isnull=True)) | (Q(store__isnull=True) & Q(product__isnull=False)),
-                name="wishlists_exactly_one_target",
+                condition=(Q(store__isnull=False) & Q(product__isnull=True) & Q(provider__isnull=True))
+                | (Q(store__isnull=True) & Q(product__isnull=False) & Q(provider__isnull=True))
+                | (Q(store__isnull=True) & Q(product__isnull=True) & Q(provider__isnull=False)),
+                name="wishlists_exactly_one_target_v2",
             ),
             models.UniqueConstraint(fields=["customer", "store"], condition=Q(store__isnull=False), name="wishlists_unique_store"),
             models.UniqueConstraint(fields=["customer", "product"], condition=Q(product__isnull=False), name="wishlists_unique_product"),
+            models.UniqueConstraint(fields=["customer", "provider"], condition=Q(provider__isnull=False), name="wishlists_unique_provider"),
         ]

@@ -54,6 +54,7 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/shop        Shopping marketplace: campaigns, discovery, search interpretation, reviews, delivery estimates
   apps/groceries   Groceries: category registry, canonical items, vendor delivery settings and hours, slots, buy again, lists, vendor listings API
   apps/parcels     Parcel: services, vehicles, coverage, quotes, bookings, partner matching, PIN-verified lifecycle, tracking, sharing
+  apps/professionals  Services: local professionals, jobs and pricing models, availability, estimates, quotes, booking lifecycle, reviews
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),

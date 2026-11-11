@@ -21,6 +21,7 @@ from apps.buzz.views import BuzzFeedView
 from apps.shop.urls import customer_urls as shop_customer_urls, public_urls as shop_public_urls
 from apps.groceries import urls as grocery_urls
 from apps.parcels import urls as parcel_urls
+from apps.professionals import urls as services_urls
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
@@ -42,6 +43,7 @@ customer_urls = [
     path("groceries/", include(grocery_urls.customer)),
     path("parcels", parcel_urls.views.ParcelListCreateView.as_view(), name="parcels"),
     path("parcels/", include(parcel_urls.customer)),
+    path("services/", include(services_urls.customer)),
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     *ride_customer_urls,
     *shop_customer_urls,
@@ -92,6 +94,8 @@ api_v1 = [
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),
     path("parcels/", include(parcel_urls.public)),
+    path("services/", include(services_urls.public)),
+    path("partner/services/", include(services_urls.partner)),
     path("partner/grocery/", include(grocery_urls.partner_urls)),
     path("events", booking_views.EventListView.as_view(), name="events"),
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),

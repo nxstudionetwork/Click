@@ -129,4 +129,9 @@ are only offered jobs while their reported location is under 10 minutes old, so 
 from the Partner App) to test matching. The test customer has 5 parcels (delivered, cash-paid, cancelled, failed, in
 transit) with real status events and PIN proofs, and 2 saved recipients.
 
-Home services aren't seeded because that feature doesn't exist yet.
+Services (`devseed/professionals.py`, run from `devseed/partners.py`): 15 service categories with 42 common jobs, 21
+fictional Bengaluru professionals (no photos: they show a monogram until a real professional uploads their own),
+most with an approved verification, weekly hours, their own prices and 4 offers (1 ended). `seed_service_history`
+(run from `devseed/customer.py`) adds 129 paid, reviewed and cancelled jobs from dev customers so ratings, jobs
+completed and rates are real aggregates; the test customer has 2 paid bookings (one reviewed), 1 cancelled and
+Ramesh Kumar saved in My Professionals.

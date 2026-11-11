@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { EmptyState, ErrorState, Skeleton } from '../components/ui';
+import { ProCardView } from '../features/pros/parts';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
 import { useWishlist } from '../features/wishlist/useWishlist';
@@ -10,6 +11,7 @@ export function WishlistPage() {
   if (wishlist.isPending) return <div className="stack"><Skeleton height={28} width="30%" /><Skeleton height={200} /></div>;
   const stores = wishlist.data.filter((i) => i.store).map((i) => i.store!);
   const products = wishlist.data.filter((i) => i.product).map((i) => i.product!);
+  const pros = wishlist.data.filter((i) => i.provider).map((i) => ({ ...i.provider!, favoriteId: i.id }));
 
   return (
     <div className="stack">
@@ -28,6 +30,12 @@ export function WishlistPage() {
             <section className="stack">
               <h2>Products</h2>
               <div className="product-grid">{products.map((p) => <ProductCard key={p.id} product={p} currency={p.store.currency} showStore />)}</div>
+            </section>
+          )}
+          {pros.length > 0 && (
+            <section className="stack sv-scope" data-theme="services">
+              <h2>My Professionals</h2>
+              <div className="sv-prolist">{pros.map((p) => <ProCardView key={p.id} p={p} wide />)}</div>
             </section>
           )}
         </>

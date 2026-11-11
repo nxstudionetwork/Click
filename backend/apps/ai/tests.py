@@ -63,7 +63,9 @@ def test_buddy_order_status_uses_customers_own_orders(api, customer, other_custo
 
 
 def test_buddy_never_claims_unlaunched_services(auth_api):
-    assert "isn’t live" in ask(auth_api, "I need a plumber")["message"]["content"]
+    # Services are live, but with no catalog or professionals Buddy must not invent anyone or offer a booking.
+    plumber = ask(auth_api, "I need a plumber")
+    assert plumber["cards"] == [] and not any(a.get("path", "").startswith("/services/pro/") for a in plumber["actions"])
     # Rides are live now: Buddy hands off to Ride (with the destination) but never books it.
     cab = ask(auth_api, "book me a cab to the airport")
     assert cab["actions"] == [{"label": "Plan this ride", "path": "/rides?to=airport"}]

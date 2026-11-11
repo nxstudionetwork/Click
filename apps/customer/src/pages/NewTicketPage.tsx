@@ -13,6 +13,7 @@ export function NewTicketPage() {
   const [category, setCategory] = useState<SupportCategory>((HELP_TOPICS.find((t) => t.id === params.get('category'))?.id) ?? 'order');
   const [orderId, setOrderId] = useState(params.get('orderId') ?? '');
   const parcelId = params.get('parcelId');
+  const serviceBookingId = params.get('serviceBookingId');
   const [subject, setSubject] = useState(params.get('subject') ?? '');
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,7 +31,7 @@ export function NewTicketPage() {
     if (!subject.trim()) missing.subject = 'Required';
     if (!message.trim()) missing.message = 'Required';
     setErrors(missing);
-    if (!Object.keys(missing).length) create.mutate({ category, subject: subject.trim(), message: message.trim(), orderId: parcelId ? null : orderId || null, parcelId: parcelId || null });
+    if (!Object.keys(missing).length) create.mutate({ category, subject: subject.trim(), message: message.trim(), orderId: parcelId || serviceBookingId ? null : orderId || null, parcelId: parcelId || null, serviceBookingId: serviceBookingId || null });
   }
 
   return (
@@ -42,7 +43,7 @@ export function NewTicketPage() {
           {HELP_TOPICS.map((t) => <button type="button" key={t.id} className="chip" aria-pressed={category === t.id} onClick={() => setCategory(t.id)}>{t.label}</button>)}
         </div>
       </div>
-      {parcelId ? <p className="small muted">About your parcel {subject.split(' · ').pop()}</p> : <div className="field">
+      {parcelId ? <p className="small muted">About your parcel {subject.split(' · ').pop()}</p> : serviceBookingId ? <p className="small muted">About your service booking {subject.split(' · ').pop()}</p> : <div className="field">
         <label className="field__label" htmlFor="ticket-order">Related order (optional)</label>
         <select id="ticket-order" className="field__input" value={orderId} onChange={(e) => setOrderId(e.target.value)}>
           <option value="">No specific order</option>

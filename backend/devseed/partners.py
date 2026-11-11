@@ -95,3 +95,6 @@ def seed_partners(log) -> None:
     from .parcels import seed_parcels
 
     seed_parcels(log)  # Click. Parcel configuration and delivery riders (after the partner catalogue exists)
+    from .professionals import seed_professionals
+
+    seed_professionals(log)  # Click. Services catalog and professionals

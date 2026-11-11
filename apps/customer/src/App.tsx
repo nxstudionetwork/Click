@@ -52,6 +52,13 @@ import { ParcelDetailPage } from './pages/ParcelDetailPage';
 import { ParcelHistoryPage } from './pages/ParcelHistoryPage';
 import { ParcelPage } from './pages/ParcelPage';
 import { ParcelSharedPage } from './pages/ParcelSharedPage';
+import { ProProfilePage } from './pages/ProProfilePage';
+import { ServiceBookingPage } from './pages/ServiceBookingPage';
+import { ServiceBookPage } from './pages/ServiceBookPage';
+import { ServiceCategoryPage } from './pages/ServiceCategoryPage';
+import { ServiceHistoryPage } from './pages/ServiceHistoryPage';
+import { ServiceRequestPage } from './pages/ServiceRequestPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { GroceryBasketPage } from './pages/GroceryBasketPage';
 import { GroceryBuyAgainPage } from './pages/GroceryBuyAgainPage';
 import { GroceryCheckoutPage } from './pages/GroceryCheckoutPage';
@@ -140,7 +147,13 @@ function AppRoutes() {
         <Route path="parcels/:id" element={guard(<ParcelDetailPage />)} />
         <Route path="track/:token" element={<ParcelSharedPage />} />
         <Route path="parcel" element={<Navigate to="/parcels" replace />} />
-        <Route path="services" element={<ServiceComingSoonPage key="services" serviceId="services" />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="services/book" element={guard(<ServiceBookPage />)} />
+        <Route path="services/request" element={<ServiceRequestPage />} />
+        <Route path="services/bookings" element={guard(<ServiceHistoryPage />)} />
+        <Route path="services/bookings/:id" element={guard(<ServiceBookingPage />)} />
+        <Route path="services/pro/:id" element={<ProProfilePage />} />
+        <Route path="services/:slug" element={<ServiceCategoryPage />} />
         <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
         <Route path="tickets" element={guard(<BookingsPage />)} />
         <Route path="tickets/:id" element={guard(<BookingPage />)} />

@@ -5,6 +5,7 @@ from apps.notifications.models import NotificationCategory
 from apps.notifications.services import notify
 from apps.orders.models import Order
 from apps.parcels.models import ParcelOrder
+from apps.professionals.models import ServiceBooking
 
 from .models import SupportTicket
 
@@ -14,10 +15,13 @@ class SupportTicketSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(source="order.number", read_only=True, default=None)
     parcel_id = serializers.PrimaryKeyRelatedField(source="parcel", queryset=ParcelOrder.objects.none(), required=False, allow_null=True)
     parcel_number = serializers.CharField(source="parcel.number", read_only=True, default=None)
+    service_booking_id = serializers.PrimaryKeyRelatedField(source="service_booking", queryset=ServiceBooking.objects.none(),
+                                                            required=False, allow_null=True)
+    service_booking_number = serializers.CharField(source="service_booking.number", read_only=True, default=None)
 
     class Meta:
         model = SupportTicket
-        fields = ["id", "reference", "category", "subject", "message", "status", "order_id", "order_number", "parcel_id", "parcel_number", "created_at", "resolved_at"]
+        fields = ["id", "reference", "category", "subject", "message", "status", "order_id", "order_number", "parcel_id", "parcel_number", "service_booking_id", "service_booking_number", "created_at", "resolved_at"]
         read_only_fields = ["id", "reference", "status", "created_at", "resolved_at"]
 
     def __init__(self, *args, **kwargs):
@@ -27,6 +31,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             # A ticket may only reference the requester's own orders.
             self.fields["order_id"].queryset = Order.objects.filter(customer=request.user.customer_profile)
             self.fields["parcel_id"].queryset = ParcelOrder.objects.filter(customer=request.user.customer_profile)
+            self.fields["service_booking_id"].queryset = ServiceBooking.objects.filter(customer=request.user.customer_profile)
 
 
 class SupportTicketListCreateView(generics.ListCreateAPIView):
@@ -34,7 +39,7 @@ class SupportTicketListCreateView(generics.ListCreateAPIView):
     serializer_class = SupportTicketSerializer
 
     def get_queryset(self):
-        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel")
+        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking")
 
     def perform_create(self, serializer):
         ticket = serializer.save(customer=self.request.user.customer_profile)
@@ -47,4 +52,4 @@ class SupportTicketDetailView(generics.RetrieveAPIView):
     serializer_class = SupportTicketSerializer
 
     def get_queryset(self):
-        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel")
+        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking")

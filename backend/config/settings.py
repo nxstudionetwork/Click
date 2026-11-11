@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "apps.shop",
     "apps.groceries",
     "apps.parcels",
+    "apps.professionals",
 ]
 
 MIDDLEWARE = [
@@ -177,6 +178,7 @@ REST_FRAMEWORK = {
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
         "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
         "search": os.environ.get("THROTTLE_SEARCH", "120/min"),  # Shopping search
+        "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }

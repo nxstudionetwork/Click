@@ -471,9 +471,11 @@ export interface ReorderResult {
 // --- Engagement -------------------------------------------------------------
 export interface WishlistItem {
   id: UUID;
-  kind: 'store' | 'product';
+  kind: 'store' | 'product' | 'provider';
   store: Store | null;
   product: ProductWithStore | null;
+  /** A saved Services professional ("My Professionals"). */
+  provider?: import('./services-market').ProCard | null;
   createdAt: ISODateTime;
 }
 
@@ -523,6 +525,9 @@ export interface SupportTicket {
   /** Set when the request is about a Click. Parcel delivery. */
   parcelId?: UUID | null;
   parcelNumber?: string | null;
+  /** Set when the request is about a Click. Services booking. */
+  serviceBookingId?: UUID | null;
+  serviceBookingNumber?: string | null;
   createdAt: ISODateTime;
   resolvedAt: ISODateTime | null;
 }

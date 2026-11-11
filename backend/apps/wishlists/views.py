@@ -20,26 +20,36 @@ class WishlistItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WishlistItem
-        fields = ["id", "kind", "store", "product", "created_at"]
+        fields = ["id", "kind", "store", "product", "provider", "created_at"]
+
+    provider = serializers.SerializerMethodField()
 
     def get_kind(self, item) -> str:
-        return "store" if item.store_id else "product"
+        return "store" if item.store_id else "product" if item.product_id else "provider"
+
+    def get_provider(self, item):
+        if not item.provider_id:
+            return None
+        from apps.professionals import engine
+
+        return engine.card(item.provider, None, request=self.context.get("request"))
 
 
 class AddWishlistSerializer(serializers.Serializer):
     store_id = serializers.UUIDField(required=False)
     product_id = serializers.UUIDField(required=False)
+    provider_id = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
-        if bool(attrs.get("store_id")) == bool(attrs.get("product_id")):
-            raise serializers.ValidationError("Provide exactly one of storeId or productId.")
+        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id")) != 1:
+            raise serializers.ValidationError("Provide exactly one of storeId, productId or providerId.")
         return attrs
 
 
 def _items(customer):
     return (
         WishlistItem.objects.filter(customer=customer)
-        .select_related("product__store", "product__category", "store")
+        .select_related("product__store", "product__category", "store", "provider__partner__profile", "provider__category")
         .prefetch_related("store__categories", "store__offers", "product__variants", "product__option_groups__options")
     )
 
@@ -48,7 +58,7 @@ class WishlistView(APIView):
     permission_classes = [IsCustomer]
 
     def get(self, request):
-        return Response(WishlistItemSerializer(_items(request.user.customer_profile), many=True).data)
+        return Response(WishlistItemSerializer(_items(request.user.customer_profile), many=True, context={"request": request}).data)
 
     def post(self, request):
         s = AddWishlistSerializer(data=request.data)
@@ -56,13 +66,17 @@ class WishlistView(APIView):
         customer = request.user.customer_profile
         if store_id := s.validated_data.get("store_id"):
             target = {"store": get_object_or_404(public_stores(), pk=store_id)}
+        elif provider_id := s.validated_data.get("provider_id"):
+            from apps.professionals.engine import listed
+
+            target = {"provider": get_object_or_404(listed(), pk=provider_id)}
         else:
             target = {"product": get_object_or_404(public_products(), pk=s.validated_data["product_id"])}
         item, created = WishlistItem.objects.get_or_create(customer=customer, **target)
         if created:
             record(customer, "wishlist.added", obj=next(iter(target.values())))
         item = _items(customer).get(pk=item.pk)
-        return Response(WishlistItemSerializer(item).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        return Response(WishlistItemSerializer(item, context={"request": request}).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class WishlistItemView(APIView):

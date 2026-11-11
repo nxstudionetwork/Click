@@ -37,8 +37,7 @@ export const SERVICES: ClickService[] = [
   { id: 'events', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
   { id: 'experiences', name: 'Experiences', tagline: 'Tours, classes and activities', icon: 'compass', path: '/experiences', status: 'soon', theme: 'movies',
     upcoming: ['Curated local experiences', 'Date and slot selection', 'Instant confirmation'] },
-  { id: 'services', name: 'Home Services', short: 'Services', tagline: 'Cleaning, repairs, professionals', icon: 'wrench', path: '/services', status: 'soon', theme: 'services',
-    upcoming: ['Verified providers with ratings', 'Upfront pricing and estimates', 'Pick a date and time slot', 'Provider status updates and reviews'] },
+  { id: 'services', name: 'Services', short: 'Services', tagline: 'Plumbers, electricians, cleaners and more', icon: 'wrench', path: '/services', status: 'live', theme: 'services' },
   { id: 'buzz', name: 'Buzz', tagline: 'Instants you can act on', icon: 'play', path: '/buzz', status: 'live', theme: 'buzz' },
 ];
 

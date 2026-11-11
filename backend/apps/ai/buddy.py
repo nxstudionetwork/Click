@@ -48,10 +48,13 @@ class ClickBasicBuddy:
         if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
             return self._help()
 
-        from . import grocery_buddy, parcel_buddy
+        from . import grocery_buddy, parcel_buddy, service_buddy
 
         if parcel_buddy.wants_parcel(text):
             return parcel_buddy.reply(text, customer)
+        if service_buddy.wants_service(text) and not grocery_buddy.REORDER.search(text):
+            if (svc := service_buddy.reply(text, customer)) is not None:
+                return svc
 
         if grocery_buddy.wants_groceries(text) and not _has(text, "restaurant", "dinner", "lunch", "biryani", "pizza", "dish", "meal"):
             if (grocery := grocery_buddy.reply(text, customer)) is not None:
@@ -84,9 +87,6 @@ class ClickBasicBuddy:
         if _has(text, "add (this|it|that) to (my )?cart", "buy (this|it|that)"):
             return BuddyReply("Open the product, choose its size or colour if it has one, then tap Add to cart. "
                               "I never add to your cart or pay without you.", actions=[{"label": "Open Shopping", "path": "/shopping"}])
-        if _has(text, "plumber", "electrician", "cleaning", "repair"):
-            return BuddyReply("That service isn’t live on Click yet, so I can’t book it. Food, groceries, shopping, rides, parcels and Showtime tickets are available now.",
-                              actions=[{"label": "Explore Click", "path": "/explore"}])
         if shopping := self._shopping(messages[-1].content):
             return shopping
         return self._search(text)

@@ -9,4 +9,5 @@ export * from './shop-endpoints';
 export * from './showtime-endpoints';
 export * from './groceries-endpoints';
 export * from './parcels-endpoints';
+export * from './services-market';
 export * from './session';

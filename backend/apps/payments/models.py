@@ -31,6 +31,7 @@ class Payment(BaseModel):
     booking = models.ForeignKey("bookings.Booking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     ride = models.ForeignKey("rides.Ride", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     parcel = models.ForeignKey("parcels.ParcelOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    service_booking = models.ForeignKey("professionals.ServiceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     method = models.CharField(max_length=30, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -43,11 +44,13 @@ class Payment(BaseModel):
         indexes = [models.Index(fields=["provider", "provider_reference"], name="payments_provider_ref_idx")]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gte=0), name="payments_amount_non_negative"),
+            # Exactly one target: an order, a show booking, a ride, a parcel or a service booking.
             models.CheckConstraint(
-                condition=(Q(order__isnull=False) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=False) & Q(ride__isnull=True) & Q(parcel__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=False) & Q(parcel__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=False)),
-                name="payments_exactly_one_target_v3",
+                condition=(Q(order__isnull=False) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
+                | (Q(order__isnull=True) & Q(booking__isnull=False) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
+                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=False) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
+                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=False) & Q(service_booking__isnull=True))
+                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=False)),
+                name="payments_exactly_one_target_v4",
             ),
         ]
