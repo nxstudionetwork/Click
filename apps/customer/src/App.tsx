@@ -52,6 +52,14 @@ import { ParcelDetailPage } from './pages/ParcelDetailPage';
 import { ParcelHistoryPage } from './pages/ParcelHistoryPage';
 import { ParcelPage } from './pages/ParcelPage';
 import { ParcelSharedPage } from './pages/ParcelSharedPage';
+import { EventBookingPage } from './pages/EventBookingPage';
+import { EventBookPage } from './pages/EventBookPage';
+import { EventPlanFlowPage } from './pages/EventPlanFlowPage';
+import { EventPlanPage } from './pages/EventPlanPage';
+import { EventProviderPage } from './pages/EventProviderPage';
+import { EventsMinePage } from './pages/EventsMinePage';
+import { EventsPage } from './pages/EventsPage';
+import { EventTeamsPage } from './pages/EventTeamsPage';
 import { ProProfilePage } from './pages/ProProfilePage';
 import { ServiceBookingPage } from './pages/ServiceBookingPage';
 import { ServiceBookPage } from './pages/ServiceBookPage';
@@ -147,6 +155,15 @@ function AppRoutes() {
         <Route path="parcels/:id" element={guard(<ParcelDetailPage />)} />
         <Route path="track/:token" element={<ParcelSharedPage />} />
         <Route path="parcel" element={<Navigate to="/parcels" replace />} />
+        <Route path="events" element={<EventsPage />} />
+        <Route path="events/teams" element={<EventTeamsPage />} />
+        <Route path="events/venues" element={<EventTeamsPage key="venues" venues />} />
+        <Route path="events/providers/:id" element={<EventProviderPage />} />
+        <Route path="events/plan" element={guard(<EventPlanFlowPage />)} />
+        <Route path="events/plans/:id" element={guard(<EventPlanPage />)} />
+        <Route path="events/book" element={guard(<EventBookPage />)} />
+        <Route path="events/bookings/:id" element={guard(<EventBookingPage />)} />
+        <Route path="events/mine" element={guard(<EventsMinePage />)} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="services/book" element={guard(<ServiceBookPage />)} />
         <Route path="services/request" element={<ServiceRequestPage />} />

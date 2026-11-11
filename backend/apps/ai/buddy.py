@@ -48,8 +48,11 @@ class ClickBasicBuddy:
         if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
             return self._help()
 
-        from . import grocery_buddy, parcel_buddy, service_buddy
+        from . import event_buddy, grocery_buddy, parcel_buddy, service_buddy
 
+        if event_buddy.wants_event(text):
+            if (ev := event_buddy.reply(text, customer)) is not None:
+                return ev
         if parcel_buddy.wants_parcel(text):
             return parcel_buddy.reply(text, customer)
         if service_buddy.wants_service(text) and not grocery_buddy.REORDER.search(text):

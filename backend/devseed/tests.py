@@ -18,7 +18,14 @@ def seeded(db):
 def test_test_customer_has_real_related_history(seeded):
     assert seeded.user.email == "test.customer@click.local" and seeded.addresses.count() == 4
     assert seeded.orders.count() == 26 and seeded.bookings.count() >= 20 and seeded.support_tickets.count() == 20
-    assert seeded.wishlist_items.count() == 21 and seeded.cart.items.count() == 2  # incl. 1 saved professional
+    assert seeded.wishlist_items.count() == 22 and seeded.cart.items.count() == 2  # incl. 1 saved professional and 1 saved event team
+    # Click. Events: ratings only from completed bookings; one upcoming booking and one plan with a quote for the test customer.
+    from apps.eventhub.models import EventBooking, EventProvider, EventReview
+
+    assert EventProvider.objects.filter(is_listed=True).count() == 30
+    assert all(p.rating_count == EventReview.objects.filter(provider=p).count() for p in EventProvider.objects.all())
+    assert seeded.event_bookings.filter(status="completed").count() == 1 and seeded.event_bookings.filter(status="confirmed").count() == 1
+    assert seeded.event_plans.filter(status="planning", enquiries__quotes__status="pending").exists()
     statuses = set(seeded.orders.values_list("status", flat=True))
     assert {"delivered", "cancelled", "placed", "out_for_delivery"} <= statuses
     assert seeded.reward_transactions.count() == seeded.orders.filter(status="delivered").count()  # earned via the real rule

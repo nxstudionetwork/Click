@@ -25,7 +25,7 @@ describe('Explore', () => {
     const names = links.map((l) => l.querySelector('.xfeature__name')!.textContent!);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
     expect(names).toEqual(CLICK_FEATURES.map((f) => f.name));
-    for (const n of ['Activity', 'Buddy', 'Buzz', 'Food', 'Groceries', 'Live Shows', 'Offers', 'Rewards', 'Shopping', 'Showtime', 'Wallet']) expect(names).toContain(n);
+    for (const n of ['Activity', 'Buddy', 'Buzz', 'Food', 'Events', 'Groceries', 'Live Shows', 'Offers', 'Rewards', 'Shopping', 'Showtime', 'Wallet']) expect(names).toContain(n);
     const href = (n: string) => links[names.indexOf(n)]!.getAttribute('href');
     expect(href('Food')).toBe('/food');
     expect(href('Buzz')).toBe('/buzz');

@@ -8,7 +8,7 @@ import type { StoreType } from '@click/api';
 import type { IconName } from '../components/ui';
 
 export type ServiceStatus = 'live' | 'soon';
-export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers';
+export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers';
 
 export interface ClickService {
   id: string;
@@ -34,7 +34,8 @@ export const SERVICES: ClickService[] = [
     upcoming: ['Pickup and drop with saved places', 'Ride options with upfront fare estimates', 'Driver and vehicle details', 'Ride history and receipts'] },
   { id: 'parcels', name: 'Parcel', short: 'Parcel', tagline: 'Send, receive and store pickup across town', icon: 'parcel', path: '/parcels', status: 'live', theme: 'parcel' },
   { id: 'movies', name: 'Showtime', tagline: 'Cinema and live shows near you', icon: 'film', path: '/showtime', status: 'live', theme: 'movies' },
-  { id: 'events', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
+  { id: 'events', name: 'Events', tagline: 'Plan events, find teams and venues', icon: 'gift', path: '/events', status: 'live', theme: 'events' },
+  { id: 'liveshows', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
   { id: 'experiences', name: 'Experiences', tagline: 'Tours, classes and activities', icon: 'compass', path: '/experiences', status: 'soon', theme: 'movies',
     upcoming: ['Curated local experiences', 'Date and slot selection', 'Instant confirmation'] },
   { id: 'services', name: 'Services', short: 'Services', tagline: 'Plumbers, electricians, cleaners and more', icon: 'wrench', path: '/services', status: 'live', theme: 'services' },
@@ -73,7 +74,8 @@ const THEME_ROUTES: [RegExp, Theme][] = [
   [/^\/shopping/, 'shopping'],
   [/^\/(rides|ride)/, 'ride'],
   [/^\/(parcels|track)/, 'parcel'],
-  [/^\/(showtime|movies|events|shows|bookings|tickets|experiences)/, 'movies'],
+  [/^\/events/, 'events'],
+  [/^\/(showtime|movies|shows|bookings|tickets|experiences)/, 'movies'],
   [/^\/services/, 'services'],
   [/^\/rewards/, 'rewards'],
   [/^\/wallet/, 'wallet'],

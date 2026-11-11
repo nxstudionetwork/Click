@@ -24,6 +24,7 @@ import './styles/showtime.css';
 import './styles/groceries.css';
 import './styles/parcel.css';
 import './styles/pros.css';
+import './styles/events.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -38,7 +38,7 @@ class BuzzAction:
 @dataclass(frozen=True)
 class BuzzItem:
     id: str
-    kind: str  # "offer" | "event" | "trailer" | "store" | "product" (later: "post")
+    kind: str  # "offer" | "event" | "trailer" | "store" | "product" | "event_team" (later: "post")
     theme: str  # Click service theme, so the client can style it
     title: str
     body: str
@@ -142,11 +142,29 @@ def _grocery_items(limit):
             break
 
 
+def _event_team_items(limit):
+    """Click. Events: listed event teams and venues with a real package (featured first). Media only if they uploaded a cover."""
+    from apps.eventhub import engine as events
+
+    providers = events.listed().filter(packages__is_active=True).distinct().order_by("-is_featured", "-rating_average")
+    for p in providers[:limit]:
+        pkg = min((x for x in p.packages.all() if x.is_active), key=lambda x: x.price)
+        cover = events.cover_url(p)
+        services = " · ".join(s.name for s in list(p.services.all())[:3])
+        yield BuzzItem(
+            id=f"eventteam:{p.id}", kind="event_team", theme="events", title=events.name_of(p),
+            body=f"{pkg.name} {events.package_label(pkg).lower()}" + (f" · {services}" if services else ""),
+            tag="Venue" if p.kind == "venue" else ("Featured event team" if p.is_featured else p.get_kind_display()),
+            source=BuzzSource("Click. Events", "events"), media_url=cover, media_type="image" if cover else "",
+            action=BuzzAction("View packages", f"/events/providers/{p.id}"), published_at=p.created_at.isoformat(),
+        )
+
+
 def build_feed(limit: int = 12) -> list[dict]:
     """Interleave sources so the feed alternates between offers, shows and places."""
     limit = max(1, min(limit, MAX_ITEMS))
     per_source = limit
     sources = [list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
-               list(_grocery_items(per_source)), list(_store_items(per_source))]
+               list(_grocery_items(per_source)), list(_event_team_items(per_source)), list(_store_items(per_source))]
     mixed = [item for item in chain.from_iterable(zip_longest(*sources)) if item is not None]
     return [asdict(i) for i in mixed[:limit]]

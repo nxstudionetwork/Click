@@ -298,6 +298,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .professionals import seed_service_history
 
     seed_service_history(profile, log)
+    from .eventhub import seed_event_history
+
+    seed_event_history(profile, log)
     from .shop import seed_shop_history
 
     seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart

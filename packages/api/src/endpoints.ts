@@ -113,7 +113,7 @@ export const customerApi = (http: HttpClient) => ({
   },
   wishlist: {
     list: () => http.request<WishlistItem[]>('/customer/wishlist'),
-    add: (target: { storeId: string } | { productId: string } | { providerId: string }) =>
+    add: (target: { storeId: string } | { productId: string } | { providerId: string } | { eventProviderId: string } | { eventPackageId: string }) =>
       http.request<WishlistItem>('/customer/wishlist', { method: 'POST', body: target }),
     remove: (id: string) => http.request<void>(`/customer/wishlist/${id}`, { method: 'DELETE' }),
   },
@@ -135,7 +135,7 @@ export const customerApi = (http: HttpClient) => ({
   support: {
     list: () => http.request<Paginated<SupportTicket>>('/customer/support/tickets'),
     get: (id: string) => http.request<SupportTicket>(`/customer/support/tickets/${id}`),
-    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null; parcelId?: string | null; serviceBookingId?: string | null }) =>
+    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null; parcelId?: string | null; serviceBookingId?: string | null; eventBookingId?: string | null }) =>
       http.request<SupportTicket>('/customer/support/tickets', { method: 'POST', body: input }),
   },
   assistant: {

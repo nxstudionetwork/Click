@@ -20,12 +20,29 @@ class WishlistItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WishlistItem
-        fields = ["id", "kind", "store", "product", "provider", "created_at"]
+        fields = ["id", "kind", "store", "product", "provider", "event_provider", "event_package", "created_at"]
 
     provider = serializers.SerializerMethodField()
+    event_provider = serializers.SerializerMethodField()
+    event_package = serializers.SerializerMethodField()
 
     def get_kind(self, item) -> str:
-        return "store" if item.store_id else "product" if item.product_id else "provider"
+        return ("store" if item.store_id else "product" if item.product_id else "provider" if item.provider_id
+                else "event_provider" if item.event_provider_id else "event_package")
+
+    def get_event_provider(self, item):
+        if not item.event_provider_id:
+            return None
+        from apps.eventhub import engine
+
+        return engine.card(item.event_provider, request=self.context.get("request"))
+
+    def get_event_package(self, item):
+        if not item.event_package_id:
+            return None
+        from apps.eventhub import engine
+
+        return engine.package_out(item.event_package, with_provider=True, request=self.context.get("request"))
 
     def get_provider(self, item):
         if not item.provider_id:
@@ -39,17 +56,20 @@ class AddWishlistSerializer(serializers.Serializer):
     store_id = serializers.UUIDField(required=False)
     product_id = serializers.UUIDField(required=False)
     provider_id = serializers.UUIDField(required=False)
+    event_provider_id = serializers.UUIDField(required=False)
+    event_package_id = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
-        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id")) != 1:
-            raise serializers.ValidationError("Provide exactly one of storeId, productId or providerId.")
+        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id", "event_provider_id", "event_package_id")) != 1:
+            raise serializers.ValidationError("Provide exactly one of storeId, productId, providerId, eventProviderId or eventPackageId.")
         return attrs
 
 
 def _items(customer):
     return (
         WishlistItem.objects.filter(customer=customer)
-        .select_related("product__store", "product__category", "store", "provider__partner__profile", "provider__category")
+        .select_related("product__store", "product__category", "store", "provider__partner__profile", "provider__category",
+                        "event_provider__partner", "event_package__provider__partner")
         .prefetch_related("store__categories", "store__offers", "product__variants", "product__option_groups__options")
     )
 
@@ -70,6 +90,14 @@ class WishlistView(APIView):
             from apps.professionals.engine import listed
 
             target = {"provider": get_object_or_404(listed(), pk=provider_id)}
+        elif eid := s.validated_data.get("event_provider_id"):
+            from apps.eventhub.engine import listed as event_listed
+
+            target = {"event_provider": get_object_or_404(event_listed(), pk=eid)}
+        elif kid := s.validated_data.get("event_package_id"):
+            from apps.eventhub.models import EventPackage
+
+            target = {"event_package": get_object_or_404(EventPackage.objects.filter(is_active=True, provider__is_listed=True), pk=kid)}
         else:
             target = {"product": get_object_or_404(public_products(), pk=s.validated_data["product_id"])}
         item, created = WishlistItem.objects.get_or_create(customer=customer, **target)

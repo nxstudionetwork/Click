@@ -171,6 +171,8 @@
 [data-theme='movies'] { --c-theme: #e5294b; --c-theme-solid: #c81e3f; --c-theme-soft: rgb(229 41 75 / 11%); --c-theme-deep: #8a1230; --c-theme-tint: #ffc1cc; --c-theme-rgb: 229 41 75;
   --st-ink: #0b0a0f; --st-ink-2: #15121b; --st-ink-3: #201a27; --st-line: rgb(255 255 255 / 8%); --st-wine: #5b0f24; --st-violet: #3b1d5c;
   --hero-bg: radial-gradient(70% 90% at 90% 0%, rgb(229 41 75 / 38%) 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(91 33 182 / 28%) 0%, transparent 65%), linear-gradient(160deg, #1a0f18 0%, #0f0b12 55%, #08070b 100%); }
+[data-theme='events'] { --c-theme: #c084fc; --c-theme-solid: #9333ea; --c-theme-soft: rgb(192 132 252 / 13%); --c-theme-deep: #6b21a8; --c-theme-tint: #f0abfc; --c-theme-rgb: 192 132 252;
+  --hero-bg: radial-gradient(55% 80% at 88% 0%, rgb(251 191 36 / 18%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(217 70 239 / 24%) 0%, transparent 65%), linear-gradient(160deg, #1a1322 0%, #0f0b14 70%); }
 [data-theme='services'] { --c-theme: #2dd4bf; --c-theme-solid: #0f9f8e; --c-theme-soft: rgb(45 212 191 / 12%); --c-theme-deep: #0b6b60; --c-theme-tint: #99f6e4; --c-theme-rgb: 45 212 191;
   --hero-bg: radial-gradient(60% 80% at 90% 0%, rgb(251 191 136 / 22%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(45 212 191 / 22%) 0%, transparent 65%), linear-gradient(160deg, #1c1a18 0%, #121110 70%); }
 [data-theme='rewards'] { --c-theme: #f5a400; --c-theme-solid: #b97800; --c-theme-soft: rgb(251 191 36 / 16%); --c-theme-deep: #8a5a00; --c-theme-tint: #fde68a; --c-theme-rgb: 251 191 36;

@@ -298,6 +298,17 @@ TYPES: list[dict] = [
              "icon": "briefcase", "configuration": {"defaults": {"service_types": ["professional"]}}},
             {"slug": "event-service", "name": "Event Service", "description": "Event staff, decor and support.", "icon": "ticket",
              "configuration": {"defaults": {"service_types": ["event_staff"]}}},
+            # Click. Events partners (quote requests and event bookings in the "events" workspace).
+            {"slug": "event-planner", "name": "Event Planner", "description": "Plan and run complete events.", "icon": "gift",
+             "configuration": {"defaults": {"service_types": ["event_staff"]}, "field_labels": {"workforce_size": "Team size"}}},
+            {"slug": "event-decorator", "name": "Decorator", "description": "Event decoration, stage and setup.", "icon": "sparkle",
+             "configuration": {"defaults": {"service_types": ["event_staff"]}, "field_labels": {"workforce_size": "Team size"}}},
+            {"slug": "event-photographer", "name": "Photographer / Videographer", "description": "Event photos and films.", "icon": "camera",
+             "configuration": {"individual": True, "hide_fields": ["workforce_size"], "defaults": {"service_types": ["event_staff"]}}},
+            {"slug": "event-entertainer", "name": "DJ / Entertainer / Host", "description": "Music, hosting and entertainment.", "icon": "headphones",
+             "configuration": {"individual": True, "hide_fields": ["workforce_size"], "defaults": {"service_types": ["event_staff"]}}},
+            {"slug": "event-makeup", "name": "Makeup & Mehendi Artist", "description": "Bridal and party makeup, mehendi.", "icon": "beauty",
+             "configuration": {"individual": True, "hide_fields": ["workforce_size"], "defaults": {"service_types": ["event_staff"]}}},
         ],
     },
     {
@@ -527,6 +538,14 @@ CATEGORY_HOME: dict[str, dict] = {
                           "You’ll stop receiving delivery requests until you go available again."),
         "metrics": ["deliveries", "completed", "earnings", "pending"], "quick_actions": ["requests", "active", "earnings"],
         "earnings_label": "Today’s deliveries", "performance": []},
+    # Click. Events: event teams, specialists and banquet venues get quote requests and event bookings.
+    **{slug: {"workspace": "events", "location": "business", "work_noun": "event",
+              "status": _status("Accepting requests", "Not accepting", "Accept requests", "Pause requests",
+                                "Customers planning events can ask you for quotes.", "You won’t get new quote requests.",
+                                "You won’t get new quote requests until you accept them again. Existing bookings stay confirmed."),
+              "metrics": ["requests", "upcoming", "earnings", "rating"], "quick_actions": ["requests", "active", "earnings"],
+              "earnings_label": "Completed today", "performance": []}
+       for slug in ("event-service", "event-planner", "event-decorator", "event-photographer", "event-entertainer", "event-makeup", "venue")},
     **{slug: {"workspace": "upcoming", "location": "business", "upcoming": {
         "service": "Click. Fleet", "what": "your vehicles, drivers, trips and fleet earnings"}}
        for slug in ("fleet-operator", "rental-vehicle", "transport-provider")},

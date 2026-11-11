@@ -10,4 +10,5 @@ export * from './showtime-endpoints';
 export * from './groceries-endpoints';
 export * from './parcels-endpoints';
 export * from './services-market';
+export * from './eventhub';
 export * from './session';

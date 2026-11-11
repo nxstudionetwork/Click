@@ -471,11 +471,14 @@ export interface ReorderResult {
 // --- Engagement -------------------------------------------------------------
 export interface WishlistItem {
   id: UUID;
-  kind: 'store' | 'product' | 'provider';
+  kind: 'store' | 'product' | 'provider' | 'event_provider' | 'event_package';
   store: Store | null;
   product: ProductWithStore | null;
   /** A saved Services professional ("My Professionals"). */
   provider?: import('./services-market').ProCard | null;
+  /** A saved Click. Events team / venue, or package. */
+  eventProvider?: import('./eventhub').EventProviderCard | null;
+  eventPackage?: import('./eventhub').EventPackageInfo | null;
   createdAt: ISODateTime;
 }
 
@@ -527,6 +530,9 @@ export interface SupportTicket {
   parcelNumber?: string | null;
   /** Set when the request is about a Click. Services booking. */
   serviceBookingId?: UUID | null;
+  /** Set when the request is about a Click. Events booking. */
+  eventBookingId?: UUID | null;
+  eventBookingNumber?: string | null;
   serviceBookingNumber?: string | null;
   createdAt: ISODateTime;
   resolvedAt: ISODateTime | null;
@@ -578,8 +584,8 @@ export interface AssistantCapabilities {
 /** One actionable Click. Buzz instant. Built from real Click records; media is never generated. */
 export interface BuzzItem {
   id: string;
-  kind: 'offer' | 'event' | 'trailer' | 'store' | 'product' | 'post';
-  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'ride' | 'parcel';
+  kind: 'offer' | 'event' | 'trailer' | 'store' | 'product' | 'event_team' | 'post';
+  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'events' | 'ride' | 'parcel';
   title: string;
   body: string;
   tag: string;

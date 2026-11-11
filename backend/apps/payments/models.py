@@ -18,6 +18,21 @@ class PaymentMethod(models.TextChoices):
     CASH = "cash", "Cash to driver / delivery partner"
 
 
+PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking")
+
+
+def _exactly_one(fields) -> Q:
+    """Exactly one of `fields` is set (new payable entities add a column and a name here, and bump the constraint)."""
+    out = Q()
+    for f in fields:
+        q = Q(**{f"{f}__isnull": False})
+        for o in fields:
+            if o != f:
+                q &= Q(**{f"{o}__isnull": True})
+        out |= q
+    return out
+
+
 class Payment(BaseModel):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -32,6 +47,7 @@ class Payment(BaseModel):
     ride = models.ForeignKey("rides.Ride", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     parcel = models.ForeignKey("parcels.ParcelOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     service_booking = models.ForeignKey("professionals.ServiceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    event_booking = models.ForeignKey("eventhub.EventBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     method = models.CharField(max_length=30, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -44,13 +60,6 @@ class Payment(BaseModel):
         indexes = [models.Index(fields=["provider", "provider_reference"], name="payments_provider_ref_idx")]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gte=0), name="payments_amount_non_negative"),
-            # Exactly one target: an order, a show booking, a ride, a parcel or a service booking.
-            models.CheckConstraint(
-                condition=(Q(order__isnull=False) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=False) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=False) & Q(parcel__isnull=True) & Q(service_booking__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=False) & Q(service_booking__isnull=True))
-                | (Q(order__isnull=True) & Q(booking__isnull=True) & Q(ride__isnull=True) & Q(parcel__isnull=True) & Q(service_booking__isnull=False)),
-                name="payments_exactly_one_target_v4",
-            ),
+            # Exactly one target: an order, a show booking, a ride, a parcel, a service booking or an event booking.
+            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v5"),
         ]

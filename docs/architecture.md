@@ -304,6 +304,41 @@ wishlists (My Professionals), support tickets, Activity and the Partner App work
   Click.'s team; the Partner App Home for service categories uses the `services` workspace (requests, active jobs,
   quote, start, complete, cash received).
 
+## Events (plan events, find teams and venues)
+
+Customer-facing name: **Events** (`/events`, `/events/plan`, `/events/plans/:id`, `/events/teams`, `/events/venues`,
+`/events/providers/:id`, `/events/book`, `/events/bookings/:id`, `/events/mine`), registered in Explore through the central
+service registry (`config/services.ts`, id `events`, theme `events`). API: `/api/v1/eventhub/...` (public),
+`/api/v1/customer/eventhub/...`, `/api/v1/partner/eventhub/...` — `/api/v1/events` stays Click. Showtime's.
+
+- **Attending events is Showtime.** Events lists Showtime's live events with bookable shows (venue, date, lowest ticket
+  price, distance) and links to them; tickets, seats and payments stay in Showtime. The "Live Shows" Explore entry stays.
+- **Registries (admin / Business OS):** `EventType` (group, icon, accent, synonyms, suggested services, checklist template,
+  shown in the planner) and `EventService` (Decoration, Catering, Photography…).
+- **Providers:** `EventProvider` is a Partner in an event category — event team, specialist or venue (`VenueDetails`:
+  capacity, spaces, amenities, rules, parking, catering policy, hours). Listing/featuring is a Business OS decision. The
+  provider's own logo/cover/portfolio uploads only (monogram otherwise); service area (base + radius), guest range, notice,
+  events per day, FAQs and cancellation terms. Ratings, events completed and "usually quotes within" (median of 3+ answered
+  requests) come only from bookings, reviews and enquiries. Availability on a date = blocked dates + notice + bookings.
+- **Packages:** `EventPackage` (+ `PackageAddon`): fixed or per-guest price, guest range, duration, inclusions, terms.
+- **Plan → quote → book:** `EventPlan` (type, date or flexible, a saved address, guests, optional budget, services,
+  requirements, reference photos, checklist). Matching teams fit the services, area, guests, event type and date. A plan
+  goes to up to 5 providers at a time (`Enquiry`); providers answer in the Partner App `events` workspace (text quote) or
+  the itemised quote endpoint (`Quote`, versioned, optional items, validity, terms); the customer accepts (→ booking),
+  rejects, asks for changes (→ revised quote) or messages (`Message`, kept on Click., no phone numbers).
+- **Booking & payment:** `EventBooking` from the customer's quote or a package, re-priced on the server and matched
+  against the total they saw (`price_changed`), idempotent, provider row-locked so a day isn't double-booked. Paid through
+  the shared Payment/Click. Wallet now (confirmed) or held and paid later (released automatically 2 days before the event).
+  Lifecycle: payment pending → confirmed → team preparing → in progress (event day only) → completed, or cancelled; each
+  step has a `StatusEvent` and a notification. `Milestone`s (services confirmed, guest count, payment, event day) are ticked
+  by the provider; the plan checklist ticks itself when a booking covers a service.
+- **Cancellation & refunds:** by the provider's terms — full refund to the wallet up to N days before, a % kept after;
+  within 2 days, support. **Reviews:** completed bookings only, once, with quality/communication/value; shown as verified.
+- **Across Click.:** favourites are shared Wishlist rows (event teams/venues and packages); help tickets link to the
+  booking (`SupportTicket.event_booking`); Activity lists event bookings; Buzz shows listed teams/venues with a real
+  package (deep link to the profile); Buddy turns "plan a birthday for 30 next Saturday" into real matches, packages,
+  availability and a checklist, pre-fills the planner and never sends, books or pays.
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching
@@ -347,7 +382,7 @@ wishlists (My Professionals), support tickets, Activity and the Partner App work
   ends the Click. session server-side and clears all cached customer data). Account deletion is not offered: there is
   no backend deletion workflow yet.
 - **Activity (`/activity`):** a timeline read from the source domains (orders, bookings, rides), filterable by Rides,
-  Food, Groceries, Shopping, Bookings, Parcels and Services.
+  Food, Groceries, Shopping, Bookings, Parcels, Services and Events.
 - **Ride (`/rides`, `/rides/:id`):** map first, then pickup (starts at the active location), up to 2 stops and the
   drop, quick chips (Home, Work, Recent, Schedule, For someone), ride options with server fares and pickup ETAs,
   offers, payment (cash or wallet), then Confirm. The trip page shows status, the driver card, safety tools, the

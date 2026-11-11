@@ -98,3 +98,6 @@ def seed_partners(log) -> None:
     from .professionals import seed_professionals
 
     seed_professionals(log)  # Click. Services catalog and professionals
+    from .eventhub import seed_eventhub
+
+    seed_eventhub(log)  # Click. Events registries, event teams, specialists and venues

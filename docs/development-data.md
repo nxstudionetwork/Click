@@ -135,3 +135,12 @@ most with an approved verification, weekly hours, their own prices and 4 offers 
 (run from `devseed/customer.py`) adds 129 paid, reviewed and cancelled jobs from dev customers so ratings, jobs
 completed and rates are real aggregates; the test customer has 2 paid bookings (one reviewed), 1 cancelled and
 Ramesh Kumar saved in My Professionals.
+
+Events (`devseed/eventhub.py`, run from `devseed/partners.py`): 25 event types, 21 services, 20 fictional event teams and
+specialists (planners, decorators, photographers, DJs, a band, an anchor, makeup, caterers, staff, transport, invitations,
+cakes) and 10 fictional venues with capacities, amenities, rules and 47 packages. None has a logo, cover or portfolio photo.
+A few upcoming dates are blocked so availability differs. `seed_event_history` (from `devseed/customer.py`) adds completed,
+reviewed bookings from the dev viewers so ratings and counts are real aggregates; the test customer has one completed and
+reviewed birthday, one upcoming confirmed booking, one saved event team and a 25th-anniversary plan with one quote waiting
+and one request not answered yet. (`devseed/events.py` remains the Showtime movies/live-events seed.)
+

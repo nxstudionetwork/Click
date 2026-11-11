@@ -3,8 +3,8 @@ import type { BuzzItem } from '@click/api';
 import { Icon, type IconName } from '../../components/ui';
 import { servicePhoto } from '../../config/media';
 
-const KIND_ICON: Record<BuzzItem['kind'], IconName> = { offer: 'tag', event: 'film', trailer: 'play', store: 'store', product: 'bag', post: 'play' };
-const THEME_ICON: Partial<Record<BuzzItem['theme'], IconName>> = { food: 'food', grocery: 'grocery', shopping: 'shop', movies: 'film', services: 'wrench', ride: 'ride', parcel: 'parcel' };
+const KIND_ICON: Record<BuzzItem['kind'], IconName> = { offer: 'tag', event: 'film', trailer: 'play', store: 'store', product: 'bag', event_team: 'gift', post: 'play' };
+const THEME_ICON: Partial<Record<BuzzItem['theme'], IconName>> = { food: 'food', grocery: 'grocery', shopping: 'shop', movies: 'film', services: 'wrench', events: 'gift', ride: 'ride', parcel: 'parcel' };
 
 /**
  * Media for an instant: the item's own image/video when it has one. Without it, a show gets the cinema photograph

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { EmptyState, ErrorState, Skeleton } from '../components/ui';
+import { PackageCardView, ProviderCardView } from '../features/events/parts';
 import { ProCardView } from '../features/pros/parts';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
@@ -12,6 +13,8 @@ export function WishlistPage() {
   const stores = wishlist.data.filter((i) => i.store).map((i) => i.store!);
   const products = wishlist.data.filter((i) => i.product).map((i) => i.product!);
   const pros = wishlist.data.filter((i) => i.provider).map((i) => ({ ...i.provider!, favoriteId: i.id }));
+  const evTeams = wishlist.data.filter((i) => i.eventProvider).map((i) => ({ ...i.eventProvider!, favoriteId: i.id }));
+  const evPkgs = wishlist.data.filter((i) => i.eventPackage).map((i) => ({ ...i.eventPackage!, favoriteId: i.id }));
 
   return (
     <div className="stack">
@@ -36,6 +39,13 @@ export function WishlistPage() {
             <section className="stack sv-scope" data-theme="services">
               <h2>My Professionals</h2>
               <div className="sv-prolist">{pros.map((p) => <ProCardView key={p.id} p={p} wide />)}</div>
+            </section>
+          )}
+          {evTeams.length + evPkgs.length > 0 && (
+            <section className="stack ev-scope" data-theme="events">
+              <h2>Event teams, venues & packages</h2>
+              <div className="ev-grid">{evTeams.map((p) => <ProviderCardView key={p.id} p={p} />)}
+                {evPkgs.map((x) => <PackageCardView key={x.id} pkg={x} showProvider action={<Link to={`/events/book?package=${x.id}`} className="ev-btn ev-btn--sm">Book</Link>} />)}</div>
             </section>
           )}
         </>

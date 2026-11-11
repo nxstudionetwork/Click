@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "apps.groceries",
     "apps.parcels",
     "apps.professionals",
+    "apps.eventhub",
 ]
 
 MIDDLEWARE = [
