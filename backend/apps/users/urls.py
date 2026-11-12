@@ -1,10 +1,11 @@
 from django.urls import path
 
-from apps.identity.views import IdentityExchangeView, IdentityPartnerSignupView, IdentitySignupView
+from apps.identity.views import IdentityExchangeView, OtpRequestView, IdentityPartnerSignupView, IdentitySignupView
 
 from . import views
 
 urlpatterns = [
+    path("auth/otp/request", OtpRequestView.as_view(), name="auth-otp-request"),
     path("auth/identity/exchange", IdentityExchangeView.as_view(), name="auth-identity-exchange"),
     path("auth/identity/signup", IdentitySignupView.as_view(), name="auth-identity-signup"),
     path("auth/identity/partner-signup", IdentityPartnerSignupView.as_view(), name="auth-identity-partner-signup"),

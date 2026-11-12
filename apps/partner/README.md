@@ -9,7 +9,7 @@ React + TypeScript (Vite), port **5174**. Uses the shared `@click/api` (contract
 ## Phase 1 flow (implemented)
 
 ```
-Splash → Login (mobile number) → Firebase OTP → Verify
+Splash → Login (mobile number) → Click OTP → Verify
        → existing partner: Partner Home
        → new partner: Partner type + category → Profile (category-specific) → Location → Review
                       → Partner ID (CLK-PT-000001) → Partner card (Save / Share) → Partner Home
@@ -17,7 +17,7 @@ Splash → Login (mobile number) → Firebase OTP → Verify
 
 | Route                    | Screen |
 |--------------------------|--------|
-| `/login`, `/verify`      | Phone entry and OTP (Firebase Phone Auth, invisible reCAPTCHA) |
+| `/login`, `/verify`      | Phone entry and OTP (Click OTP from the backend) |
 | `/onboarding/category`   | What do you provide through Click? (types and categories from the API) |
 | `/onboarding/profile`    | Basic details + fields defined for the chosen category |
 | `/onboarding/location`   | Manual address, optional "use my current location", service area |
@@ -34,10 +34,9 @@ Routes are UX only; the API enforces sign-in and ownership on every request.
 
 The Partner App uses the same identity layer as the Customer App (see `docs/authentication.md`):
 
-1. `@click/phone-auth` sends and checks the SMS code with Firebase Phone Authentication (lazy-loaded on the sign-in
-   path only), returns the Firebase ID token, and signs out of Firebase.
-2. `POST /api/v1/auth/identity/exchange {provider: "firebase", token}`: Django verifies the token and resolves the
-   Click user by Firebase UID (or by an already-verified phone, so a customer who becomes a partner is one person).
+1. `@click/phone-auth` asks the backend to text a code (`POST /api/v1/auth/otp/request`).
+2. `POST /api/v1/auth/identity/exchange {provider: "phone_otp", token: "<challenge>.<code>"}`: Django verifies the code and resolves the
+   Click user by verified phone (or by an already-verified phone, so a customer who becomes a partner is one person).
 3. A new phone gets `{status: "profile_required", signupToken}`; the app calls
    `POST /api/v1/auth/identity/partner-signup {signupToken}`, which creates a phone-only Click user.
 4. Either way the app now has the normal Click session (in-memory access token + httpOnly refresh cookie), and
@@ -50,14 +49,7 @@ credential, so no new code is needed.
 
 ## Configuration
 
-Copy `.env.example` to `.env.local` and fill in the Firebase **web app** values (public identifiers, not secrets,
-the same as the Customer App's). The backend's `FIREBASE_PROJECT_ID` defaults to `clickstartup26`. No service-account
-key is used anywhere.
-
-In Firebase console: enable **Authentication → Sign-in method → Phone**, and add your domains under
-**Authentication → Settings → Authorized domains** (`localhost` is included by default). For testing without real SMS,
-add test phone numbers there, or use the Auth Emulator exactly as described in `docs/authentication.md`
-(run `npm run dev:partner` for this app).
+No client-side auth configuration is needed; the backend's `CLICK_SMS_PROVIDER` decides how codes are sent.
 
 ## Categories and visuals
 

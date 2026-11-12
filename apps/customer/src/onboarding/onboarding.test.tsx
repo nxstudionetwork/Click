@@ -1,3 +1,4 @@
+import { ApiError } from '@click/api';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
@@ -90,18 +91,18 @@ describe('Verify', () => {
   });
 
   it('returning customer: verified token is exchanged and the session starts', async () => {
-    pending(vi.fn().mockResolvedValue({ provider: 'firebase', token: 'id-token' }));
+    pending(vi.fn().mockResolvedValue({ provider: 'phone_otp', token: 'challenge.123456' }));
     exchange.mockResolvedValue({ status: 'authenticated', user: { id: 'u1' }, access: 'a' });
     flow('/login/verify');
     await userEvent.click(screen.getByLabelText('Digit 1 of 6'));
     await userEvent.paste('246810');
     expect(await screen.findByRole('heading', { name: 'Home page' }, { timeout: 3000 })).toBeInTheDocument();
-    expect(exchange).toHaveBeenCalledWith({ provider: 'firebase', token: 'id-token' });
+    expect(exchange).toHaveBeenCalledWith({ provider: 'phone_otp', token: 'challenge.123456' });
     expect(startSession).toHaveBeenCalled();
   });
 
   it('new customer goes to profile setup; backend failure is explained', async () => {
-    pending(vi.fn().mockResolvedValue({ provider: 'firebase', token: 't' }));
+    pending(vi.fn().mockResolvedValue({ provider: 'phone_otp', token: 't' }));
     exchange.mockResolvedValueOnce({ status: 'profile_required', signupToken: 'st', phoneNumber: '+919876543210', expiresIn: 1200 });
     flow('/login/verify');
     await userEvent.click(screen.getByLabelText('Digit 1 of 6'));
@@ -111,12 +112,21 @@ describe('Verify', () => {
   });
 
   it('backend failure after OTP is explained', async () => {
-    pending(vi.fn().mockResolvedValue({ provider: 'firebase', token: 't' }));
+    pending(vi.fn().mockResolvedValue({ provider: 'phone_otp', token: 't' }));
     exchange.mockRejectedValue(new Error('boom'));
     flow('/login/verify');
     await userEvent.click(screen.getByLabelText('Digit 1 of 6'));
     await userEvent.paste('246810');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Your number is verified, but we couldn’t sign you in');
+    expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t sign you in');
+  });
+
+  it('a wrong code reported by the backend is shown as is', async () => {
+    pending(vi.fn().mockResolvedValue({ provider: 'phone_otp', token: 't' }));
+    exchange.mockRejectedValue(new ApiError(401, { code: 'invalid_code', message: 'That code isn’t correct. Please try again.' }));
+    flow('/login/verify');
+    await userEvent.click(screen.getByLabelText('Digit 1 of 6'));
+    await userEvent.paste('246810');
+    expect(await screen.findByRole('alert')).toHaveTextContent('That code isn’t correct');
   });
 });
 

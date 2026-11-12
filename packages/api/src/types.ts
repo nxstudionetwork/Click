@@ -30,7 +30,7 @@ export type Role = 'customer' | 'partner' | 'staff';
 
 export interface User {
   id: UUID;
-  /** Null for phone-only identities (Click Partner signs in with a Firebase-verified phone). */
+  /** Null for phone-only identities (Click Partner signs in with an OTP-verified phone). */
   email: string | null;
   fullName: string;
   phone: string;

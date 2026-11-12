@@ -27,12 +27,12 @@ python manage.py seed_dev_data --catalog-only
 | Name | Click Test User |
 | Click Customer ID | `CLK-CS-TEST001` |
 | Email | `test.customer@click.local` (the reserved `.local` domain can't be a real inbox) |
-| Phone (verified) | `+1 650-555-0101` (US 555-01xx numbers are reserved for fiction); add it as a Firebase test phone number (see docs/authentication.md) |
+| Phone (verified) | `+1 650-555-0101` (US 555-01xx numbers are reserved for fiction) |
 | Password (dev only) | `ClickDev@2026` |
 
 **Ways to sign in:**
-1. **Phone OTP (the real flow):** sign in with `+1 650 555 0101`, using the code you configured for that test
-   number in Firebase Console.
+1. **Phone OTP (the real flow):** choose the US code and enter `650 555 0101`. With `CLICK_SMS_PROVIDER=console`
+   (the development default) the 6-digit code is printed in the API terminal.
 2. **One click (development builds only):** on the sign-in screen, the dashed **Development mode** box has
    **Login as Test Customer**.
 
@@ -41,8 +41,8 @@ python manage.py seed_dev_data --catalog-only
   otherwise) and returns 404 in production.
 - **Frontend:** the panel is behind `import.meta.env.DEV`, so Vite removes it from production builds.
 
-**OTP:** Click signs customers in with Firebase Phone Auth. There is no fake OTP in Click's code: the test code
-lives in Firebase Console and only works for the test number.
+**OTP:** Click generates and checks the code itself. In development it is printed in the API terminal instead of
+being texted; production stays unavailable until an SMS provider is configured. There is no fixed or bypass code.
 
 ## What gets seeded
 

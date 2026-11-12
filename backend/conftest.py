@@ -9,6 +9,36 @@ from apps.stores.models import Store, StoreType
 from apps.users.models import User
 
 
+SMS_OUTBOX: list[tuple[str, str]] = []
+
+
+class TestSmsSender:
+    """Tests only: keeps texts in memory instead of sending them."""
+
+    name = "test"
+
+    def send(self, phone, text):
+        SMS_OUTBOX.append((phone, text))
+
+
+@pytest.fixture(autouse=True)
+def _sms(settings):
+    settings.CLICK_SMS_PROVIDER = "conftest.TestSmsSender"
+    settings.CLICK_OTP_RESEND_SECONDS, settings.CLICK_OTP_MAX_PER_HOUR, settings.CLICK_OTP_MAX_PER_IP_HOUR = 0, 100, 1000
+    SMS_OUTBOX.clear()
+    yield
+
+
+def otp_credential(api, phone, *, wrong=False, **headers):
+    """Request a code for `phone` and return the exchange credential "<challenge>.<code>" (a wrong code if asked)."""
+    r = api.post("/api/v1/auth/otp/request", {"phone": phone}, **headers)
+    assert r.status_code == 201, r.content
+    code = SMS_OUTBOX[-1][1][:6]
+    if wrong:
+        code = f"{(int(code) + 1) % 10 ** 6:06d}"
+    return f"{r.json()['challengeId']}.{code}"
+
+
 @pytest.fixture
 def api():
     return APIClient()

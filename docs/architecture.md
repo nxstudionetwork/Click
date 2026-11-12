@@ -5,7 +5,7 @@
 | Responsibility          | Location                                | Notes |
 |-------------------------|-----------------------------------------|-------|
 | Customer App            | `apps/customer`                         | React + TypeScript (Vite) |
-| Partner App             | `apps/partner`                          | React + TypeScript (Vite); Firebase phone sign-in |
+| Partner App             | `apps/partner`                          | React + TypeScript (Vite); Click phone OTP sign-in |
 | Business OS             | `apps/business-os`                      | Phase 6 (internal) |
 | Shared code             | `packages/api`, `packages/ui`, `packages/phone-auth` | `@click/api`: contract, HTTP + session client; `@click/ui`: primitives + logo; `@click/phone-auth`: phone OTP adapter |
 | Backend                 | `backend/`                              | Django + DRF, one shared API |
@@ -45,7 +45,7 @@ their lifecycles differ.
   - Rides: `customer/rides/places?q=`, `customer/rides/quote` (POST trip → options with fares and pickup ETAs),
     `customer/rides` (GET list, POST book; idempotent), `customer/rides/<id>`, `/cancel`, `/rating`, `/safety`.
   - `stores` also accepts `veg=true`, `min_rating`, `offers=true`, `max_price` and `sort=eta|price_low|price_high`.
-- **Partner sign-in:** the shared `auth/identity/exchange` (Firebase ID token verified server-side), then
+- **Partner sign-in:** Click phone OTP and the shared `auth/identity/exchange` (code verified server-side), then
   `auth/identity/partner-signup` for a newly verified phone (creates a phone-only Click account)
 - **Partner:** `partner/categories` (public catalogue), `partner/me`, `partner/onboarding/{category,profile,location,submit}`
   - Drivers (transport partners): `partner/rides/offers`, `partner/rides/<id>/accept`, `partner/rides/<id>/decline`,
@@ -588,10 +588,10 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
 
 ## Click Partner identity
 
-- **Phone identity:** the same identity layer as customers (`apps/identity`, see `docs/authentication.md`): Firebase
-  verifies the phone, Django verifies the ID token, and `ExternalIdentity(provider, subject=<Firebase UID>)` links it to
+- **Phone identity:** the same identity layer as customers (`apps/identity`, see `docs/authentication.md`): Click's
+  OTP verifies the phone and `ExternalIdentity(provider="phone_otp", subject=<E.164 phone>)` links it to
   one Click user. A new phone gets a phone-only user (no email or password); a phone already verified on a customer
-  account maps to that same person, so one human is never two users. No Firebase service-account key is used.
+  account maps to that same person, so one human is never two users.
 - **Partner model:** `PartnerType` → `PartnerCategory` (catalogue with JSON configuration) · `Partner` (UUID PK,
   public `partner_code`) · `PartnerMembership` (user ↔ partner, owner today, staff later; one owned partner per user) ·
   `PartnerProfile` (contact + category-specific `details`) · `PartnerAddress` · `PartnerVerification` ·

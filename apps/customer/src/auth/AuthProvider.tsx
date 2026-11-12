@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: async (email, password) => apply(await api.auth.login({ email, password })),
     register: async (input) => apply(await api.auth.register(input)),
     // Ends the Click. session on the server (revokes the refresh cookie) and drops every cached customer
-    // record from memory. Firebase keeps no session in the app: phone sign-in signs out of it right after
+    // record from memory. Phone OTP keeps no session of its own: right after
     // verification. The account itself is untouched; this is not deletion.
     logout: async () => {
       await api.auth.logout().catch(() => undefined);

@@ -18,7 +18,7 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
-  /** Exchange a phone-OTP provider credential (e.g. Firebase ID token) for a Click session or a signup token. */
+  /** Exchange a verified phone credential (Click OTP: "<challenge>.<code>") for a Click session or a signup token. */
   exchangeIdentity: (input: { provider: string; token: string }) =>
     http.request<IdentityExchangeResult>('/auth/identity/exchange', { method: 'POST', body: input, auth: false }),
   /** Click Partner: create the phone-only Click account for a newly verified phone (token from exchangeIdentity). */

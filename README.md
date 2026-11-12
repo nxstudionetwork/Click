@@ -28,7 +28,7 @@ apps/
 packages/
   api/             @click/api: shared typed API contract, HTTP client and session client for all apps
   ui/              @click/ui: shared UI primitives and the Click logo (each app supplies its own tokens)
-  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Firebase adapter) for every app
+  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Click backend OTP) for every app
 backend/           Django + DRF shared API (PostgreSQL)
 docs/              Architecture notes (see docs/architecture.md)
 infrastructure/    Local dev infrastructure (Postgres via docker compose)
@@ -88,19 +88,18 @@ python manage.py runserver
 # Frontend (http://localhost:5173, proxies /api to Django)
 npm install
 npm run dev:customer
-npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md for Firebase setup)
+npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md)
 ```
 
 ## Customer sign-in
 
-Phone OTP via Firebase Phone Auth, verified by the Click backend, which issues Click's own session.
-Setup and provider swapping: [docs/authentication.md](docs/authentication.md). Put the Firebase web config in
-`apps/customer/.env.local` (see `apps/customer/.env.example`).
+Phone OTP run by the Click backend (code generated, texted through `CLICK_SMS_PROVIDER`, verified, then Click's own
+session). In development the code is printed in the API terminal. Adding the SMS provider: [docs/authentication.md](docs/authentication.md).
 
 ## Development test login
 
 After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
-with the Firebase test number `+1 650 555 0101` (see docs). Details: [docs/development-data.md](docs/development-data.md).
+with `+1 650 555 0101` and the code printed in the API terminal. Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

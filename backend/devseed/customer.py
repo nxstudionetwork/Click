@@ -34,8 +34,8 @@ from . import locality_point
 TEST_CUSTOMER = {
     "email": "test.customer@click.local",  # reserved .local domain: can never be a real inbox
     "full_name": "Click Test User",
-    # US 555-01xx numbers are reserved for fiction. Add this number + a code of your choice as a
-    # *test phone number* in Firebase Console → Authentication → Sign-in method → Phone.
+    # US 555-01xx numbers are reserved for fiction. In development, request a code for this number on the
+    # sign-in screen; the code is printed in the API terminal (CLICK_SMS_PROVIDER=console).
     "phone": "+16505550101",
     "customer_code": "CLK-CS-TEST001",
     "password": "ClickDev@2026",  # development-only password; also usable via the normal login form

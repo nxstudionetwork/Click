@@ -236,16 +236,19 @@ CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
 CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
 
 # --- Customer identity ------------------------------------------------
-# Phone sign-in is verified by a pluggable identity provider; Click then issues its own session.
-# To change provider later: add a verifier in apps/identity and point this mapping at it.
+# Phone sign-in: Click's own OTP (apps/identity/otp.py) proves the phone; Click then issues its own session.
+# Another identity provider can be added as a verifier here without changing the app's screens.
 CLICK_IDENTITY_PROVIDERS = {
-    "firebase": "apps.identity.firebase.FirebaseIdTokenVerifier",
+    "phone_otp": "apps.identity.otp.PhoneOtpVerifier",
 }
-# Firebase project whose ID tokens are accepted (public identifier, not a secret). No service-account key is needed:
-# tokens are verified against Google's public certificates.
-FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "clickstartup26")
-# Local Firebase Auth Emulator (e.g. "127.0.0.1:9099"). Honoured ONLY when DEBUG is on.
-FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") if DEBUG else ""
+# Who delivers the code: "" = none (sign-in unavailable until the SMS provider is configured), "console" = development
+# only (code printed in the API log), or a dotted path to your SMS sender class (see apps/identity/sms.py).
+CLICK_SMS_PROVIDER = os.environ.get("CLICK_SMS_PROVIDER", "console" if (DEBUG or TESTING) else "")
+CLICK_OTP_TTL_SECONDS = int(os.environ.get("CLICK_OTP_TTL_SECONDS", "300"))
+CLICK_OTP_RESEND_SECONDS = int(os.environ.get("CLICK_OTP_RESEND_SECONDS", "30"))
+CLICK_OTP_MAX_ATTEMPTS = int(os.environ.get("CLICK_OTP_MAX_ATTEMPTS", "5"))
+CLICK_OTP_MAX_PER_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_HOUR", "5"))
+CLICK_OTP_MAX_PER_IP_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_IP_HOUR", "30"))
 # Legacy email/password endpoints: development/test accounts only. Customers sign in with phone OTP.
 CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")

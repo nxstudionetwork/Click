@@ -51,7 +51,7 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
     setStatus(s ? 'signed_in' : 'signed_out');
   }, []);
 
-  // Restore from the Click session cookie. Firebase is only used during OTP; it keeps no session.
+  // Restore from the Click session cookie. Phone OTP keeps no session of its own.
   useEffect(() => {
     let cancelled = false;
     (async () => {
