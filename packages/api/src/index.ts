@@ -12,5 +12,7 @@ export * from './parcels-endpoints';
 export * from './services-market';
 export * from './eventhub';
 export * from './hotels';
+export * from './travel';
+export * from './experiences';
 export * from './buddy';
 export * from './session';

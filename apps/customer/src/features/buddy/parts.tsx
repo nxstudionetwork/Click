@@ -59,6 +59,37 @@ function Cards({ cards }: { cards: BuddyCard[] }) {
             </Link>
           );
         }
+        case 'journey': {
+          const j = c.journey;
+          const t = (x: string) => new Date(x).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+          return (
+            <Link key={i} to={`/travel/journey/${j.journeyId}/${j.fromStopId}/${j.toStopId}`} className="bd-hotel">
+              <span className="bd-kicker">{j.mode} · {j.operator} {j.number}</span>
+              <strong>{t(j.departsAt)} {j.from} → {t(j.arrivesAt)} {j.to}</strong>
+              <span className="small">{Math.floor(j.durationMinutes / 60)}h {j.durationMinutes % 60}m{j.mode === 'flight' ? ` · ${j.stops ? `${j.stops} stop` : 'non-stop'}` : ''} · {j.class}</span>
+              {j.lowest && <span className="bd-hotel__price"><strong>{formatMoney(j.lowest)}</strong><span className="small">per person incl. GST</span></span>}
+            </Link>
+          );
+        }
+        case 'attraction': {
+          const a = c.attraction;
+          return (
+            <Link key={i} to={`/bookings/places/${a.slug}`} className="bd-hotel">
+              <span className="bd-kicker">{a.kindLabel} · {a.city}</span><strong>{a.name}</strong>
+              <span className="small">{a.bookable ? `${a.bookingTypes.join(', ') || 'Tickets'}${a.fromPrice != null ? ` · ${Number(a.fromPrice) ? `from ${formatMoney(a.fromPrice)}` : 'free'}` : ''}` : 'Information only — booked through official channels'}</span>
+              {a.rating && <span className="small bd-muted">★ {a.rating.average} ({a.rating.count} verified visits)</span>}
+            </Link>
+          );
+        }
+        case 'reservation': {
+          const r = c.reservation;
+          return (
+            <Link key={i} to={r.link} className="bd-hotel bd-wide">
+              <span className="bd-kicker">{r.kindLabel} · {r.reference} · {r.statusLabel}</span><strong>{r.title}</strong>
+              <span className="small">{r.subtitle}{r.when ? ` · ${new Date(r.when).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}` : ''}</span>
+            </Link>
+          );
+        }
         case 'action_result': {
           const r = c.result;
           const ok = r.status === 'done' || r.status === 'confirmed';

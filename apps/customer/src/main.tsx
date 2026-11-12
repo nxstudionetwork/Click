@@ -26,6 +26,8 @@ import './styles/parcel.css';
 import './styles/pros.css';
 import './styles/events.css';
 import './styles/hotels.css';
+import './styles/travel.css';
+import './styles/bookings.css';
 import './styles/buddy.css';
 
 const queryClient = new QueryClient({

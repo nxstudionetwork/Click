@@ -35,6 +35,8 @@ def redact(text: str) -> str:
 
 
 TOPICS = [
+    ("travel", r"\b(bus|buses|trains?|flights?|fly)\b.{0,40}\b(from|to)\b|\bpnr\b", "Travel"),
+    ("bookings", r"\b(temples?|darshan|seva|water ?park|zoo|museum|tourist|attractions?|things to do|my (upcoming )?bookings)\b", "Bookings"),
     ("hotels", r"\b(hotels?|resorts?|stay|homestay|hostel|villa)\b", "Hotel stay"),
     ("events", r"\b(birthday|wedding|party|event|planner|decorator|venue|anniversary)\b", "Event planning"),
     ("services", r"\b(plumber|electrician|carpenter|cleaner|cleaning|repair|leak|painter|pest|ac service)\b", "Home services"),

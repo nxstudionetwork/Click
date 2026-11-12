@@ -48,7 +48,7 @@ class ClickBasicBuddy:
         if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
             return self._help()
 
-        from . import event_buddy, grocery_buddy, hotel_buddy, parcel_buddy, service_buddy
+        from . import bookings_buddy, event_buddy, grocery_buddy, hotel_buddy, parcel_buddy, service_buddy, travel_buddy
 
         if nav := self._navigate(text):
             return nav
@@ -58,9 +58,15 @@ class ClickBasicBuddy:
         if _has(text, "remind", "reminder", "reminders", "alarm"):
             note = "Reminders aren’t available in Click yet, so I can’t set one"
 
+        if travel_buddy.wants_travel(text):
+            if (tr := travel_buddy.reply(text, customer)) is not None:
+                return tr
         if hotel_buddy.wants_hotel(text):
             if (h := hotel_buddy.reply(text, customer)) is not None:
                 return h
+        if bookings_buddy.wants_bookings(text) and not event_buddy.wants_event(text):
+            if (bk := bookings_buddy.reply(text, customer)) is not None:
+                return bk
         if event_buddy.wants_event(text):
             if (ev := event_buddy.reply(text, customer)) is not None:
                 return ev
@@ -120,6 +126,7 @@ class ClickBasicBuddy:
            ("home", "/", "Home"), ("food", "/food", "Food"), ("rides?", "/rides", "Ride"), ("shop|shopping", "/shopping", "Shop"),
            ("groceries", "/groceries", "Groceries"), ("parcels?", "/parcels", "Parcel"), ("services", "/services", "Services"),
            ("events", "/events", "Events"), ("hotels", "/hotels", "Hotels"), ("shows|showtime|movies", "/showtime", "Shows"),
+           ("travel|my journeys", "/travel", "Travel"), ("bookings|my bookings", "/bookings/mine", "Bookings"),
            ("orders", "/orders", "Orders"), ("cart|basket", "/cart", "Cart"), ("notifications", "/notifications", "Notifications"),
            ("activity|history", "/activity", "Activity"), ("offers", "/offers", "Offers"), ("click id|id card", "/account/card", "Click ID card")]
 
@@ -209,8 +216,8 @@ class ClickBasicBuddy:
 
     def _help(self):
         return BuddyReply(
-            "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, find what’s on in Showtime tonight, "
-            "check your orders and bookings, and explain your wallet and rewards. I prepare things for you; you always review and pay yourself.",
+            "Hi, I’m Buddy. I can find restaurants, dishes, groceries and products, buses, trains and flights, temples and things to do, "
+            "what’s on in Showtime tonight, check your orders and bookings, and explain your wallet and rewards. I prepare things for you; you always review and pay yourself.",
             actions=[{"label": "Find biryani", "prompt": "Find me a good biryani"}, {"label": "Movies tonight", "prompt": "Movies tonight"},
                      {"label": "Where is my order?", "prompt": "Where is my order?"}, {"label": "Dinner and a movie", "prompt": "Plan dinner and a movie tonight"}],
         )
@@ -256,11 +263,9 @@ class ClickBasicBuddy:
         return BuddyReply(msg, cards=[{"type": "order", "order": d} for d in data], actions=actions)
 
     def _bookings(self, customer):
-        data = tools.upcoming_bookings(customer)
-        if not data:
-            return BuddyReply("You have no upcoming tickets.", actions=[{"label": "Open Showtime", "path": "/showtime"}])
-        return BuddyReply(f"You have {len(data)} upcoming booking{'s' if len(data) > 1 else ''}.",
-                          cards=[{"type": "booking", "booking": b} for b in data], actions=[{"label": "All bookings", "path": "/bookings"}])
+        from . import bookings_buddy
+
+        return bookings_buddy.my_bookings(customer, "")
 
     def _wallet(self, customer):
         bal = tools.wallet(customer)

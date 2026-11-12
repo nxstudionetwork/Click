@@ -56,6 +56,8 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/parcels     Parcel: services, vehicles, coverage, quotes, bookings, partner matching, PIN-verified lifecycle, tracking, sharing
   apps/professionals  Services: local professionals, jobs and pricing models, availability, estimates, quotes, booking lifecycle, reviews
   apps/hotels      Hotels: destinations, properties, rooms, rates, inventory, offers, bookings, cancellation, verified reviews
+  apps/travel      Travel: bus / train / flight timetables, search, seats & berths (RAC / waitlist), tickets, cancellation, fare alerts
+  apps/experiences Bookings: temples, attractions, experiences (tickets, slots, darshan), entry codes, and the list of every booking
   apps/eventhub    Events: plan events, event teams/specialists/venues, packages, quotes, bookings, milestones, checklist, reviews
 ```
 

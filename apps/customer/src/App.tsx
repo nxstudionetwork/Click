@@ -38,6 +38,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { RewardsPage } from './pages/RewardsPage';
 import { SearchPage } from './pages/SearchPage';
 import { ServiceComingSoonPage } from './pages/ServiceComingSoonPage';
+import { SERVICES } from './config/services';
 import { SettingsPage } from './pages/SettingsPage';
 import { ServicePage } from './pages/ServicePage';
 import { StorePage } from './pages/StorePage';
@@ -68,6 +69,20 @@ import { HotelComparePage } from './pages/HotelComparePage';
 import { HotelPropertyPage } from './pages/HotelPropertyPage';
 import { HotelSearchPage } from './pages/HotelSearchPage';
 import { HotelsPage } from './pages/HotelsPage';
+import { TravelPage } from './pages/TravelPage';
+import { TravelSearchPage } from './pages/TravelSearchPage';
+import { TravelJourneyPage } from './pages/TravelJourneyPage';
+import { TravelBookPage } from './pages/TravelBookPage';
+import { TravelBookingPage } from './pages/TravelBookingPage';
+import { TravelBookingsPage, TravelComparePage } from './pages/TravelBookingsPage';
+import { TravelMePage } from './pages/TravelMePage';
+import { TravelPlanPage } from './pages/TravelPlanPage';
+import { BookingsHubPage } from './pages/BookingsHubPage';
+import { BookingsSearchPage } from './pages/BookingsSearchPage';
+import { AttractionPage } from './pages/AttractionPage';
+import { ExperienceBookPage } from './pages/ExperienceBookPage';
+import { ExperienceBookingPage } from './pages/ExperienceBookingPage';
+import { MyBookingsPage } from './pages/MyBookingsPage';
 import { ProProfilePage } from './pages/ProProfilePage';
 import { ServiceBookingPage } from './pages/ServiceBookingPage';
 import { ServiceBookPage } from './pages/ServiceBookPage';
@@ -171,6 +186,21 @@ function AppRoutes() {
         <Route path="hotels/bookings" element={guard(<HotelBookingsPage />)} />
         <Route path="hotels/bookings/:id" element={guard(<HotelBookingPage />)} />
         <Route path="hotels/:id" element={<HotelPropertyPage />} />
+        <Route path="travel" element={<TravelPage />} />
+        <Route path="travel/search" element={<TravelSearchPage />} />
+        <Route path="travel/journey/:journey/:from/:to" element={<TravelJourneyPage />} />
+        <Route path="travel/compare" element={<TravelComparePage />} />
+        <Route path="travel/plan" element={<TravelPlanPage />} />
+        <Route path="travel/book" element={guard(<TravelBookPage />)} />
+        <Route path="travel/bookings" element={guard(<TravelBookingsPage />)} />
+        <Route path="travel/bookings/:id" element={guard(<TravelBookingPage />)} />
+        <Route path="travel/me" element={guard(<TravelMePage />)} />
+        <Route path="bookings" element={<BookingsHubPage />} />
+        <Route path="bookings/search" element={<BookingsSearchPage />} />
+        <Route path="bookings/places/:slug" element={<AttractionPage />} />
+        <Route path="bookings/book" element={guard(<ExperienceBookPage />)} />
+        <Route path="bookings/mine" element={guard(<MyBookingsPage />)} />
+        <Route path="bookings/r/:id" element={guard(<ExperienceBookingPage />)} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/teams" element={<EventTeamsPage />} />
         <Route path="events/venues" element={<EventTeamsPage key="venues" venues />} />
@@ -187,7 +217,9 @@ function AppRoutes() {
         <Route path="services/bookings/:id" element={guard(<ServiceBookingPage />)} />
         <Route path="services/pro/:id" element={<ProProfilePage />} />
         <Route path="services/:slug" element={<ServiceCategoryPage />} />
-        <Route path="experiences" element={<ServiceComingSoonPage key="experiences" serviceId="experiences" />} />
+        <Route path="experiences" element={<Navigate to="/bookings/search?group=experiences" replace />} />
+        {/* Services announced but not live yet get an honest coming-soon page at their registry path. */}
+        {SERVICES.filter((s) => s.status === 'soon').map((s) => <Route key={s.id} path={s.path.slice(1)} element={<ServiceComingSoonPage serviceId={s.id} />} />)}
         <Route path="tickets" element={guard(<BookingsPage />)} />
         <Route path="tickets/:id" element={guard(<BookingPage />)} />
         <Route path="deliveries" element={<Navigate to="/parcels" replace />} />
@@ -213,7 +245,6 @@ function AppRoutes() {
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />
-        <Route path="bookings" element={<Navigate to="/tickets" replace />} />
         <Route path="bookings/:id" element={<ParamRedirect to="/tickets/:id" />} />
         <Route path="activity" element={guard(<ActivityPage />)} />
         <Route path="help/new" element={guard(<NewTicketPage />)} />

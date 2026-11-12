@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { ParcelSummary, RideSummary, ServiceBookingSummary, StoreType, EventBookingSummary, HotelBookingSummary } from '@click/api';
+import type { ParcelSummary, RideSummary, ServiceBookingSummary, StoreType, EventBookingSummary, HotelBookingSummary, TravelBookingSummary, ExperienceBookingSummary } from '@click/api';
 import { EmptyState, ErrorState, Icon, Skeleton } from '../components/ui';
 import { PageHeader } from '../components/shell/PageHeader';
 import { BookingCard } from '../features/bookings/BookingCard';
@@ -13,13 +13,15 @@ import { formatDateTime, formatMoney } from '../lib/format';
  * bookings, rides) rather than copied into a separate table. Filters exist only for domains that exist today;
  * service bookings join as that service launches (as another source here).
  */
-const FILTERS: { id: string; label: string; source: 'all' | 'orders' | 'bookings' | 'rides' | 'parcels' | 'services' | 'events' | 'hotels'; type?: StoreType }[] = [
+const FILTERS: { id: string; label: string; source: 'all' | 'orders' | 'bookings' | 'rides' | 'parcels' | 'services' | 'events' | 'hotels' | 'travel' | 'places'; type?: StoreType }[] = [
   { id: 'all', label: 'All', source: 'all' },
   { id: 'rides', label: 'Rides', source: 'rides' },
   { id: 'parcels', label: 'Parcels', source: 'parcels' },
   { id: 'services', label: 'Services', source: 'services' },
   { id: 'events', label: 'Events', source: 'events' },
   { id: 'hotels', label: 'Stays', source: 'hotels' },
+  { id: 'travel', label: 'Travel', source: 'travel' },
+  { id: 'places', label: 'Temples & places', source: 'places' },
   { id: 'food', label: 'Food', source: 'orders', type: 'restaurant' },
   { id: 'groceries', label: 'Groceries', source: 'orders', type: 'grocery' },
   { id: 'shopping', label: 'Shopping', source: 'orders', type: 'retail' },
@@ -36,6 +38,8 @@ export function ActivityPage() {
   const wantServices = filter.source === 'all' || filter.source === 'services';
   const wantEvents = filter.source === 'all' || filter.source === 'events';
   const wantHotels = filter.source === 'all' || filter.source === 'hotels';
+  const wantTravel = filter.source === 'all' || filter.source === 'travel';
+  const wantPlaces = filter.source === 'all' || filter.source === 'places';
   const orders = useQuery({ queryKey: ['customer', 'orders', 'list', 'activity', filter.type ?? ''], queryFn: () => api.customer.orders.list({ type: filter.type }), enabled: wantOrders });
   const bookings = useQuery({ queryKey: ['customer', 'bookings', 'activity'], queryFn: () => api.customer.bookings.list(), enabled: wantBookings });
   const rides = useQuery({ queryKey: ['customer', 'rides', 'activity'], queryFn: () => api.customer.rides.list(), enabled: wantRides });
@@ -43,9 +47,11 @@ export function ActivityPage() {
   const services = useQuery({ queryKey: ['services', 'bookings', 'all'], queryFn: () => api.services.bookings(), enabled: wantServices });
   const events = useQuery({ queryKey: ['eventhub', 'bookings', 'all'], queryFn: () => api.eventHub.bookings(), enabled: wantEvents });
   const hotels = useQuery({ queryKey: ['hotels', 'bookings', 'all'], queryFn: () => api.hotels.bookings(), enabled: wantHotels });
+  const travel = useQuery({ queryKey: ['travel', 'bookings', 'all'], queryFn: () => api.travel.bookings(), enabled: wantTravel });
+  const places = useQuery({ queryKey: ['bookings', 'list', 'all'], queryFn: () => api.bookings.list(), enabled: wantPlaces });
 
-  const failed = (wantOrders && orders.error) || (wantBookings && bookings.error) || (wantRides && rides.error) || (wantParcels && parcels.error) || (wantServices && services.error) || (wantEvents && events.error) || (wantHotels && hotels.error);
-  const loading = (wantOrders && orders.isPending) || (wantBookings && bookings.isPending) || (wantRides && rides.isPending) || (wantParcels && parcels.isPending) || (wantServices && services.isPending) || (wantEvents && events.isPending) || (wantHotels && hotels.isPending);
+  const failed = (wantOrders && orders.error) || (wantBookings && bookings.error) || (wantRides && rides.error) || (wantParcels && parcels.error) || (wantServices && services.error) || (wantEvents && events.error) || (wantHotels && hotels.error) || (wantTravel && travel.error) || (wantPlaces && places.error);
+  const loading = (wantOrders && orders.isPending) || (wantBookings && bookings.isPending) || (wantRides && rides.isPending) || (wantParcels && parcels.isPending) || (wantServices && services.isPending) || (wantEvents && events.isPending) || (wantHotels && hotels.isPending) || (wantTravel && travel.isPending) || (wantPlaces && places.isPending);
   const items = [
     ...(wantOrders ? orders.data?.results ?? [] : []).map((o) => ({ at: o.createdAt, key: `o-${o.id}`, node: <OrderCard order={o} /> })),
     ...(wantBookings ? bookings.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `b-${b.id}`, node: <BookingCard booking={b} /> })),
@@ -54,6 +60,8 @@ export function ActivityPage() {
     ...(wantServices ? services.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `s-${b.id}`, node: <ServiceActivityRow b={b} /> })),
     ...(wantEvents ? events.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `e-${b.id}`, node: <EventActivityRow b={b} /> })),
     ...(wantHotels ? hotels.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `h-${b.id}`, node: <HotelActivityRow b={b} /> })),
+    ...(wantTravel ? travel.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `t-${b.id}`, node: <TravelActivityRow b={b} /> })),
+    ...(wantPlaces ? places.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `x-${b.id}`, node: <PlaceActivityRow b={b} /> })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 
   return (
@@ -65,11 +73,11 @@ export function ActivityPage() {
             onClick={() => setParams(f.id === 'all' ? {} : { filter: f.id }, { replace: true })}>{f.label}</button>
         ))}
       </div>
-      {failed ? <ErrorState error={failed} onRetry={() => { orders.refetch(); bookings.refetch(); rides.refetch(); parcels.refetch(); services.refetch(); events.refetch(); hotels.refetch(); }} />
+      {failed ? <ErrorState error={failed} onRetry={() => { orders.refetch(); bookings.refetch(); rides.refetch(); parcels.refetch(); services.refetch(); events.refetch(); hotels.refetch(); travel.refetch(); places.refetch(); }} />
         : loading ? <Skeleton height={200} radius={16} />
           : items.length === 0 ? (
             <EmptyState icon="history" title="No activity yet." message={filter.id === 'all' ? 'Your Click. orders, rides and bookings will appear here.' : `Nothing in ${filter.label} yet.`}
-              action={<Link to={filter.id === 'bookings' ? '/showtime' : filter.id === 'rides' ? '/rides' : filter.id === 'parcels' ? '/parcels' : filter.id === 'services' ? '/services' : filter.id === 'events' ? '/events' : filter.id === 'hotels' ? '/hotels' : '/food'} className="btn btn--primary">{filter.id === 'bookings' ? 'Book a show' : filter.id === 'rides' ? 'Book a ride' : filter.id === 'parcels' ? 'Send a parcel' : filter.id === 'services' ? 'Book a professional' : filter.id === 'events' ? 'Plan an event' : filter.id === 'hotels' ? 'Find a stay' : 'Order food'}</Link>} />
+              action={<Link to={filter.id === 'bookings' ? '/showtime' : filter.id === 'rides' ? '/rides' : filter.id === 'parcels' ? '/parcels' : filter.id === 'services' ? '/services' : filter.id === 'events' ? '/events' : filter.id === 'hotels' ? '/hotels' : filter.id === 'travel' ? '/travel' : filter.id === 'places' ? '/bookings' : '/food'} className="btn btn--primary">{filter.id === 'bookings' ? 'Book a show' : filter.id === 'rides' ? 'Book a ride' : filter.id === 'parcels' ? 'Send a parcel' : filter.id === 'services' ? 'Book a professional' : filter.id === 'events' ? 'Plan an event' : filter.id === 'hotels' ? 'Find a stay' : filter.id === 'travel' ? 'Plan a journey' : filter.id === 'places' ? 'Find a place to visit' : 'Order food'}</Link>} />
           ) : <div className="card">{items.map((it, i) => <div key={it.key} style={i ? { borderTop: '1px solid var(--c-line)' } : undefined}>{it.node}</div>)}</div>}
     </div>
   );
@@ -135,6 +143,32 @@ function HotelActivityRow({ b }: { b: HotelBookingSummary }) {
       <span className="activity__text">
         <strong className="truncate">{b.property.name}</strong>
         <span className="truncate">Stay · {d(b.checkIn)} – {d(b.checkOut)} · {formatMoney(b.total)} · {b.number}</span>
+      </span>
+      <span className="activity__status">{b.statusLabel}</span>
+    </Link>
+  );
+}
+
+function TravelActivityRow({ b }: { b: TravelBookingSummary }) {
+  return (
+    <Link to={`/travel/bookings/${b.id}`} className="activity__row" data-theme="travel" style={{ padding: '12px 14px' }}>
+      <span className="activity__icon"><Icon name={b.mode === 'flight' ? 'plane' : b.mode === 'train' ? 'train' : 'bus'} size={18} /></span>
+      <span className="activity__text">
+        <strong className="truncate">{b.modeLabel} · {b.from.city} → {b.to.city}</strong>
+        <span className="truncate">{formatDateTime(b.departsAt)} · {b.operator} · {formatMoney(b.total)}{b.pnr ? ` · PNR ${b.pnr}` : ` · ${b.number}`}</span>
+      </span>
+      <span className="activity__status">{b.statusLabel}</span>
+    </Link>
+  );
+}
+
+function PlaceActivityRow({ b }: { b: ExperienceBookingSummary }) {
+  return (
+    <Link to={`/bookings/r/${b.id}`} className="activity__row" data-theme="bookings" style={{ padding: '12px 14px' }}>
+      <span className="activity__icon"><Icon name={b.attraction.group === 'spiritual' ? 'temple' : 'ticket'} size={18} /></span>
+      <span className="activity__text">
+        <strong className="truncate">Booked {b.offering.name} · {b.attraction.name}</strong>
+        <span className="truncate">{new Date(`${b.visitDate}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {Number(b.total) ? formatMoney(b.total) : 'Free'} · {b.number}</span>
       </span>
       <span className="activity__status">{b.statusLabel}</span>
     </Link>

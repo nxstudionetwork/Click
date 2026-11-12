@@ -21,6 +21,7 @@ class RewardTransaction(BaseModel):
     kind = models.CharField(max_length=10, choices=Kind.choices)
     points = models.IntegerField(help_text="Positive for credits, negative for debits.")
     order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, null=True, blank=True, related_name="reward_transactions")
+    reference = models.CharField(max_length=60, blank=True, help_text="What earned the points when it isn't an order, e.g. 'travel:<id>'.")
     description = models.CharField(max_length=200)
     expires_at = models.DateTimeField(null=True, blank=True)
 
@@ -28,6 +29,7 @@ class RewardTransaction(BaseModel):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(fields=["order"], condition=Q(kind="earn"), name="rewards_one_earn_per_order"),
+            models.UniqueConstraint(fields=["reference"], condition=Q(kind="earn") & ~Q(reference=""), name="rewards_one_earn_per_reference"),
             models.CheckConstraint(
                 condition=(Q(kind="earn", points__gt=0) | Q(kind__in=["redeem", "expire"], points__lt=0) | Q(kind="adjust")),
                 name="rewards_points_sign_matches_kind",

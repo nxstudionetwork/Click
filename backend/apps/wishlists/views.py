@@ -20,16 +20,33 @@ class WishlistItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WishlistItem
-        fields = ["id", "kind", "store", "product", "provider", "event_provider", "event_package", "hotel", "created_at"]
+        fields = ["id", "kind", "store", "product", "provider", "event_provider", "event_package", "hotel", "travel_route", "attraction", "created_at"]
 
     provider = serializers.SerializerMethodField()
     event_provider = serializers.SerializerMethodField()
     event_package = serializers.SerializerMethodField()
     hotel = serializers.SerializerMethodField()
+    travel_route = serializers.SerializerMethodField()
+    attraction = serializers.SerializerMethodField()
 
     def get_kind(self, item) -> str:
         return ("store" if item.store_id else "product" if item.product_id else "provider" if item.provider_id
-                else "event_provider" if item.event_provider_id else "event_package" if item.event_package_id else "hotel")
+                else "event_provider" if item.event_provider_id else "event_package" if item.event_package_id else "hotel" if item.hotel_id
+                else "travel_route" if item.travel_route_id else "attraction")
+
+    def get_travel_route(self, item):
+        if not item.travel_route_id:
+            return None
+        from apps.travel.views import place_out
+
+        return {"id": str(item.travel_route_id), "origin": place_out(item.travel_route.origin), "destination": place_out(item.travel_route.destination)}
+
+    def get_attraction(self, item):
+        if not item.attraction_id:
+            return None
+        from apps.experiences.views import card
+
+        return card(item.attraction, saved={}, with_next=False)
 
     def get_hotel(self, item):
         if not item.hotel_id:
@@ -67,10 +84,11 @@ class AddWishlistSerializer(serializers.Serializer):
     event_provider_id = serializers.UUIDField(required=False)
     event_package_id = serializers.UUIDField(required=False)
     hotel_id = serializers.UUIDField(required=False)
+    attraction_id = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
-        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id", "event_provider_id", "event_package_id", "hotel_id")) != 1:
-            raise serializers.ValidationError("Provide exactly one of storeId, productId, providerId, eventProviderId, eventPackageId or hotelId.")
+        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id", "event_provider_id", "event_package_id", "hotel_id", "attraction_id")) != 1:
+            raise serializers.ValidationError("Provide exactly one of storeId, productId, providerId, eventProviderId, eventPackageId, hotelId or attractionId.")
         return attrs
 
 
@@ -78,7 +96,8 @@ def _items(customer):
     return (
         WishlistItem.objects.filter(customer=customer)
         .select_related("product__store", "product__category", "store", "provider__partner__profile", "provider__category",
-                        "event_provider__partner", "event_package__provider__partner", "hotel__partner", "hotel__destination")
+                        "event_provider__partner", "event_package__provider__partner", "hotel__partner", "hotel__destination",
+                        "travel_route__origin__city", "travel_route__destination__city", "attraction")
         .prefetch_related("store__categories", "store__offers", "product__variants", "product__option_groups__options")
     )
 
@@ -111,6 +130,10 @@ class WishlistView(APIView):
             from apps.hotels.models import HotelProperty
 
             target = {"hotel": get_object_or_404(HotelProperty.objects.filter(is_listed=True), pk=hid)}
+        elif aid := s.validated_data.get("attraction_id"):
+            from apps.experiences.models import Attraction
+
+            target = {"attraction": get_object_or_404(Attraction.objects.filter(is_listed=True), pk=aid)}
         else:
             target = {"product": get_object_or_404(public_products(), pk=s.validated_data["product_id"])}
         item, created = WishlistItem.objects.get_or_create(customer=customer, **target)

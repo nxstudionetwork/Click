@@ -7,6 +7,7 @@ import { SERVICES } from '../config/services';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
 import { EventCard } from '../features/bookings/EventCard';
+import { PlaceCard } from '../features/bookings/parts';
 import { api } from '../lib/api';
 
 const SCOPES: { id: SearchScope; label: string }[] = [
@@ -63,6 +64,13 @@ export function SearchPage() {
     placeholderData: keepPreviousData,
   });
 
+  // Click. Bookings (temples, attractions, experiences) and Click. Travel cities answer the same query.
+  const places = useQuery({ queryKey: ['bookings', 'search', { q }], queryFn: () => api.bookings.search({ q }), enabled: active && scope === 'all', placeholderData: keepPreviousData });
+  const cities = useQuery({ queryKey: ['travel', 'places', 'any', q], queryFn: () => api.travel.places(q), enabled: active && scope === 'all' });
+  const placeRows = scope === 'all' ? places.data?.results ?? [] : [];
+  const cityRows = scope === 'all' ? (cities.data?.results ?? []).filter((p) => p.kind === 'city').slice(0, 3) : [];
+  const extra = placeRows.length + cityRows.length;
+
   useEffect(() => {
     if (results.isSuccess && active && (results.data.stores.length || results.data.products.length || results.data.events.length)) {
       setRecent((r) => {
@@ -77,7 +85,7 @@ export function SearchPage() {
     <div className="stack">
       <div className="search search-big" role="search">
         <Icon name="search" />
-        <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Search restaurants, dishes, groceries, products, movies…" aria-label="Search Click" />
+        <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Search food, groceries, products, movies, temples, places, cities…" aria-label="Search Click" />
         {draft && <button className="icon-btn" onClick={() => setDraft('')} aria-label="Clear search"><Icon name="close" size={18} /></button>}
       </div>
       <div className="tabs" role="tablist" aria-label="Search category">
@@ -106,10 +114,22 @@ export function SearchPage() {
         <ErrorState error={results.error} onRetry={() => results.refetch()} />
       ) : results.isPending ? (
         <div className="stack">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={80} radius={16} />)}</div>
-      ) : results.data.stores.length + results.data.products.length + results.data.events.length === 0 ? (
+      ) : results.data.stores.length + results.data.products.length + results.data.events.length + extra === 0 ? (
         <EmptyState title={`No results for “${q}”`} message="Check the spelling or try a broader term." />
       ) : (
         <div className="stack" style={{ opacity: results.isPlaceholderData ? 0.6 : 1 }}>
+          {cityRows.length > 0 && (
+            <section className="stack" style={{ gap: 'var(--s-2)' }}>
+              <h2>Travel</h2>
+              <div className="chips" style={{ flexWrap: 'wrap' }}>{cityRows.map((c) => <Link key={c.id} className="chip" to={`/travel?to=${c.slug}`}>Buses, trains &amp; flights to {c.name}</Link>)}</div>
+            </section>
+          )}
+          {placeRows.length > 0 && (
+            <section className="stack bk-page bk-scope" data-theme="bookings">
+              <div className="spread"><h2>Places &amp; experiences <span className="muted small">({places.data!.count})</span></h2><Link className="bk-more" to={`/bookings/search?q=${encodeURIComponent(q)}`}>See all</Link></div>
+              <div className="bk-row">{placeRows.slice(0, 6).map((a) => <PlaceCard key={a.id} a={a} />)}</div>
+            </section>
+          )}
           {results.data.stores.length > 0 && (
             <section className="stack">
               <h2>Stores <span className="muted small">({results.data.stores.length})</span></h2>

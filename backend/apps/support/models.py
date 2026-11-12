@@ -39,6 +39,10 @@ class SupportTicket(BaseModel):
                                         related_name="support_tickets")
     hotel_booking = models.ForeignKey("hotels.HotelBooking", on_delete=models.SET_NULL, null=True, blank=True,
                                         related_name="support_tickets")
+    travel_booking = models.ForeignKey("travel.TravelBooking", on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name="support_tickets")
+    experience_booking = models.ForeignKey("experiences.ExperienceBooking", on_delete=models.SET_NULL, null=True, blank=True,
+                                           related_name="support_tickets")
     category = models.CharField(max_length=20, choices=Category.choices)
     subject = models.CharField(max_length=150)
     message = models.TextField(max_length=4000)

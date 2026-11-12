@@ -41,7 +41,7 @@ def money(x) -> Decimal:
 
 
 def tz() -> ZoneInfo:
-    return ZoneInfo(settings.TIME_ZONE)
+    return ZoneInfo(settings.CLICK_LOCAL_TIMEZONE)
 
 
 def today() -> date:

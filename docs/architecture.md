@@ -375,6 +375,81 @@ API: `/api/v1/hotels/...` (public), `/api/v1/customer/hotels/...`, `/api/v1/part
   notifications at each step, Buddy hotel search and "my hotel bookings". `HotelBooking.trip_ref` is reserved for a future
   Trip / itinerary. Card/UPI gateways and webhooks are not connected: only the wallet ledger and pay-at-property exist.
 
+## Travel (long-distance transport)
+
+Customer-facing name: **Travel** (`/travel`, `/travel/search`, `/travel/journey/:journey/:from/:to`, `/travel/compare`, `/travel/book`,
+`/travel/bookings`, `/travel/bookings/:id`, `/travel/me`, `/travel/plan`), in Explore and Home via the service registry (id `travel`, theme
+`travel`). Bus, train and flight only — local rides stay in Ride, stays in Hotels. API: `/api/v1/travel/...` (public: home, places, search,
+dates, options) and `/api/v1/customer/travel/...` (review, bookings, ticket, pay / cancel / rate, recent, routes, travellers, alerts,
+preferences, next).
+
+- **Origin ≠ current location.** The journey search has its own From / To (cities, stations, airports, bus stops — each labelled
+  "Hyderabad — Airport (HYD)"). "Leave from my city" is an offer, never a default.
+- **Data:** `Place` (city + its stations / airports / bus stops), `Operator` (mode, status, source: Click. partner inventory, aggregator or
+  direct API), `Service` (timetable: number, name, vehicle, running days, amenities, bus seat layout, baggage, cancellation tiers), `Stop`
+  (time, day offset, km, boarding / dropping), `FareClass` (bus seat class, train class, flight cabin: capacity, RAC / waitlist, fares, GST,
+  refundability, change fee), `Journey` (a dated run, materialised from the timetable inside the booking window; status, delay, notice),
+  `TravelBooking` + `Passenger` (seat / coach-berth / CNF-RAC-WL status) + `StatusEvent`, `TripRating`, `SavedTraveller` (name, age, gender,
+  berth preference — no ID numbers), `RecentSearch`, `Route` (saved in the shared Wishlist), `PriceAlert`, `TravelPreference`, `TravelOffer`.
+- **Providers:** `apps.travel.search.ClickInventory` serves Click.'s own timetables; other providers implement the same `options()` and are
+  listed in `CLICK_TRAVEL_PROVIDERS` (run with a timeout, results de-duplicated; if every provider fails the API says "Travel options are
+  temporarily unavailable" — nothing is invented). Provider credentials stay on the server. No external provider is connected.
+- **Availability and fares** (server only): bus seats from the operator layout, each sold once per journey (unique constraint), women-only
+  seats enforced; train classes confirm a berth (preference honoured, seniors get a lower berth when free), then RAC, then a capped
+  waitlist, and a cancellation promotes RAC → CNF and WL → RAC with notifications; flights: cabin capacity, fares step with load factor
+  and closeness to departure. Bus fare = route fare × share of distance; train = per km (minimum) + reservation / superfast charges;
+  GST as the provider applies it. Offers (`TravelOffer`) are computed on the server.
+- **Results:** server-side filters (price, bus type, departure / arrival buckets, boarding / dropping point, operator / airline, amenities,
+  rating from verified trips, cancellation type, stops, refundable, checked bag, train type, max duration) and sorts; the cheapest / fastest
+  / best-value labels come from the result data (best value only when it's a different option); lowest fares on the 3 days either side
+  come from the same search; compare 2–3 options of one mode. Saved preferences pre-select filters once per search.
+- **Booking:** seats / class → passengers → review (re-checked now: availability, passenger rules, fare, offer, tax, policy, points) →
+  Pay & book from the Click. Wallet. The booking must match the reviewed total (`price_changed` → "Fare updated: previous / current", the
+  customer confirms), is idempotent and locks the service row. A failed payment holds the seats 10 minutes (pending payment, retry), then
+  releases them; no PNR or ticket exists until it is paid. Round trips are two linked tickets (`trip_ref`): after the outbound, the return
+  search opens.
+- **After:** digital ticket only for a paid booking (PNR from Click.; no barcode the operator didn't issue), print / PDF, share, calendar
+  (.ics), cancellation by the tiers agreed at booking with the exact fee and refund to the wallet (fully waitlisted train tickets refund in
+  full), operator delay / platform notice / cancellation (admin action → notifications; operator cancellation refunds in full), reminders
+  24 h before, completion after arrival with Click. Rewards points on the fare, verified trip rating → operator rating.
+- **Across Click.:** Activity (Travel), Wishlist (saved routes), notifications, support (`SupportTicket.travel_booking`, attached from the
+  booking), the central Bookings list, Buddy ("a bus from Hyderabad to Delhi tomorrow", "the cheapest train from Chennai to Odisha",
+  "which is faster…", "book this train" opens the journey — Buddy never buys), fare alerts (re-checked when opened; a scheduler should
+  run `check_alerts` and `booking.sweep`), Plan your journey (Travel + Hotels + places + Shows + Events, each linking into its own flow).
+
+## Bookings (places, experiences and every booking)
+
+Customer-facing name: **Bookings** (`/bookings`, `/bookings/search`, `/bookings/places/:slug`, `/bookings/book`, `/bookings/r/:id`,
+`/bookings/mine`); theme `bookings`. It is the reservation hub: temples and spiritual places, tourist spots, parks and experiences, plus
+the customer's bookings across Click. It links to Shows, Events, Hotels and Travel instead of duplicating them. API:
+`/api/v1/experiences/...` (home, search, attractions, availability), `/api/v1/customer/experiences/...` (review, bookings, pay / cancel /
+review, saved), `/api/v1/customer/reservations` (every booking), `/api/v1/partner/experiences/check-in`.
+
+- **Bookable vs information.** `Attraction.bookable` is true only when an onboarded provider sells it through Click. with live offerings;
+  everything else is "Information available" with `official_source` (e.g. a temple trust's own channels) — no prices, slots or timings
+  are claimed for it.
+- **Booking models:** `Offering` = entry ticket (any time that day) or time slot (darshan, seva, pooja, tours, activities), with days, slot
+  times, capacity, max per booking, minimum age, pickup points, requirements and GST; `Price` = the provider's ticket types (adult, child,
+  senior, student, family = 4 places, devotee, participant); `Closure` = provider closures.
+- **Availability** = capacity − places used by confirmed bookings and pending ones inside their hold, per date / slot; slots within 15
+  minutes have closed. A 14-day calendar comes with each offering.
+- **Booking:** server-priced review (offer, GST, points) → lead visitor (names of others optional) → Pay & book (Click. Wallet) or confirm a
+  free darshan registration. Price-changed guard, idempotency, offering row lock, 10-minute hold on payment failure. Confirmation issues
+  an entry code the provider verifies in the Partner App (`check-in`: their own bookings only, today only, once).
+- **After:** cancellation free until N hours before the visit, then the provider's fee %; refunds to the wallet; completion the day after
+  the visit with Rewards points; verified 1–5 reviews → place rating.
+- **Discovery:** categories with counts, cities from the data, sections by stated rules (in your city, near you by straight-line distance,
+  temples, tourist spots, parks, experiences, kid-friendly, "most booked on Click." = confirmed bookings in 90 days, top rated = 4.0+ from 3+
+  verified visits); search with filters (date availability, bookable, instant, free cancellation, verified, family / kids, indoor /
+  outdoor, rating, price, distance) and sorts; matches elsewhere on Click. (hotels, travel, shows) for the same words. Global Search
+  shows places & experiences and travel cities too.
+- **My bookings** (`apps.experiences.hub`): reads Showtime tickets, hotel stays, travel tickets, event bookings, service bookings and
+  place / experience bookings from their own tables, normalised (kind, title, when, status, amount, link); one domain failing doesn't hide
+  the others. Nothing is copied.
+- **Across Click.:** Wishlist (saved places), Activity ("Temples & places"), notifications, support (`SupportTicket.experience_booking`),
+  Buddy ("temples I can visit this weekend", "a water park for 4 people", "what can I book in Vijayawada tomorrow?", "my booking
+  tomorrow").
+
 ## Buddy (AI assistant and action layer)
 
 Header icon → a **Man / Go** chooser. **MAN** (`/buddy`) is its own workspace (no Click header / bottom nav): Buddy header

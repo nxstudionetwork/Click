@@ -36,7 +36,9 @@ ROUTES = [r"/", r"/explore", r"/food", r"/rides", r"/shopping", r"/groceries", r
           r"/parcels", r"/parcels/history", r"/services", r"/services/bookings", r"/events", r"/events/mine", r"/events/plan", r"/hotels",
           r"/hotels/bookings", r"/showtime", r"/buzz", r"/offers", r"/orders", r"/wishlist", r"/rewards", r"/wallet", r"/notifications",
           r"/account", r"/account/addresses", r"/account/payments", r"/account/card", r"/settings", r"/help", r"/help/new", r"/activity", r"/cart",
-          r"/checkout", r"/bookings", r"/tickets", r"/search",
+          r"/checkout", r"/bookings", r"/tickets", r"/search", r"/travel", r"/travel/search", r"/travel/bookings", r"/travel/plan", r"/travel/me",
+          r"/bookings/mine", r"/bookings/search", r"/(travel/bookings|bookings/r)/[0-9a-fA-F-]{36}", r"/bookings/places/[a-z0-9-]+",
+          r"/travel/journey/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}",
           r"/(orders|rides|parcels|tickets|bookings|services/bookings|services/pro|events/providers|events/plans|events/bookings|hotels|hotels/bookings|products)/[0-9a-fA-F-]{36}",
           r"/(stores|showtime|services|groceries/store)/[a-z0-9-]+"]
 _ROUTE_RE = re.compile(r"^(?:" + "|".join(ROUTES) + r")$")

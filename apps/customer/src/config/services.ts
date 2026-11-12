@@ -8,7 +8,7 @@ import type { StoreType } from '@click/api';
 import type { IconName } from '../components/ui';
 
 export type ServiceStatus = 'live' | 'soon';
-export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers';
+export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'travel' | 'bookings' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers';
 
 export interface ClickService {
   id: string;
@@ -37,8 +37,8 @@ export const SERVICES: ClickService[] = [
   { id: 'events', name: 'Events', tagline: 'Plan events, find teams and venues', icon: 'gift', path: '/events', status: 'live', theme: 'events' },
   { id: 'hotels', name: 'Hotels', tagline: 'Find a place. Compare it. Book it.', icon: 'hotel', path: '/hotels', status: 'live', theme: 'hotels' },
   { id: 'liveshows', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
-  { id: 'experiences', name: 'Experiences', tagline: 'Tours, classes and activities', icon: 'compass', path: '/experiences', status: 'soon', theme: 'movies',
-    upcoming: ['Curated local experiences', 'Date and slot selection', 'Instant confirmation'] },
+  { id: 'travel', name: 'Travel', tagline: 'Buses, trains and flights — all in one journey', icon: 'bus', path: '/travel', status: 'live', theme: 'travel' },
+  { id: 'bookings', name: 'Bookings', tagline: 'Temples, attractions, experiences — and all your bookings', icon: 'temple', path: '/bookings', status: 'live', theme: 'bookings' },
   { id: 'services', name: 'Services', short: 'Services', tagline: 'Plumbers, electricians, cleaners and more', icon: 'wrench', path: '/services', status: 'live', theme: 'services' },
   { id: 'buzz', name: 'Buzz', tagline: 'Instants you can act on', icon: 'play', path: '/buzz', status: 'live', theme: 'buzz' },
 ];
@@ -77,7 +77,9 @@ const THEME_ROUTES: [RegExp, Theme][] = [
   [/^\/(parcels|track)/, 'parcel'],
   [/^\/events/, 'events'],
   [/^\/hotels/, 'hotels'],
-  [/^\/(showtime|movies|shows|bookings|tickets|experiences)/, 'movies'],
+  [/^\/travel/, 'travel'],
+  [/^\/(bookings|experiences)/, 'bookings'],
+  [/^\/(showtime|movies|shows|tickets)/, 'movies'],
   [/^\/services/, 'services'],
   [/^\/rewards/, 'rewards'],
   [/^\/wallet/, 'wallet'],

@@ -151,3 +151,16 @@ STAYCLICK). No photos (a designed placeholder shows). The dev Partner App hotel 
 `seed_hotel_history` (from `devseed/customer.py`) adds completed stays with verified reviews from dev viewers (ratings are
 recomputed from them); the test customer has one past reviewed stay, one upcoming stay and one saved hotel.
 
+Travel (`devseed/travel.py`, from `devseed/partners.py`): 16 real cities with their real airports (IATA codes), railway stations (station
+codes) and well-known bus boarding points, approximately located; 5 fictional bus operators, 3 fictional airlines and a fictional rail partner
+with 120 timetabled services (both directions) — seat layouts, classes, fares, cancellation tiers and baggage are samples in the provider
+shape, not real schedules. 2 offers (bus 10% auto; coupon FLYCLICK). `seed_travel_history` adds completed, rated trips by dev viewers
+(operator ratings are recomputed from them); the test customer has an upcoming bus, a past flight, 2 saved travellers, a saved route and a
+recent search.
+
+Bookings (`devseed/experiences.py`): 16 real temples and landmarks as information only (brief general descriptions, where they're booked;
+no prices, slots or timings), and 25 fictional bookable providers onboarded as partners (temples with darshan / seva / archana, museums, a
+planetarium, water and theme parks, an aquarium, adventure parks, a ropeway, walks, tours, cruises, a workshop, cycling, a food trail) with
+ticket types, slots, capacity and policies; a closure day and 2 offers (parks 10% auto; coupon EXPLORE15). No images. `seed_experience_history`
+adds reviewed visits by dev viewers; the test customer has an upcoming special darshan, a past museum visit and a saved water park.
+

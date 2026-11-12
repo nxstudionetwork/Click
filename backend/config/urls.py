@@ -5,6 +5,8 @@ One shared API for all Click products, versioned under /api/v1/.
   auth        /api/v1/auth/..., /api/v1/me    shared identity
   bookings    /api/v1/events, /api/v1/shows   movies & live events (public)
   hotels      /api/v1/hotels/...              Click. Hotels: search, properties, rooms, bookings (public + customer + partner)
+  travel      /api/v1/travel/...              Click. Travel: bus, train and flight search, journeys, tickets (public + customer)
+  experiences /api/v1/experiences/...         Click. Bookings: temples, attractions, experiences; /customer/reservations = every booking
   eventhub    /api/v1/eventhub/...            Click. Events: plan events, teams, venues, quotes (public + customer + partner)
   customer    /api/v1/customer/...            Customer App (IsCustomer + ownership)
   partner     /api/v1/partner/...             Click Partner App (resolved from request.user)
@@ -27,6 +29,9 @@ from apps.parcels import urls as parcel_urls
 from apps.professionals import urls as services_urls
 from apps.eventhub import urls as eventhub_urls
 from apps.hotels import urls as hotel_urls
+from apps.travel import urls as travel_urls
+from apps.experiences import urls as experience_urls
+from apps.experiences.views import HubView as ReservationsView
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
@@ -51,6 +56,9 @@ customer_urls = [
     path("services/", include(services_urls.customer)),
     path("eventhub/", include(eventhub_urls.customer)),
     path("hotels/", include(hotel_urls.customer)),
+    path("travel/", include(travel_urls.customer)),
+    path("experiences/", include(experience_urls.customer)),
+    path("reservations", ReservationsView.as_view(), name="customer-reservations"),
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     *ride_customer_urls,
     *shop_customer_urls,
@@ -113,6 +121,9 @@ api_v1 = [
     path("partner/eventhub/", include(eventhub_urls.partner)),
     path("hotels/", include(hotel_urls.public)),
     path("partner/hotels/", include(hotel_urls.partner)),
+    path("travel/", include(travel_urls.public)),
+    path("experiences/", include(experience_urls.public)),
+    path("partner/experiences/", include(experience_urls.partner)),
     path("partner/grocery/", include(grocery_urls.partner_urls)),
     path("events", booking_views.EventListView.as_view(), name="events"),
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),

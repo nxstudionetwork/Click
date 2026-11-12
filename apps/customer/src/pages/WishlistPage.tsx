@@ -3,6 +3,7 @@ import { EmptyState, ErrorState, Skeleton } from '../components/ui';
 import { PackageCardView, ProviderCardView } from '../features/events/parts';
 import { addDays, HotelImage, RatingBadge, SaveHotel, todayIso } from '../features/hotels/parts';
 import { ProCardView } from '../features/pros/parts';
+import { PlaceCard } from '../features/bookings/parts';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
 import { useWishlist } from '../features/wishlist/useWishlist';
@@ -17,6 +18,8 @@ export function WishlistPage() {
   const evTeams = wishlist.data.filter((i) => i.eventProvider).map((i) => ({ ...i.eventProvider!, favoriteId: i.id }));
   const hotels = wishlist.data.filter((i) => i.hotel).map((i) => ({ ...i.hotel!, favoriteId: i.id }));
   const evPkgs = wishlist.data.filter((i) => i.eventPackage).map((i) => ({ ...i.eventPackage!, favoriteId: i.id }));
+  const routes = wishlist.data.filter((i) => i.travelRoute).map((i) => ({ ...i.travelRoute!, favoriteId: i.id }));
+  const places = wishlist.data.filter((i) => i.attraction).map((i) => ({ ...i.attraction!, favoriteId: i.id }));
 
   return (
     <div className="stack">
@@ -41,6 +44,18 @@ export function WishlistPage() {
             <section className="stack sv-scope" data-theme="services">
               <h2>My Professionals</h2>
               <div className="sv-prolist">{pros.map((p) => <ProCardView key={p.id} p={p} wide />)}</div>
+            </section>
+          )}
+          {places.length > 0 && (
+            <section className="stack bk-page bk-scope" data-theme="bookings">
+              <h2>Temples, places &amp; experiences</h2>
+              <div className="bk-grid">{places.map((a) => <PlaceCard key={a.id} a={a} />)}</div>
+            </section>
+          )}
+          {routes.length > 0 && (
+            <section className="stack">
+              <h2>Travel routes</h2>
+              <div className="chips">{routes.map((r) => <Link key={r.favoriteId} className="chip" to={`/travel?to=${r.destination.slug}`}>{r.origin.name} → {r.destination.name}</Link>)}</div>
             </section>
           )}
           {hotels.length > 0 && (

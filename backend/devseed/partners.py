@@ -104,3 +104,9 @@ def seed_partners(log) -> None:
     from .hotels import seed_hotels
 
     seed_hotels(log)  # Click. Hotels destinations, properties, rooms, rates and offers
+    from .travel import seed_travel
+
+    seed_travel(log)  # Click. Travel places, operators, timetables, fares and seat layouts
+    from .experiences import seed_experiences
+
+    seed_experiences(log)  # Click. Bookings temples, attractions and experiences

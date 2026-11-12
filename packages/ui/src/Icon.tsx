@@ -93,6 +93,11 @@ const PATHS = {
   egg: 'M12 3c3.5 0 6 6 6 10a6 6 0 0 1-12 0c0-4 2.5-10 6-10Z',
   cookie: 'M12 3a9 9 0 1 0 9 9 3 3 0 0 1-3-3 3 3 0 0 1-3-3 3 3 0 0 1-3-3Zm-3 8h.01M14 15h.01M9 16h.01',
   spice: 'M9 8h6v13H9V8Zm1-5h4v5h-4V3Zm-1 9h6',
+  train: 'M6 3h12a1 1 0 0 1 1 1v11a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V4a1 1 0 0 1 1-1Zm-1 8h14M9 15h.01M15 15h.01M8 21l2-3m6 3-2-3',
+  plane: 'M10.5 21 13 14l7-1.5a1.5 1.5 0 0 0 0-3L13 8 10.5 3H9l1.5 5.5L5 9 3 6.5H2l1 5.5-1 5.5h1L5 15l5.5.5L9 21h1.5Z',
+  temple: 'M12 2 4 8h16L12 2Zm-7 6v3h14V8M6 11v8m4-8v8m4-8v8m4-8v8M3 21h18M4 19h16',
+  swap: 'M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3',
+  seat: 'M7 4h8a2 2 0 0 1 2 2v6H7V4Zm-2 8h14v3H5v-3Zm2 3v5m10-5v5',
 } as const;
 
 export type IconName = keyof typeof PATHS;

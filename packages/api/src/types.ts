@@ -471,7 +471,7 @@ export interface ReorderResult {
 // --- Engagement -------------------------------------------------------------
 export interface WishlistItem {
   id: UUID;
-  kind: 'store' | 'product' | 'provider' | 'event_provider' | 'event_package' | 'hotel';
+  kind: 'store' | 'product' | 'provider' | 'event_provider' | 'event_package' | 'hotel' | 'travel_route' | 'attraction';
   store: Store | null;
   product: ProductWithStore | null;
   /** A saved Services professional ("My Professionals"). */
@@ -481,6 +481,10 @@ export interface WishlistItem {
   eventPackage?: import('./eventhub').EventPackageInfo | null;
   /** A saved Click. Hotels property. */
   hotel?: Omit<import('./hotels').SavedHotel, 'favoriteId'> | null;
+  /** A saved Click. Travel route (city pair). */
+  travelRoute?: { id: UUID; origin: import('./travel').TravelPlace; destination: import('./travel').TravelPlace } | null;
+  /** A saved temple / attraction / experience (Click. Bookings). */
+  attraction?: import('./experiences').AttractionCard | null;
   createdAt: ISODateTime;
 }
 
@@ -538,6 +542,12 @@ export interface SupportTicket {
   /** Set when the request is about a Click. Hotels booking. */
   hotelBookingId?: UUID | null;
   hotelBookingNumber?: string | null;
+  /** Set when the request is about a Click. Travel ticket. */
+  travelBookingId?: UUID | null;
+  travelBookingNumber?: string | null;
+  /** Set when the request is about a Click. Bookings visit (temple, attraction, experience). */
+  experienceBookingId?: UUID | null;
+  experienceBookingNumber?: string | null;
   serviceBookingNumber?: string | null;
   createdAt: ISODateTime;
   resolvedAt: ISODateTime | null;
@@ -560,7 +570,12 @@ export type BuddyCard =
   | { type: 'grocery_store'; store: import('./groceries').GroceryStoreCard }
   | { type: 'hotel'; hotel: import('./hotels').HotelCard }
   | { type: 'hotel_booking'; booking: { id: UUID; number: string; property: string; checkIn: string; checkOut: string; status: string; payment: string; total: Money } }
-  | { type: 'action_result'; result: import('./buddy').BuddyActionRun };
+  | { type: 'action_result'; result: import('./buddy').BuddyActionRun }
+  | { type: 'journey'; journey: { id: string; mode: import('./travel').TravelMode; journeyId: UUID; fromStopId: UUID; toStopId: UUID; departsAt: ISODateTime;
+      arrivesAt: ISODateTime; durationMinutes: number; lowest: Money | null; available: boolean; stops: number; operator: string; number: string; name: string;
+      from: string; to: string; class: string } }
+  | { type: 'attraction'; attraction: import('./experiences').AttractionCard }
+  | { type: 'reservation'; reservation: import('./experiences').Reservation };
 
 export type BuddyAction = { label: string; path: string } | { label: string; prompt: string }
   /** A typed action for the server's action layer (validated and permission-checked there). */

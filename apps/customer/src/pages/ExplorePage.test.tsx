@@ -32,9 +32,11 @@ describe('Explore', () => {
     expect(href('Wallet')).toBe('/wallet');
     expect(href('Live Shows')).toBe('/showtime/search?kind=event');
     expect(href('Showtime')).toBe('/showtime');
-    // Only services that genuinely haven't launched say so.
-    expect(within(links[names.indexOf('Experiences')]!).getByText('Soon')).toBeInTheDocument();
-    expect(links[names.indexOf('Experiences')]).toHaveAccessibleName(/coming soon/);
+    // Travel and Bookings are live features of their own (Experiences now live inside Bookings); nothing says "Soon".
+    expect(href('Travel')).toBe('/travel');
+    expect(href('Bookings')).toBe('/bookings');
+    expect(names).not.toContain('Experiences');
+    expect(within(grid).queryByText('Soon')).toBeNull();
     expect(href('Parcel')).toBe('/parcels');
     expect(within(links[names.indexOf('Parcel')]!).queryByText('Soon')).toBeNull();
     expect(within(links[names.indexOf('Rides')]!).queryByText('Soon')).toBeNull();
