@@ -229,13 +229,18 @@ def _ensure_line_stock(cart, product, variant, quantity, exclude=None) -> None:
 
 
 @transaction.atomic
-def update_item(item: CartItem, quantity: int, note: str | None = None) -> CartItem:
+def update_item(item: CartItem, quantity: int | None = None, note: str | None = None, acknowledge_price: bool = False) -> CartItem:
+    quantity = quantity or item.quantity
     if quantity > item.quantity:
         _ensure_line_stock(item.cart, item.product, item.variant, quantity, exclude=item.pk)
     item.quantity = quantity
     if note is not None:
         item.note = note
-    item.save(update_fields=["quantity", "note", "updated_at"])
+    if acknowledge_price:  # the customer has seen the current price; the notice goes away
+        from apps.catalog.pricing import price_of
+
+        item.price_seen = price_of(item.product, item.variant).price
+    item.save(update_fields=["quantity", "note", "price_seen", "updated_at"])
     return item
 
 

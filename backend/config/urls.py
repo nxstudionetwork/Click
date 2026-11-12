@@ -19,6 +19,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
+from apps.search import views as search_views
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
@@ -98,6 +99,8 @@ customer_urls = [
     path("support/related", support_views.RelatedItemsView.as_view(), name="support-related"),
     path("support/articles/<slug:slug>/feedback", support_views.ArticleFeedbackView.as_view(), name="support-article-feedback"),
     path("activity", ActivityView.as_view(), name="activity"),
+    path("search/recent", search_views.RecentView.as_view(), name="search-recent"),
+    path("search/recent/<uuid:pk>", search_views.RecentView.as_view(), name="search-recent-one"),
     path("payments", payment_views.PaymentsView.as_view(), name="payments"),
     path("payments/overview", payment_views.OverviewView.as_view(), name="payments-overview"),
     path("payments/preferences", payment_views.PreferencesView.as_view(), name="payments-preferences"),
@@ -143,6 +146,8 @@ api_v1 = [
     path("stores/<slug:slug>/menu", StoreMenuView.as_view(), name="store-menu"),
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
+    path("search/global", search_views.GlobalSearchView.as_view(), name="search-global"),
+    path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),
     path("parcels/", include(parcel_urls.public)),

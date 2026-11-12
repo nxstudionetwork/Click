@@ -92,7 +92,7 @@ export const customerApi = (http: HttpClient) => ({
     /** Apply an offer (validated server-side) / remove it. */
     applyOffer: (offerId: string) => http.request<Cart>('/customer/cart/offer', { method: 'POST', body: { offerId } }),
     removeOffer: () => http.request<Cart>('/customer/cart/offer', { method: 'DELETE' }),
-    updateItem: (id: string, input: { quantity: number; note?: string }) =>
+    updateItem: (id: string, input: { quantity?: number; note?: string; acknowledgePrice?: boolean }) =>
       http.request<Cart>(`/customer/cart/items/${id}`, { method: 'PATCH', body: input }),
     removeItem: (id: string) => http.request<Cart>(`/customer/cart/items/${id}`, { method: 'DELETE' }),
   },

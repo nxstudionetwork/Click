@@ -21,7 +21,7 @@ export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme;
   { to: '/', label: 'Home', icon: 'home', theme: 'default', end: true },
   { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
   { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
-  { to: '/services', label: 'Services', icon: 'wrench', theme: 'shopping' },
+  { to: '/shopping', label: 'Shop', icon: 'shop', theme: 'shopping' },
   { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
 ];
 

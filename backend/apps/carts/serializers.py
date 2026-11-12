@@ -173,5 +173,6 @@ class ApplyOfferSerializer(serializers.Serializer):
 
 
 class UpdateCartItemSerializer(serializers.Serializer):
-    quantity = serializers.IntegerField(min_value=1, max_value=MAX_ITEM_QUANTITY)
+    quantity = serializers.IntegerField(min_value=1, max_value=MAX_ITEM_QUANTITY, required=False)
+    acknowledge_price = serializers.BooleanField(required=False, default=False, help_text="The customer saw the new price.")
     note = serializers.CharField(max_length=200, required=False, allow_blank=True)

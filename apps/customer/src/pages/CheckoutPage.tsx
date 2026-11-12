@@ -81,7 +81,8 @@ export function CheckoutPage() {
   const list = addresses.data ?? [];
   const showForm = adding || list.length === 0;
   const open = c.groups.every((g) => g.store.isOpen);
-  const canPlace = !!addressId && !showForm && open && c.items.every((i) => i.isAvailable);
+  const belowMin = c.groups.filter((g) => g.belowMinimum);
+  const canPlace = !!addressId && !showForm && open && c.items.every((i) => i.isAvailable && !i.priceChange) && belowMin.length === 0;
   const err = [place.error, checkout.error].find((e): e is ApiError => e instanceof ApiError) ?? null;
   const estimateFor = (storeId: string) => estimates.data?.groups.find((g) => g.store.id === storeId)?.deliveryEstimate ?? null;
 
@@ -183,6 +184,8 @@ export function CheckoutPage() {
           Place {marketplace && c.groups.length > 1 ? `${c.groups.length} orders` : 'order'} · {formatMoney(c.totals.total, currency)}
         </Button>
         {!open && <p className="small muted">A store in your cart isn’t taking orders right now.</p>}
+        {belowMin.map((g) => <p key={g.store.id} className="small muted">Add {formatMoney(Number(g.store.minOrderAmount) - Number(g.subtotal), currency)} more from {g.store.name} to reach its minimum order.</p>)}
+        {c.items.some((i) => i.priceChange) && <p className="small muted">A price changed. <Link to="/cart">Review it in your cart</Link>.</p>}
       </aside>
     </div>
   );

@@ -1,8 +1,10 @@
 import { Link, Navigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../lib/api';
 import type { Cart, CartGroup } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, QuantityStepper, Skeleton, SmartImage, useToast } from '../components/ui';
 import { Totals } from '../features/cart/Totals';
-import { useCart, useCartActions } from '../features/cart/useCart';
+import { cartKey, useCart, useCartActions } from '../features/cart/useCart';
 import { formatMoney } from '../lib/format';
 
 /**
@@ -29,7 +31,8 @@ export function CartPage() {
   }
   const marketplace = c.mode === 'marketplace';
   const currency = c.groups[0]?.store.currency ?? 'INR';
-  const blocked = c.groups.some((g) => g.belowMinimum || !g.store.isOpen) || c.items.some((i) => !i.isAvailable);
+  const repriced = c.items.filter((i) => i.priceChange);
+  const blocked = c.groups.some((g) => g.belowMinimum || !g.store.isOpen) || c.items.some((i) => !i.isAvailable) || repriced.length > 0;
   const busy = update.isPending || remove.isPending;
 
   return (
@@ -45,7 +48,8 @@ export function CartPage() {
       <aside className="checkout__aside card card--pad stack">
         <h3>Bill details</h3>
         <Totals totals={c.totals} currency={currency} offerTitle={c.offer?.title} />
-        {c.items.some((i) => !i.isAvailable) && <p className="badge badge--warning" style={{ whiteSpace: 'normal' }}>Remove items that are no longer available to continue.</p>}
+        {c.items.some((i) => !i.isAvailable) && <p className="badge badge--warning" style={{ whiteSpace: 'normal' }}>Remove or save for later the items that are currently unavailable to continue.</p>}
+        {repriced.length > 0 && <p className="badge badge--warning" style={{ whiteSpace: 'normal' }}>Some prices changed since you added them. Review and accept the new prices to continue.</p>}
         <Link to="/checkout" className={`btn btn--primary btn--block ${blocked ? 'disabled' : ''}`} aria-disabled={blocked}
           onClick={(e) => blocked && e.preventDefault()} style={blocked ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}>
           Proceed to checkout
@@ -77,7 +81,9 @@ function GroupCard({ cart, g, marketplace, busy, onQty }: { cart: Cart; g: CartG
             {i.variant && <div className="muted small">{i.variant.label}</div>}
             {i.options.length > 0 && <div className="muted small">{i.options.map((o) => o.name).join(' · ')}</div>}
             {i.note && <div className="muted small">“{i.note}”</div>}
-            {!i.isAvailable && <span className="badge badge--warning">No longer available</span>}
+            {!i.isAvailable && <span className="badge badge--warning">Currently unavailable</span>}
+            {i.priceChange && <PriceNotice id={i.id} change={i.priceChange} currency={s.currency} />}
+            <LineActions id={i.id} productId={i.product.id} name={i.product.name} unavailable={!i.isAvailable} />
           </div>
           <QuantityStepper value={i.quantity} busy={busy} label={i.product.name} onChange={(n) => onQty(i.id, n)} />
           <strong style={{ minWidth: 72, textAlign: 'right' }}>{formatMoney(i.lineTotal, s.currency)}</strong>
@@ -86,5 +92,35 @@ function GroupCard({ cart, g, marketplace, busy, onQty }: { cart: Cart; g: CartG
       {g.belowMinimum && <p className="badge badge--warning">Add {formatMoney(Number(s.minOrderAmount) - Number(g.subtotal), s.currency)} more to reach {s.name}’s minimum order</p>}
       {!s.isOpen && <p className="badge badge--danger">{s.name} isn’t taking orders right now</p>}
     </section>
+  );
+}
+
+/** "Price updated": old and new price; the customer accepts the new one before checkout (stored on the server). */
+function PriceNotice({ id, change, currency }: { id: string; change: { from: string; to: string }; currency: string }) {
+  const qc = useQueryClient();
+  const ack = useMutation({ mutationFn: () => api.customer.cart.updateItem(id, { acknowledgePrice: true }), onSuccess: (c) => qc.setQueryData(cartKey, c) });
+  const up = Number(change.to) > Number(change.from);
+  return (
+    <div className="cart-note" role="status">
+      <span><strong>Price updated</strong> <s className="muted">{formatMoney(change.from, currency)}</s> → <strong className={up ? 'cart-note--up' : 'cart-note--down'}>{formatMoney(change.to, currency)}</strong></span>
+      <Button size="sm" variant="secondary" loading={ack.isPending} onClick={() => ack.mutate()}>OK</Button>
+    </div>
+  );
+}
+
+/** Save for later (moves the item to your Wishlist) and Find similar (Global Search). */
+function LineActions({ id, productId, name, unavailable }: { id: string; productId: string; name: string; unavailable: boolean }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const save = useMutation({
+    mutationFn: async () => { await api.customer.wishlist.add({ productId }); return api.customer.cart.removeItem(id); },
+    onSuccess: (c) => { qc.setQueryData(cartKey, c); qc.invalidateQueries({ queryKey: ['customer', 'wishlist'] }); toast('Saved for later in your Wishlist'); },
+    onError: (e) => toast(e instanceof Error ? e.message : 'Couldn’t save it.', 'error'),
+  });
+  return (
+    <div className="cart-actions small">
+      <button type="button" className="link-btn" disabled={save.isPending} onClick={() => save.mutate()}>Save for later</button>
+      {unavailable && <Link to={`/search?q=${encodeURIComponent(name)}`} className="link-btn">Find similar</Link>}
+    </div>
   );
 }

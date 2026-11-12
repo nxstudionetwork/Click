@@ -166,9 +166,27 @@ export const SUPPORT_LINK_FIELD: Record<string, SupportLink> = {
   wallet_transaction: 'walletTransactionId',
 };
 
+// --- Global Search ---------------------------------------------------------------------------------------------
+export interface SearchHit {
+  type: string; id: string; title: string; subtitle: string; link: string; group: string; service: string;
+  image?: string; rating?: string | null; price?: Money | null; badge?: string; score?: number;
+}
+export interface GlobalSearchResult {
+  query: string; count: number; top: SearchHit[]; mine: SearchHit[];
+  groups: { code: string; label: string; count: number; results: SearchHit[] }[];
+}
+export interface SearchSuggestions {
+  query: string; suggestions: SearchHit[]; mine?: SearchHit[]; recent: { id: UUID; query: string; at: ISODateTime }[]; trending?: string[];
+}
+
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  search: {
+    global: (q: string, group = '') => http.request<GlobalSearchResult>('/search/global', { query: { q, group: group || undefined } }),
+    suggest: (q: string) => http.request<SearchSuggestions>('/search/suggest', { query: { q } }),
+    clearRecent: (id?: string) => http.request<void>(id ? `/customer/search/recent/${id}` : '/customer/search/recent', { method: 'DELETE' }),
+  },
   wallet: {
     get: () => http.request<Wallet>('/customer/wallet'),
     transactions: (q: { filter?: WalletFilter; q?: string; page?: number } = {}) =>

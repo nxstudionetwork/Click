@@ -23,12 +23,12 @@ const signedIn = { status: 'authenticated', user: { fullName: 'Asha Rao', email:
 describe('AppShell', () => {
   beforeEach(() => { auth.value = { status: 'anonymous', user: null }; });
 
-  it('primary navigation is Home | Ride | Food | Services | Explore, each with its own service colour', () => {
+  it('primary navigation is Home | Ride | Food | Shop | Explore, each with its own service colour', () => {
     renderWithProviders(<AppShell />);
     const bottom = screen.getAllByRole('navigation', { name: 'Primary' })[1]!;
     const items = [...bottom.children] as HTMLElement[];
-    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Services', 'Explore']);
-    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', '/services', null]);
+    expect(items.map((a) => a.textContent)).toEqual(['Home', 'Ride', 'Food', 'Shop', 'Explore']);
+    expect(items.map((a) => a.getAttribute('href'))).toEqual(['/', '/rides', '/food', '/shopping', null]);
     expect(items.map((a) => a.dataset.theme)).toEqual(['default', 'ride', 'food', 'shopping', 'explore']);
   });
 

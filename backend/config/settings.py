@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "apps.travel",
     "apps.experiences",
     "apps.offers",
+    "apps.search",
 ]
 
 MIDDLEWARE = [
