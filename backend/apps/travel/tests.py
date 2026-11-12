@@ -4,7 +4,7 @@ payment failure / retry / hold expiry, idempotency, tickets only after payment, 
 operator changes, ownership, recent searches, saved routes, travellers, price alerts, the central bookings list."""
 
 import uuid
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal as D
 
 import pytest
@@ -225,8 +225,10 @@ def test_cancellation_tiers_and_operator_cancel(net):
     soon = search(api, "bus", "hyderabad", "vijayawada", (engine.today() + timedelta(days=0 if timezone.now().astimezone(engine.tz()).hour < 18 else 1)).isoformat()).json()
     if soon["results"]:  # inside 24 h → 50% fee under the tiers
         bk = book(api, soon["results"][0], "seater", pax(), seats=["3"]).json()
-        c = api.get(f"{CUST}/bookings/{bk['id']}").json()["cancellation"]
-        assert c["allowed"] and c["feePercent"] == 50 and D(c["refund"]) == D(bk["total"]) / 2
+        detail = api.get(f"{CUST}/bookings/{bk['id']}").json()
+        c = detail["cancellation"]
+        within = datetime.fromisoformat(detail["departsAt"]) - timezone.now() <= timedelta(hours=24)
+        assert c["allowed"] and c["feePercent"] == (50 if within else 0) and D(c["refund"]) == D(bk["total"]) * (D("0.5") if within else 1)
     o = search(api, "train", "hyderabad", "vijayawada").json()["results"][0]
     bk = book(api, o, "3A", pax()).json()
     n = booking.operator_update(Journey.objects.get(pk=o["journeyId"]), Journey.Status.CANCELLED)

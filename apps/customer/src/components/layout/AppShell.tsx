@@ -76,7 +76,7 @@ export function AppShell() {
               <BuddySelector />
               <Link to="/notifications" className="icon-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
                 <Icon name="bell" />
-                {status === 'authenticated' && unread > 0 && <span className="icon-btn__count">{unread > 9 ? '9+' : unread}</span>}
+                {status === 'authenticated' && unread > 0 && <span className="icon-btn__count">{unread > 99 ? '99+' : unread}</span>}
               </Link>
               {count > 0 && (
                 <Link to="/cart" className="icon-btn" aria-label={`Cart, ${count} items`}>

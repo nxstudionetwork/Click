@@ -54,5 +54,10 @@ def settle_on_cancel(payments, customer, label: str) -> None:
         p.save(update_fields=["status", "updated_at"])
 
 
+def collect_on_delivery(order) -> int:
+    """Delivered means the partner collected the cash: a pending cash-on-delivery payment becomes captured."""
+    return order.payments.filter(method=PaymentMethod.CASH_ON_DELIVERY, status=Payment.Status.PENDING).update(status=Payment.Status.CAPTURED)
+
+
 def cancel_pending_payments(order) -> None:
     settle_on_cancel(order.payments.all(), order.customer, f"order {order.number}")

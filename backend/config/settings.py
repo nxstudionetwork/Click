@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     "apps.hotels",
     "apps.travel",
     "apps.experiences",
+    "apps.offers",
 ]
 
 MIDDLEWARE = [
@@ -257,6 +258,30 @@ CLICK_SHOP_PRICE_BANDS = [int(x) for x in os.environ.get("CLICK_SHOP_PRICE_BANDS
 CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
+CLICK_REWARD_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRING_SOON_DAYS", "30"))
+# Loyalty tiers by points earned in the last 365 days, with the earning multiplier each tier gets (business rules).
+CLICK_REWARD_TIERS = [("bronze", "Bronze", 0, "1.0"), ("silver", "Silver", 2000, "1.1"), ("gold", "Gold", 5000, "1.25"), ("platinum", "Platinum", 12000, "1.5")]
+
+# Click. Wallet business limits (configuration, not regulatory values) and promo-credit rules.
+CLICK_WALLET_MIN_TOPUP = os.environ.get("CLICK_WALLET_MIN_TOPUP", "100")
+CLICK_WALLET_MAX_TOPUP = os.environ.get("CLICK_WALLET_MAX_TOPUP", "10000")
+CLICK_WALLET_DAILY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_DAILY_TOPUP_LIMIT", "20000")
+CLICK_WALLET_MONTHLY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_MONTHLY_TOPUP_LIMIT", "50000")
+CLICK_WALLET_MAX_BALANCE = os.environ.get("CLICK_WALLET_MAX_BALANCE", "100000")
+CLICK_WALLET_PROMO_REFUND_DAYS = int(os.environ.get("CLICK_WALLET_PROMO_REFUND_DAYS", "30"))
+CLICK_WALLET_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_WALLET_EXPIRING_SOON_DAYS", "7"))
+CLICK_WALLET_DEBIT_NOTIFY_FROM = os.environ.get("CLICK_WALLET_DEBIT_NOTIFY_FROM", "1")
+
+# Payment provider for wallet top-ups. "sandbox" (test mode, no real money) is allowed only when CLICK_PAYMENT_SANDBOX is on.
+CLICK_PAYMENT_PROVIDER = os.environ.get("CLICK_PAYMENT_PROVIDER", "")
+CLICK_PAYMENT_SANDBOX = os.environ.get("CLICK_PAYMENT_SANDBOX", "1" if DEBUG else "0") == "1"
+CLICK_PAYMENT_WEBHOOK_SECRET = os.environ.get("CLICK_PAYMENT_WEBHOOK_SECRET", "")
+
+# Official Click. support contacts (shown in Help & Support).
+CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
+CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
+CLICK_SUPPORT_HOURS = os.environ.get("CLICK_SUPPORT_HOURS", "")
+CLICK_SUPPORT_TICKETS_PER_HOUR = int(os.environ.get("CLICK_SUPPORT_TICKETS_PER_HOUR", "5"))
 # Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
 # (built-in, answers only from real Click data). Set to empty to disable AI.
 CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")

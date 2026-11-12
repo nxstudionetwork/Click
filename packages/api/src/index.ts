@@ -15,4 +15,5 @@ export * from './hotels';
 export * from './travel';
 export * from './experiences';
 export * from './buddy';
+export * from './money';
 export * from './session';

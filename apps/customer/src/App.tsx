@@ -10,6 +10,9 @@ import { AppShell } from './components/layout/AppShell';
 import { EmptyState } from './components/ui';
 import { AddressesPage } from './pages/AddressesPage';
 import { ActivityPage } from './pages/ActivityPage';
+import { WalletEntryPage } from './pages/WalletEntryPage';
+import { PaymentDetailPage } from './pages/PaymentDetailPage';
+import { HelpArticlePage } from './pages/HelpArticlePage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BuddyGoPage } from './pages/BuddyGoPage';
@@ -42,7 +45,7 @@ import { SERVICES } from './config/services';
 import { SettingsPage } from './pages/SettingsPage';
 import { ServicePage } from './pages/ServicePage';
 import { StorePage } from './pages/StorePage';
-import { TicketPage } from './pages/TicketPage';
+import { TicketPage, TicketsPage } from './pages/TicketPage';
 import { WishlistPage } from './pages/WishlistPage';
 import { CheckoutDonePage } from './pages/CheckoutDonePage';
 import { ShopBrandsPage } from './pages/ShopBrandsPage';
@@ -141,6 +144,8 @@ function AppRoutes() {
       <Route path="buzz" element={<BuzzPage />} />
       {/* Profile: a dedicated personal page with its own header (no app header or bottom navigation) */}
       <Route path="account" element={guard(<ProfilePage />)} />
+      {/* Activity: a dedicated timeline with its own Back / Activity / Home header (no app header or bottom navigation) */}
+      <Route path="activity" element={guard(<ActivityPage />)} />
       <Route element={<AppShell />}>
         {/* Discovery (public) */}
         <Route index element={<HomePage />} />
@@ -243,12 +248,15 @@ function AppRoutes() {
         <Route path="account/addresses" element={guard(<AddressesPage />)} />
         <Route path="account/card" element={guard(lazyCard(false))} />
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
+        <Route path="account/payments/:id" element={guard(<PaymentDetailPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />
+        <Route path="wallet/activity/:id" element={guard(<WalletEntryPage />)} />
         <Route path="bookings/:id" element={<ParamRedirect to="/tickets/:id" />} />
-        <Route path="activity" element={guard(<ActivityPage />)} />
         <Route path="help/new" element={guard(<NewTicketPage />)} />
+        <Route path="help/tickets" element={guard(<TicketsPage />)} />
         <Route path="help/tickets/:id" element={guard(<TicketPage />)} />
+        <Route path="help/articles/:slug" element={<HelpArticlePage />} />
         <Route path="*" element={<EmptyState icon="alert" title="Page not found" action={<Link to="/" className="btn btn--outline">Go home</Link>} />} />
       </Route>
     </Routes>

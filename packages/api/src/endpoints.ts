@@ -1,7 +1,8 @@
+import type { Wallet } from './money';
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
   CheckoutResult, ReturnRequestInput, CreateBookingInput,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
@@ -150,7 +151,7 @@ export const customerApi = (http: HttpClient) => ({
       return http.request<{ text: string }>('/customer/assistant/transcribe', { method: 'POST', body: form });
     },
   },
-  wallet: () => http.request<WalletSummary>('/customer/wallet'),
+  wallet: () => http.request<Wallet>('/customer/wallet'),
   rides: {
     places: (q: string) => http.request<{ results: RidePlaceResult[] }>('/customer/rides/places', { query: { q } }),
     quote: (input: RideTripInput) => http.request<RideQuote>('/customer/rides/quote', { method: 'POST', body: input }),

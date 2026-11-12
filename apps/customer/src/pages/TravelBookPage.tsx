@@ -8,6 +8,7 @@ import { useThemeOverride } from '../components/layout/AppShell';
 import { fmtDate, fmtDur, fmtTime, modeOf, searchFrom, searchQs } from '../features/travel/parts';
 import { useWallet, walletKey } from '../features/wallet/useWallet';
 import { api } from '../lib/api';
+import { ClaimedCodes } from '../features/offers/ClaimedCodes';
 import { formatMoney } from '../lib/format';
 
 const newKey = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -141,6 +142,7 @@ export function TravelBookPage() {
           </fieldset>
           <label className="tv-check"><input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} /> Save these travellers for next time (name, age, gender, berth preference)</label>
           <label className="tv-field"><span className="tv-field__label">Offer code (optional)</span><input className="tv-field__input" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} /></label>
+          <ClaimedCodes service="travel" current={coupon} onPick={setCoupon} />
           <Button type="submit" block className="tv-go" loading={check.isPending}>Review journey</Button>
         </form>
       ) : (

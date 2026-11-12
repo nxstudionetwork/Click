@@ -28,7 +28,7 @@ def test_test_customer_has_real_related_history(seeded):
     assert seeded.event_plans.filter(status="planning", enquiries__quotes__status="pending").exists()
     statuses = set(seeded.orders.values_list("status", flat=True))
     assert {"delivered", "cancelled", "placed", "out_for_delivery"} <= statuses
-    assert seeded.reward_transactions.count() == seeded.orders.filter(status="delivered").count()  # earned via the real rule
+    assert seeded.reward_transactions.filter(kind="earn", order__isnull=False).count() == seeded.orders.filter(status="delivered").count()  # earned via the real rule
     # Every order went through the real checkout: items, payment and a status trail exist.
     for order in Order.objects.filter(customer=seeded):
         assert order.items.exists() and order.payments.exists() and order.events.exists()

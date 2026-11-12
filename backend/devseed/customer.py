@@ -169,9 +169,15 @@ def _shift(order: Order, days: int) -> None:
 def seed_wallet(profile, log) -> None:
     if WalletTransaction.objects.filter(customer=profile).exists():
         return
-    for amount, desc in [("10000.00", "Development test credit (DEVELOPMENT MOCK DATA)"), ("250.00", "Welcome to Click credit"), ("100.00", "Sorry-for-the-delay credit")]:
-        WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.PROMO, amount=D(amount), description=desc)
-    log("wallet: 3 promotional credits")
+    from django.utils import timezone
+
+    now = timezone.now()
+    WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.ADJUSTMENT, bucket="cash", amount=D("10000.00"),
+                                     description="Opening balance")
+    for amount, desc, days in [("250.00", "Welcome to Click. credit", 60), ("100.00", "Sorry-for-the-delay credit", 5)]:
+        WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.PROMO, bucket="promo", amount=D(amount), description=desc,
+                                         expires_at=now + timedelta(days=days))
+    log("wallet: opening balance and 2 promotional credits (one expiring soon)")
 
 
 def _grocery_delivery(profile, store, address):
@@ -284,6 +290,9 @@ def finalize_notifications(profile, log) -> None:
 def seed_test_customer(log) -> CustomerProfile:
     profile = ensure_test_customer(log)
     seed_wallet(profile, log)
+    from .money import seed_money
+
+    seed_money(profile, log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
     from .showtime import seed_showtime_history

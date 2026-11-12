@@ -1,4 +1,4 @@
-import { authApi, catalogApi, createClickClient, buddyApi, customerApi, eventHubApi, eventsApi, groceriesApi, hotelsApi, travelApi, experiencesApi, parcelsApi, servicesApi, shopApi, showtimeApi, storesApi } from '@click/api';
+import { authApi, catalogApi, createClickClient, buddyApi, customerApi, eventHubApi, eventsApi, groceriesApi, hotelsApi, travelApi, experiencesApi, moneyApi, parcelsApi, servicesApi, shopApi, showtimeApi, storesApi } from '@click/api';
 
 /** Session wiring (in-memory access token, httpOnly refresh cookie) is shared via @click/api. */
 const client = createClickClient({ baseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1', clientId: 'customer-web' });
@@ -22,6 +22,8 @@ export const api = {
   travel: travelApi(http),
   /** Click. Bookings: temples, attractions, experiences and every booking across Click. */
   bookings: experiencesApi(http),
+  /** Wallet, Payments, Rewards, Offers, Notifications, Activity, Help & Support. */
+  money: moneyApi(http),
   /** Buddy conversations and the secure action layer. */
   buddy: buddyApi(http),
 };

@@ -1,176 +1,78 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import type { ParcelSummary, RideSummary, ServiceBookingSummary, StoreType, EventBookingSummary, HotelBookingSummary, TravelBookingSummary, ExperienceBookingSummary } from '@click/api';
-import { EmptyState, ErrorState, Icon, Skeleton } from '../components/ui';
-import { PageHeader } from '../components/shell/PageHeader';
-import { BookingCard } from '../features/bookings/BookingCard';
-import { OrderCard } from '../features/orders/OrderCard';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Button, EmptyState, ErrorState, Icon, Skeleton } from '../components/ui';
+import { MoneyHead, Pill, THEME, groupByDay, iconFor, money, signed, timeOf } from '../features/money/parts';
 import { api } from '../lib/api';
-import { formatDateTime, formatMoney } from '../lib/format';
 
-/**
- * Activity: one timeline of everything the customer has done on Click., read from the source domains (orders,
- * bookings, rides) rather than copied into a separate table. Filters exist only for domains that exist today;
- * service bookings join as that service launches (as another source here).
- */
-const FILTERS: { id: string; label: string; source: 'all' | 'orders' | 'bookings' | 'rides' | 'parcels' | 'services' | 'events' | 'hotels' | 'travel' | 'places'; type?: StoreType }[] = [
-  { id: 'all', label: 'All', source: 'all' },
-  { id: 'rides', label: 'Rides', source: 'rides' },
-  { id: 'parcels', label: 'Parcels', source: 'parcels' },
-  { id: 'services', label: 'Services', source: 'services' },
-  { id: 'events', label: 'Events', source: 'events' },
-  { id: 'hotels', label: 'Stays', source: 'hotels' },
-  { id: 'travel', label: 'Travel', source: 'travel' },
-  { id: 'places', label: 'Temples & places', source: 'places' },
-  { id: 'food', label: 'Food', source: 'orders', type: 'restaurant' },
-  { id: 'groceries', label: 'Groceries', source: 'orders', type: 'grocery' },
-  { id: 'shopping', label: 'Shopping', source: 'orders', type: 'retail' },
-  { id: 'bookings', label: 'Bookings', source: 'bookings' },
-];
+const LABEL: Record<string, string> = {
+  food: 'Food', groceries: 'Groceries', shop: 'Shop', ride: 'Rides', parcel: 'Parcel', services: 'Services', travel: 'Travel', hotels: 'Hotels', shows: 'Shows',
+  events: 'Events', bookings: 'Bookings', payments: 'Payments', wallet: 'Wallet', rewards: 'Rewards', wishlist: 'Saved', buddy: 'Buddy', support: 'Support',
+};
+const START: Record<string, [string, string]> = {
+  food: ['/food', 'Order food'], groceries: ['/groceries', 'Shop groceries'], shop: ['/shopping', 'Start shopping'], ride: ['/rides', 'Book a ride'],
+  parcel: ['/parcels', 'Send a parcel'], services: ['/services', 'Book a professional'], travel: ['/travel', 'Plan a journey'], hotels: ['/hotels', 'Find a stay'],
+  shows: ['/showtime', 'Book a show'], events: ['/events', 'Plan an event'], bookings: ['/bookings', 'Find a place to visit'],
+};
+const STATUSES = [['', 'Any'], ['ok', 'Completed'], ['pending', 'In progress'], ['bad', 'Cancelled / failed']];
 
+/** Activity: everything you did on Click., newest first, read from each service's own records. A dedicated page with
+ *  its own header (no app header or bottom navigation). Notifications are separate. */
 export function ActivityPage() {
   const [params, setParams] = useSearchParams();
-  const filter = FILTERS.find((f) => f.id === params.get('filter')) ?? FILTERS[0]!;
-  const wantOrders = filter.source === 'all' || filter.source === 'orders';
-  const wantBookings = filter.source === 'all' || filter.source === 'bookings';
-  const wantRides = filter.source === 'all' || filter.source === 'rides';
-  const wantParcels = filter.source === 'all' || filter.source === 'parcels';
-  const wantServices = filter.source === 'all' || filter.source === 'services';
-  const wantEvents = filter.source === 'all' || filter.source === 'events';
-  const wantHotels = filter.source === 'all' || filter.source === 'hotels';
-  const wantTravel = filter.source === 'all' || filter.source === 'travel';
-  const wantPlaces = filter.source === 'all' || filter.source === 'places';
-  const orders = useQuery({ queryKey: ['customer', 'orders', 'list', 'activity', filter.type ?? ''], queryFn: () => api.customer.orders.list({ type: filter.type }), enabled: wantOrders });
-  const bookings = useQuery({ queryKey: ['customer', 'bookings', 'activity'], queryFn: () => api.customer.bookings.list(), enabled: wantBookings });
-  const rides = useQuery({ queryKey: ['customer', 'rides', 'activity'], queryFn: () => api.customer.rides.list(), enabled: wantRides });
-  const parcels = useQuery({ queryKey: ['customer', 'parcels', 'activity'], queryFn: () => api.parcels.list(), enabled: wantParcels });
-  const services = useQuery({ queryKey: ['services', 'bookings', 'all'], queryFn: () => api.services.bookings(), enabled: wantServices });
-  const events = useQuery({ queryKey: ['eventhub', 'bookings', 'all'], queryFn: () => api.eventHub.bookings(), enabled: wantEvents });
-  const hotels = useQuery({ queryKey: ['hotels', 'bookings', 'all'], queryFn: () => api.hotels.bookings(), enabled: wantHotels });
-  const travel = useQuery({ queryKey: ['travel', 'bookings', 'all'], queryFn: () => api.travel.bookings(), enabled: wantTravel });
-  const places = useQuery({ queryKey: ['bookings', 'list', 'all'], queryFn: () => api.bookings.list(), enabled: wantPlaces });
+  const category = params.get('category') ?? params.get('filter') ?? '';
+  const status = params.get('status') ?? '';
+  const [q, setQ] = useState(params.get('q') ?? '');
+  const [term, setTerm] = useState(q);
+  useEffect(() => { const t = setTimeout(() => setTerm(q.trim()), 300); return () => clearTimeout(t); }, [q]);
+  const set = (k: string, v: string) => { const n = new URLSearchParams(params); n.delete('filter'); if (v) n.set(k, v); else n.delete(k); setParams(n, { replace: true }); };
 
-  const failed = (wantOrders && orders.error) || (wantBookings && bookings.error) || (wantRides && rides.error) || (wantParcels && parcels.error) || (wantServices && services.error) || (wantEvents && events.error) || (wantHotels && hotels.error) || (wantTravel && travel.error) || (wantPlaces && places.error);
-  const loading = (wantOrders && orders.isPending) || (wantBookings && bookings.isPending) || (wantRides && rides.isPending) || (wantParcels && parcels.isPending) || (wantServices && services.isPending) || (wantEvents && events.isPending) || (wantHotels && hotels.isPending) || (wantTravel && travel.isPending) || (wantPlaces && places.isPending);
-  const items = [
-    ...(wantOrders ? orders.data?.results ?? [] : []).map((o) => ({ at: o.createdAt, key: `o-${o.id}`, node: <OrderCard order={o} /> })),
-    ...(wantBookings ? bookings.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `b-${b.id}`, node: <BookingCard booking={b} /> })),
-    ...(wantRides ? rides.data?.results ?? [] : []).map((r) => ({ at: r.createdAt, key: `r-${r.id}`, node: <RideRow ride={r} /> })),
-    ...(wantParcels ? parcels.data?.results ?? [] : []).map((p) => ({ at: p.createdAt, key: `p-${p.id}`, node: <ParcelActivityRow p={p} /> })),
-    ...(wantServices ? services.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `s-${b.id}`, node: <ServiceActivityRow b={b} /> })),
-    ...(wantEvents ? events.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `e-${b.id}`, node: <EventActivityRow b={b} /> })),
-    ...(wantHotels ? hotels.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `h-${b.id}`, node: <HotelActivityRow b={b} /> })),
-    ...(wantTravel ? travel.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `t-${b.id}`, node: <TravelActivityRow b={b} /> })),
-    ...(wantPlaces ? places.data?.results ?? [] : []).map((b) => ({ at: b.createdAt, key: `x-${b.id}`, node: <PlaceActivityRow b={b} /> })),
-  ].sort((a, b) => b.at.localeCompare(a.at));
+  const list = useInfiniteQuery({
+    queryKey: ['activity', category, status, term],
+    queryFn: ({ pageParam }) => api.money.activity({ category, status, q: term, cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (l) => l.nextCursor,
+  });
+  const rows = useMemo(() => list.data?.pages.flatMap((p) => p.results) ?? [], [list.data]);
+  const cats = list.data?.pages[0]?.categories ?? Object.keys(LABEL);
+  const filtered = !!(status || term);
 
   return (
-    <div className="stack">
-      <PageHeader title="Activity" subtitle="Your Click. orders, rides and bookings, newest first." back={{ to: '/account', label: 'Profile' }} />
-      <div className="chips" role="group" aria-label="Filter activity">
-        {FILTERS.map((f) => (
-          <button key={f.id} type="button" className="chip" aria-pressed={f.id === filter.id}
-            onClick={() => setParams(f.id === 'all' ? {} : { filter: f.id }, { replace: true })}>{f.label}</button>
-        ))}
+    <div className="mn-page mn-page--full">
+      <MoneyHead title="Activity" back="/account" />
+      <div className="mn-search"><Icon name="search" size={18} />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search orders, bookings, amounts, references" aria-label="Search activity" /></div>
+      <div className="mn-chips" role="tablist" aria-label="Activity type">
+        <button type="button" role="tab" className="mn-chip" aria-selected={!category} aria-pressed={!category} onClick={() => set('category', '')}>All</button>
+        {cats.map((c) => <button key={c} type="button" role="tab" className="mn-chip" aria-selected={category === c} aria-pressed={category === c} onClick={() => set('category', c)}>
+          <Icon name={iconFor(c)} size={15} />{LABEL[c] ?? c}</button>)}
       </div>
-      {failed ? <ErrorState error={failed} onRetry={() => { orders.refetch(); bookings.refetch(); rides.refetch(); parcels.refetch(); services.refetch(); events.refetch(); hotels.refetch(); travel.refetch(); places.refetch(); }} />
-        : loading ? <Skeleton height={200} radius={16} />
-          : items.length === 0 ? (
-            <EmptyState icon="history" title="No activity yet." message={filter.id === 'all' ? 'Your Click. orders, rides and bookings will appear here.' : `Nothing in ${filter.label} yet.`}
-              action={<Link to={filter.id === 'bookings' ? '/showtime' : filter.id === 'rides' ? '/rides' : filter.id === 'parcels' ? '/parcels' : filter.id === 'services' ? '/services' : filter.id === 'events' ? '/events' : filter.id === 'hotels' ? '/hotels' : filter.id === 'travel' ? '/travel' : filter.id === 'places' ? '/bookings' : '/food'} className="btn btn--primary">{filter.id === 'bookings' ? 'Book a show' : filter.id === 'rides' ? 'Book a ride' : filter.id === 'parcels' ? 'Send a parcel' : filter.id === 'services' ? 'Book a professional' : filter.id === 'events' ? 'Plan an event' : filter.id === 'hotels' ? 'Find a stay' : filter.id === 'travel' ? 'Plan a journey' : filter.id === 'places' ? 'Find a place to visit' : 'Order food'}</Link>} />
-          ) : <div className="card">{items.map((it, i) => <div key={it.key} style={i ? { borderTop: '1px solid var(--c-line)' } : undefined}>{it.node}</div>)}</div>}
+      <div className="mn-chips" role="group" aria-label="Status">
+        {STATUSES.map(([v, l]) => <button key={v || 'any'} type="button" className="mn-chip mn-chip--sm" aria-pressed={status === v} onClick={() => set('status', v!)}>{l}</button>)}
+      </div>
+
+      {list.isError ? <ErrorState error={list.error} onRetry={() => list.refetch()} /> : !list.data ? <Skeleton height={300} /> : rows.length === 0 && !list.hasNextPage ? (
+        <EmptyState icon="history" title={filtered ? 'Nothing matches' : 'No activity yet'}
+          message={filtered ? 'Try another search or filter.' : category ? `Nothing in ${LABEL[category] ?? category} yet.` : 'Your orders, rides, bookings, payments and rewards appear here.'}
+          action={!filtered && START[category] ? <Link to={START[category]![0]} className="btn btn--primary">{START[category]![1]}</Link> : undefined} />
+      ) : (
+        <>
+          {groupByDay(rows, (r) => r.at).map((g) => (
+            <div key={g.label} className="mn-group"><h3 className="mn-group__label">{g.label}</h3>
+              <ul className="mn-list">{g.rows.map((r) => (
+                <li key={r.id}><Link to={r.link} className="mn-row" data-theme={THEME[r.category]}>
+                  <span className="mn-row__icon mn-row__icon--theme"><Icon name={iconFor(r.category)} size={18} /></span>
+                  <span className="mn-row__text"><strong className="truncate">{r.title}</strong>
+                    <span className="small mn-muted truncate">{[r.subtitle, r.reference, timeOf(r.at)].filter(Boolean).join(' · ')}</span></span>
+                  <span className="mn-row__end">{r.amount && <strong className={r.category === 'wallet' && Number(r.amount) > 0 ? 'mn-ok' : ''}>{r.category === 'wallet' ? signed(r.amount) : money(r.amount)}</strong>}{r.status && <Pill tone={r.tone}>{r.status}</Pill>}</span>
+                </Link></li>
+              ))}</ul>
+            </div>
+          ))}
+          {rows.length === 0 && <p className="small mn-muted">No matches in recent activity.</p>}
+          {list.hasNextPage && <Button variant="secondary" block loading={list.isFetchingNextPage} onClick={() => list.fetchNextPage()}>{filtered && rows.length < 5 ? 'Search older activity' : 'Load more'}</Button>}
+        </>
+      )}
     </div>
-  );
-}
-
-function RideRow({ ride: r }: { ride: RideSummary }) {
-  return (
-    <Link to={`/rides/${r.id}`} className="activity__row" data-theme="ride" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name="ride" size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{r.pickupLabel} → {r.dropLabel}</strong>
-        <span className="truncate">{r.rideType.name} · {formatMoney(r.total, r.currency)} · {r.number} · {formatDateTime(r.scheduledFor ?? r.createdAt)}</span>
-      </span>
-      <span className="activity__status">{r.statusLabel}</span>
-    </Link>
-  );
-}
-
-function ParcelActivityRow({ p }: { p: ParcelSummary }) {
-  return (
-    <Link to={`/parcels/${p.id}`} className="activity__row" data-theme="parcel" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name="parcel" size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{p.pickup.label} → {p.drop.label}</strong>
-        <span className="truncate">Parcel · {p.service.name} · {formatMoney(p.total, p.currency)} · {p.number} · {formatDateTime(p.scheduledFor ?? p.createdAt)}</span>
-      </span>
-      <span className="activity__status">{p.statusLabel}</span>
-    </Link>
-  );
-}
-
-function ServiceActivityRow({ b }: { b: ServiceBookingSummary }) {
-  return (
-    <Link to={`/services/bookings/${b.id}`} className="activity__row" data-theme="services" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name="wrench" size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{b.job.name}{b.provider ? ` · ${b.provider.name}` : ''}</strong>
-        <span className="truncate">{b.category.name}{b.total ? ` · ${formatMoney(b.total)}` : ''} · {b.number} · {formatDateTime(b.scheduledStart ?? b.createdAt)}</span>
-      </span>
-      <span className="activity__status">{b.statusLabel}</span>
-    </Link>
-  );
-}
-
-function EventActivityRow({ b }: { b: EventBookingSummary }) {
-  return (
-    <Link to={`/events/bookings/${b.id}`} className="activity__row" data-theme="events" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name="gift" size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{b.title}</strong>
-        <span className="truncate">Event · {formatMoney(b.total)} · {b.number} · {new Date(`${b.eventDate}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}{b.startTime ? `, ${b.startTime}` : ''}</span>
-      </span>
-      <span className="activity__status">{b.statusLabel}</span>
-    </Link>
-  );
-}
-
-function HotelActivityRow({ b }: { b: HotelBookingSummary }) {
-  const d = (x: string) => new Date(`${x}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  return (
-    <Link to={`/hotels/bookings/${b.id}`} className="activity__row" data-theme="hotels" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name="hotel" size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{b.property.name}</strong>
-        <span className="truncate">Stay · {d(b.checkIn)} – {d(b.checkOut)} · {formatMoney(b.total)} · {b.number}</span>
-      </span>
-      <span className="activity__status">{b.statusLabel}</span>
-    </Link>
-  );
-}
-
-function TravelActivityRow({ b }: { b: TravelBookingSummary }) {
-  return (
-    <Link to={`/travel/bookings/${b.id}`} className="activity__row" data-theme="travel" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name={b.mode === 'flight' ? 'plane' : b.mode === 'train' ? 'train' : 'bus'} size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">{b.modeLabel} · {b.from.city} → {b.to.city}</strong>
-        <span className="truncate">{formatDateTime(b.departsAt)} · {b.operator} · {formatMoney(b.total)}{b.pnr ? ` · PNR ${b.pnr}` : ` · ${b.number}`}</span>
-      </span>
-      <span className="activity__status">{b.statusLabel}</span>
-    </Link>
-  );
-}
-
-function PlaceActivityRow({ b }: { b: ExperienceBookingSummary }) {
-  return (
-    <Link to={`/bookings/r/${b.id}`} className="activity__row" data-theme="bookings" style={{ padding: '12px 14px' }}>
-      <span className="activity__icon"><Icon name={b.attraction.group === 'spiritual' ? 'temple' : 'ticket'} size={18} /></span>
-      <span className="activity__text">
-        <strong className="truncate">Booked {b.offering.name} · {b.attraction.name}</strong>
-        <span className="truncate">{new Date(`${b.visitDate}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {Number(b.total) ? formatMoney(b.total) : 'Free'} · {b.number}</span>
-      </span>
-      <span className="activity__status">{b.statusLabel}</span>
-    </Link>
   );
 }

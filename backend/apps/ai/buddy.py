@@ -54,6 +54,11 @@ class ClickBasicBuddy:
             return nav
         if cart := self._add_to_cart(customer, messages[-1].content):
             return cart
+        from . import money_buddy
+
+        # Wallet, payments, refunds, points, offers, notifications, activity, support: answered from the ledgers.
+        if money_buddy.wants_money(text) and (money := money_buddy.reply(text, customer)) is not None:
+            return money
         note = ""
         if _has(text, "remind", "reminder", "reminders", "alarm"):
             note = "Reminders aren’t available in Click yet, so I can’t set one"

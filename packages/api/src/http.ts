@@ -43,6 +43,8 @@ export interface RequestOptions {
 
 export interface HttpClient {
   request<T>(path: string, opts?: RequestOptions): Promise<T>;
+  /** Authenticated file download (e.g. a support attachment), returned as a Blob. */
+  blob?: (path: string) => Promise<Blob>;
   clientId: string;
   baseUrl: string;
 }
@@ -93,5 +95,15 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
     return data as T;
   }
 
-  return { request, clientId, baseUrl };
+  async function blob(path: string): Promise<Blob> {
+    let res = await send(path, {}, options.getAccessToken());
+    if (res.status === 401) {
+      const fresh = await options.refreshAccessToken();
+      if (fresh) res = await send(path, {}, fresh);
+    }
+    if (!res.ok) throw new ApiError(res.status, { code: 'http_error', message: 'Couldn’t open the file.' });
+    return res.blob();
+  }
+
+  return { request, blob, clientId, baseUrl };
 }

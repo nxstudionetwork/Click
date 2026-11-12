@@ -93,6 +93,11 @@ def resolve(ret: ReturnRequest, *, approve: bool, note: str = "") -> ReturnReque
         ret.status = ReturnRequest.Status.REFUNDED
         msg = "Return approved and refunded"
     ret.save(update_fields=["status", "refund_amount", "resolution_note", "resolved_at", "updated_at"])
+    order = ret.item.order
+    if ret.status == ReturnRequest.Status.REFUNDED and not order.items.exclude(returns__status=ReturnRequest.Status.REFUNDED).exists():
+        from apps.rewards.services import reverse_for_order
+
+        reverse_for_order(order, f"order {order.number} fully refunded")  # every item came back: its points do too
     notify(ret.customer, NotificationCategory.ORDERS, msg, f"{title} · {ret.item.order.number}", f"/orders/{ret.item.order_id}")
     return ret
 

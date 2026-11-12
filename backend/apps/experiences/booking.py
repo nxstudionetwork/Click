@@ -342,7 +342,7 @@ def complete_past() -> int:
         b.save(update_fields=["status", "updated_at"])
         _event(b, S.COMPLETED, "Visit completed")
         if b.subtotal:
-            award_points(b.customer, b.subtotal - b.discount, f"experience:{b.id}", f"Booking {b.number}")
+            award_points(b.customer, b.subtotal - b.discount, f"experience:{b.id}", f"Booking {b.number}", service="bookings")
         n += 1
     return n
 

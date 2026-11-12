@@ -8,6 +8,7 @@ import { useThemeOverride } from '../components/layout/AppShell';
 import { fmtDay, fmtSlot } from '../features/bookings/parts';
 import { useWallet, walletKey } from '../features/wallet/useWallet';
 import { api } from '../lib/api';
+import { ClaimedCodes } from '../features/offers/ClaimedCodes';
 import { formatMoney } from '../lib/format';
 
 const newKey = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -100,6 +101,7 @@ export function ExperienceBookPage() {
             <div className="bk-coupon"><input value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Offer code" aria-label="Offer code" />
               <Button variant="secondary" size="sm" onClick={() => setApplied(coupon.trim())}>Apply</Button></div>
           )}
+          {Number(r.subtotal) > 0 && <ClaimedCodes service="bookings" current={applied} onPick={(c) => { setCoupon(c); setApplied(c); }} />}
           {r.couponError && <p className="small bk-warn">{r.couponError}</p>}
 
           {Number(r.total) > 0 && (

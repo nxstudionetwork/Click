@@ -8,6 +8,7 @@ import { useThemeOverride } from '../components/layout/AppShell';
 import { fmtDay, partyLabel, stayFrom, stayQs } from '../features/hotels/parts';
 import { useWallet, walletKey } from '../features/wallet/useWallet';
 import { api } from '../lib/api';
+import { ClaimedCodes } from '../features/offers/ClaimedCodes';
 import { formatMoney } from '../lib/format';
 
 const newKey = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -129,6 +130,7 @@ export function HotelBookPage() {
                   <input className="ht-input" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code" aria-label="Coupon code" maxLength={20} />
                   <Button type="submit" variant="secondary" disabled={!coupon.trim()}>Apply</Button>
                 </form>
+                <ClaimedCodes service="hotels" current={applied} onPick={(c) => { setCoupon(c); setApplied(c); }} />
                 {applied && <p className={`small ${r.offer && Number(r.discount) > 0 ? 'ht-ok' : 'ht-warn'}`}>{r.offer && Number(r.discount) > 0 ? `${r.offer} applied.` : `“${applied}” doesn’t apply to this stay.`}</p>}
                 {r.property.policies.length > 0 && <ul className="ht-rules">{r.property.policies.map((p) => <li key={p} className="small">{p}</li>)}</ul>}
               </section>

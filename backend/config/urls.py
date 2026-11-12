@@ -33,12 +33,15 @@ from apps.travel import urls as travel_urls
 from apps.experiences import urls as experience_urls
 from apps.experiences.views import HubView as ReservationsView
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
-from apps.wallet.views import WalletView
+from apps.wallet import views as wallet_views
+from apps.payments import views as payment_views
+from apps.activity.views import ActivityView
+from apps.offers import views as offer_views
+from apps.rewards import views as reward_views
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
 from apps.catalog.views import ProductDetailView, StoreMenuView
 from apps.notifications import views as notification_views
-from apps.rewards.views import RewardsView
 from apps.support import views as support_views
 from apps.wishlists import views as wishlist_views
 from apps.core.views import health
@@ -81,9 +84,29 @@ customer_urls = [
     path("notifications/summary", notification_views.NotificationSummaryView.as_view(), name="notifications-summary"),
     path("notifications/read-all", notification_views.NotificationReadAllView.as_view(), name="notifications-read-all"),
     path("notifications/<uuid:pk>/read", notification_views.NotificationReadView.as_view(), name="notification-read"),
-    path("rewards", RewardsView.as_view(), name="rewards"),
+    path("notifications/<uuid:pk>/unread", notification_views.NotificationUnreadView.as_view(), name="notification-unread"),
+    path("notifications/preferences", notification_views.PreferencesView.as_view(), name="notification-preferences"),
+    path("rewards", reward_views.RewardsView.as_view(), name="rewards"),
+    path("rewards/history", reward_views.HistoryView.as_view(), name="rewards-history"),
+    path("rewards/history/<uuid:pk>", reward_views.HistoryDetailView.as_view(), name="rewards-history-detail"),
+    path("rewards/catalog/<uuid:pk>/redeem", reward_views.RedeemView.as_view(), name="rewards-redeem"),
     path("support/tickets", support_views.SupportTicketListCreateView.as_view(), name="support-tickets"),
     path("support/tickets/<uuid:pk>", support_views.SupportTicketDetailView.as_view(), name="support-ticket"),
+    path("support/tickets/<uuid:pk>/messages", support_views.MessagesView.as_view(), name="support-ticket-messages"),
+    path("support/tickets/<uuid:pk>/<slug:action>", support_views.TicketActionView.as_view(), name="support-ticket-action"),
+    path("support/attachments/<uuid:pk>", support_views.AttachmentView.as_view(), name="support-attachment"),
+    path("support/related", support_views.RelatedItemsView.as_view(), name="support-related"),
+    path("support/articles/<slug:slug>/feedback", support_views.ArticleFeedbackView.as_view(), name="support-article-feedback"),
+    path("activity", ActivityView.as_view(), name="activity"),
+    path("payments", payment_views.PaymentsView.as_view(), name="payments"),
+    path("payments/overview", payment_views.OverviewView.as_view(), name="payments-overview"),
+    path("payments/preferences", payment_views.PreferencesView.as_view(), name="payments-preferences"),
+    path("payments/refunds", payment_views.RefundsView.as_view(), name="payments-refunds"),
+    path("payments/<uuid:pk>", payment_views.PaymentDetailView.as_view(), name="payment-detail"),
+    path("offers/mine", offer_views.MineView.as_view(), name="offers-mine"),
+    path("offers/claimed", offer_views.ClaimedView.as_view(), name="offers-claimed"),
+    path("offers/<str:ref>/save", offer_views.SaveView.as_view(), name="offers-save"),
+    path("offers/<str:ref>/claim", offer_views.ClaimView.as_view(), name="offers-claim"),
     path("assistant/messages", CustomerAssistantView.as_view(), name="assistant"),
     path("assistant/conversations", ai_conv.ConversationsView.as_view(), name="assistant-conversations"),
     path("assistant/conversations/<uuid:pk>", ai_conv.ConversationDetailView.as_view(), name="assistant-conversation"),
@@ -93,7 +116,13 @@ customer_urls = [
     path("assistant/events", ai_conv.EventsView.as_view(), name="assistant-events"),
     path("assistant/capabilities", AssistantCapabilitiesView.as_view(), name="assistant-capabilities"),
     path("assistant/transcribe", AssistantTranscribeView.as_view(), name="assistant-transcribe"),
-    path("wallet", WalletView.as_view(), name="wallet"),
+    path("wallet", wallet_views.WalletView.as_view(), name="wallet"),
+    path("wallet/transactions", wallet_views.TransactionsView.as_view(), name="wallet-transactions"),
+    path("wallet/transactions/<uuid:pk>", wallet_views.TransactionDetailView.as_view(), name="wallet-transaction"),
+    path("wallet/top-ups", wallet_views.TopUpsView.as_view(), name="wallet-topups"),
+    path("wallet/top-ups/<uuid:pk>", wallet_views.TopUpDetailView.as_view(), name="wallet-topup"),
+    path("wallet/top-ups/<uuid:pk>/sandbox", wallet_views.SandboxPayView.as_view(), name="wallet-topup-sandbox"),
+    path("wallet/security", wallet_views.SecurityView.as_view(), name="wallet-security"),
     path("bookings", booking_views.BookingListCreateView.as_view(), name="bookings"),
     path("bookings/<uuid:pk>", booking_views.BookingDetailView.as_view(), name="booking-detail"),
     path("bookings/<uuid:pk>/cancel", booking_views.BookingCancelView.as_view(), name="booking-cancel"),
@@ -136,6 +165,12 @@ api_v1 = [
     path("showtime/titles/<slug:slug>/reviews", booking_views.ShowtimeReviewsView.as_view(), name="showtime-reviews"),
     path("partner/tickets/verify", booking_views.TicketVerifyView.as_view(), name="partner-ticket-verify"),
     path("offers", store_views.OfferListView.as_view(), name="offers"),
+    path("offers/hub", offer_views.HubView.as_view(), name="offers-hub"),
+    path("offers/item/<str:ref>", offer_views.OfferView.as_view(), name="offers-item"),
+    path("support/help", support_views.HelpHomeView.as_view(), name="support-help"),
+    path("support/articles", support_views.ArticleSearchView.as_view(), name="support-articles"),
+    path("support/articles/<slug:slug>", support_views.ArticleView.as_view(), name="support-article"),
+    path("payments/webhooks/<slug:provider>", wallet_views.ProviderWebhookView.as_view(), name="payments-webhook"),
     path("buzz", BuzzFeedView.as_view(), name="buzz"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),

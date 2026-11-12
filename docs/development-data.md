@@ -64,6 +64,8 @@ lives in Firebase Console and only works for the test number.
 | Test customer: notifications | about 130 (8 newest unread) |
 | Test customer: wishlist | 20 (10 stores, 10 products) |
 | Test customer: support tickets | 20 (all statuses) |
+| Wallet & rewards rules (`devseed/money.py`) | 5 reward catalog items, 7 missions, 1 points campaign, 2 cashback offers; opening balance + 2 promo credits (one expiring in 5 days) |
+| Help articles | about 28, loaded by the `support` data migration (not seed data) |
 | Test customer: cart | 2 items |
 
 Stores and the test customer's addresses have coordinates near real Bengaluru locality centres (stable per record,
@@ -164,3 +166,10 @@ planetarium, water and theme parks, an aquarium, adventure parks, a ropeway, wal
 ticket types, slots, capacity and policies; a closure day and 2 offers (parks 10% auto; coupon EXPLORE15). No images. `seed_experience_history`
 adds reviewed visits by dev viewers; the test customer has an upcoming special darshan, a past museum visit and a saved water park.
 
+
+## Adding money in development
+
+Wallet top-ups run against the **sandbox test provider** while `CLICK_PAYMENT_SANDBOX` is on (it follows `DEBUG`).
+Add money → choose amount and method → review → the test-mode step offers *Approve* / *Decline*. The server signs and
+verifies the provider event exactly as it would a real webhook, so the wallet is credited only on a verified approval.
+No real money moves. With the sandbox off and no provider configured, the app shows adding money as unavailable.

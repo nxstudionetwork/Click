@@ -279,7 +279,7 @@ def complete_past() -> int:
         bk.status = S.COMPLETED
         bk.save(update_fields=["status", "updated_at"])
         _event(bk, S.COMPLETED, "Journey completed")
-        award_points(bk.customer, bk.base_fare, f"travel:{bk.id}", f"Travel {bk.number}")
+        award_points(bk.customer, bk.base_fare, f"travel:{bk.id}", f"Travel {bk.number}", service="travel")
         n += 1
     return n
 

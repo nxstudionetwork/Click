@@ -10,7 +10,7 @@ def test_notifications_list_read_and_isolation(api, customer, other_customer):
     notify(customer.customer_profile, "offers", "Two")
     notify(other_customer.customer_profile, "orders", "Not yours")
     api.force_authenticate(customer)
-    assert api.get("/api/v1/customer/notifications/summary").json() == {"unread": 2}
+    assert api.get("/api/v1/customer/notifications/summary").json()["unread"] == 2
     assert [n["title"] for n in api.get("/api/v1/customer/notifications?category=orders").json()["results"]] == ["One"]
     assert api.post(f"/api/v1/customer/notifications/{a.id}/read").json()["isRead"] is True
     assert api.get("/api/v1/customer/notifications?unread=true").json()["count"] == 1
@@ -18,7 +18,7 @@ def test_notifications_list_read_and_isolation(api, customer, other_customer):
 
     api.force_authenticate(other_customer)
     assert api.post(f"/api/v1/customer/notifications/{a.id}/read").status_code == 404
-    assert api.get("/api/v1/customer/notifications/summary").json() == {"unread": 1}
+    assert api.get("/api/v1/customer/notifications/summary").json()["unread"] == 1
 
 
 def test_order_placement_creates_notification(auth_api, products, address):

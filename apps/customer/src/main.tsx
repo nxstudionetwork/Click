@@ -29,6 +29,7 @@ import './styles/hotels.css';
 import './styles/travel.css';
 import './styles/bookings.css';
 import './styles/buddy.css';
+import './styles/money.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -41,12 +41,14 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/catalog     menu categories, products
   apps/carts       server-side single-store cart
   apps/orders      transactional, idempotent order placement; status state machine + audit trail
-  apps/payments    payment records (cash on delivery today; gateways plug in later)
+  apps/payments    payment records for every order and booking, refunds, default method, failed/pending handling, signed provider webhooks
   apps/wishlists   saved stores/products per customer
-  apps/notifications in-app notification centre (order, rewards, support events)
-  apps/rewards     append-only points ledger (earned on delivered orders)
-  apps/support     customer support tickets
-  apps/wallet      Click Wallet (append-only ledger; pay + refunds)
+  apps/notifications in-app inbox: grouped categories, read state, per-category preferences (essential ones can't be muted)
+  apps/rewards     points ledger with expiry, tiers, campaigns, missions, achievements, reversals, atomic redemption to Wallet credit
+  apps/support     Help & Support: knowledge-base articles with feedback, requests with related item, conversation and attachments
+  apps/wallet      Click. Wallet: cash + promo-credit ledger, verified top-ups (provider abstraction, sandbox test mode), cashback, expiry, limits
+  apps/offers      Click. Offers: one hub over every service's offers, save / claim codes, savings from real discounts
+  apps/activity    Activity timeline across every service (cursor paging) and the activity event log
   apps/bookings    Showtime: titles, cinemas, screens and seat layouts, showtimes, seat holds, food & drinks, offers, tickets, reviews
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores

@@ -210,6 +210,9 @@ def transition_order(order: Order, to_status: str, *, actor=None, note: str = ""
         _restock(order)
     elif to_status == OrderStatus.DELIVERED:
         order.delivered_at = now
+        from apps.payments.services import collect_on_delivery
+
+        collect_on_delivery(order)
     order.save(update_fields=["status", "cancelled_at", "delivered_at", "updated_at"])
     OrderStatusEvent.objects.create(order=order, from_status=previous, to_status=to_status, actor=actor, note=note)
     notify(order.customer, NotificationCategory.ORDERS, f"{order.store.name}: {order.get_status_display()}",

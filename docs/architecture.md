@@ -99,9 +99,39 @@ and support tickets. Frontend route guards are UX only.
 
 ## Wallet and bookings
 
-- **Wallet:** the balance is always the sum of an append-only ledger. Writes lock the customer row, so concurrent
-  payments can't overspend. Wallet payments are captured immediately, and cancelling refunds them to the wallet.
-  Top-ups wait for a payment gateway; staff can issue promotional credit in Django admin.
+- **Wallet:** the balance is always the sum of an append-only ledger, in two buckets.
+  - *Cash* (money added, refunds of cash) and *promo credit* (promotional credit, cashback, rewards conversions). Promo
+    credits are lots with an expiry; payments spend promo first, soonest-expiring first, then cash. Expired remainders
+    are written off by `sweep_expired` as "Credit expired" lines. Refunds return each part to the bucket it came from.
+  - Every write locks the customer row, so concurrent payments can't overspend; constraints stop a payment being
+    debited twice or a source (cashback, reward, top-up) being credited twice.
+  - **Adding money** goes amount → method → review → payment provider → server verification → credit. The intent never
+    credits; only a provider event whose HMAC signature verifies (`X-Click-Signature`, `POST /payments/webhooks/<provider>`)
+    does, once (`apply_provider_result` is idempotent). Limits (per top-up, day, month, maximum balance) come from settings.
+    The only provider today is a **sandbox test mode** (on when `CLICK_PAYMENT_SANDBOX`, default DEBUG); in production
+    without a provider, adding money is shown as unavailable.
+  - Account states (active / restricted / locked / suspended / closed) pause adding money and paying; the balance stays visible.
+  - No withdrawal, peer-to-peer transfer or split wallet + card payment: the API reports `partialPayment: false`.
+- **Payments** (`/customer/payments`): every payment record the customer owns (orders, rides, parcels, services, shows,
+  events, hotels, travel, bookings, wallet top-ups) with filters, search, detail (breakdown, wallet movements, refunds,
+  retry on the booking that owns it) and a default method stored on the server. Cash on delivery is captured when the
+  order is delivered; unpaid cash / pay-at-venue rows show as "pay later", never as stuck.
+- **Rewards:** points ledger with FIFO lots and expiry; tiers from `CLICK_REWARD_TIERS` measured on 365-day points;
+  campaign multipliers; missions measured from real orders and bookings and awarded once (`mission:<code>`);
+  redemption deducts points and issues a promo Wallet credit in one transaction (idempotency key per tap); refunds
+  reverse the points they earned.
+- **Offers** (`/offers/hub`): aggregates store, hotel, show, service, ride, travel, experience, cashback and points
+  offers into one shape. Badges and "best value" come from stated rules. Claimed codes are suggested at the Hotels,
+  Travel and Bookings checkouts; each service still validates the code.
+- **Notifications vs Activity:** notifications are what Click. told the customer (grouped, read state, mutable
+  non-essential categories); Activity (`/customer/activity`) is what the customer did, read from each service's own
+  records with a cursor that stays correct under search and status filters.
+- **Help & Support:** articles (data migration from `apps/support/articles.py`) with feedback; requests carry one
+  related record the customer owns (checked server-side), get an urgency-based priority, are rate limited and
+  duplicate-safe, and hold a conversation with attachments (JPEG / PNG / WebP / PDF up to 5 MB, checked by content).
+  A support reply (`SupportMessage` with sender "support", from Django admin today) notifies the customer.
+- **Scheduled jobs needed in production:** `wallet.sweep_expired` / `remind_expiring`, `wallet.expire_topups`,
+  `rewards.sweep_expired`.
 - **Bookings:**
   - A database unique constraint stops any seat being sold twice, even under concurrent requests.
   - Placement is idempotent and prices are computed on the server.
