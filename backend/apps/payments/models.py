@@ -18,7 +18,7 @@ class PaymentMethod(models.TextChoices):
     CASH = "cash", "Cash to driver / delivery partner"
 
 
-PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking")
+PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking", "hotel_booking")
 
 
 def _exactly_one(fields) -> Q:
@@ -48,6 +48,7 @@ class Payment(BaseModel):
     parcel = models.ForeignKey("parcels.ParcelOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     service_booking = models.ForeignKey("professionals.ServiceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     event_booking = models.ForeignKey("eventhub.EventBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    hotel_booking = models.ForeignKey("hotels.HotelBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     method = models.CharField(max_length=30, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -60,6 +61,6 @@ class Payment(BaseModel):
         indexes = [models.Index(fields=["provider", "provider_reference"], name="payments_provider_ref_idx")]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gte=0), name="payments_amount_non_negative"),
-            # Exactly one target: an order, a show booking, a ride, a parcel, a service booking or an event booking.
-            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v5"),
+            # Exactly one target: an order, a show booking, a ride, a parcel, a service booking, an event booking or a hotel booking.
+            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v6"),
         ]

@@ -236,23 +236,7 @@ details.faq p { margin-top: var(--s-2); color: var(--c-ink-2); font-size: var(--
 @keyframes success { 0% { transform: scale(0.96); opacity: 0; } 60% { transform: scale(1.01); } 100% { transform: scale(1); opacity: 1; } }
 
 /* ---- Buddy ---- */
-.buddy { display: flex; flex-direction: column; gap: var(--s-3); max-width: 860px; margin: 0 auto; min-height: calc(100vh - var(--header-h) - 120px); }
-.buddy__head { display: flex; align-items: center; gap: var(--s-2); padding-bottom: var(--s-3); border-bottom: 1px solid var(--c-line); }
-.buddy__title { display: flex; align-items: center; gap: var(--s-2); flex: 1; }
-.buddy__orb { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--c-brand), #14c8a0); flex: none; }
-.buddy__orb--lg { width: 64px; height: 64px; animation: orb 3s ease-in-out infinite; }
 @keyframes orb { 50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgb(91 61 245 / 8%); } }
-.buddy__chat { display: flex; flex-direction: column; gap: var(--s-3); flex: 1; }
-.buddy__welcome { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s-3); padding: var(--s-8) var(--s-2); }
-.buddy__welcome p { max-width: 52ch; }
-.buddy__reply { display: flex; flex-direction: column; gap: var(--s-3); align-items: stretch; animation: route-in 0.25s var(--ease); }
-.buddy__reply .bubble { align-self: flex-start; }
-.buddy__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-3); }
-.buddy__cards > .card, .buddy__cards > .offer-card { grid-column: 1 / -1; }
-.buddy__typing { display: inline-flex; gap: 4px; }
-.buddy__typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ink-3); animation: blink 1.2s infinite; }
-.buddy__typing span:nth-child(2) { animation-delay: 0.2s; }
-.buddy__typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
 .chip--link { display: inline-flex; align-items: center; gap: 4px; color: var(--c-brand-strong); border-color: var(--c-brand-soft); background: var(--c-brand-soft); }
 
@@ -273,8 +257,6 @@ details.faq p { margin-top: var(--s-2); color: var(--c-ink-2); font-size: var(--
 @media (max-width: 359px) { .services { gap: var(--s-2); } .service { padding: var(--s-3) var(--s-2); } .service__name { font-size: var(--fs-xs); } .service .badge { top: 4px; right: 4px; font-size: 10px; padding: 1px 6px; } }
 
 .ticket__body .badge { justify-self: start; }
-.buddy__cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.buddy__cards .event-card__poster { aspect-ratio: 4 / 5; }
 
 /* ---- Development-only UI ---- */
 .dev-panel { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); border: 1.5px dashed var(--c-warning); border-radius: var(--r-md); background: var(--c-warning-soft); }

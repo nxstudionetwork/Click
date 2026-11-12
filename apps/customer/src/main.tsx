@@ -25,6 +25,8 @@ import './styles/groceries.css';
 import './styles/parcel.css';
 import './styles/pros.css';
 import './styles/events.css';
+import './styles/hotels.css';
+import './styles/buddy.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

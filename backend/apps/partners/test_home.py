@@ -78,7 +78,9 @@ def test_home_requires_sign_in_and_a_finished_profile(api, restaurant):
     ("restaurant", "orders", "Open", ["orders", "sales", "completed", "pending"]),
     ("retail-store", "orders", "Open", ["orders", "sales", "items_sold", "pending"]),
     ("cinema-hall", "venue", "Bookings open", ["shows", "tickets", "occupancy", "revenue"]),
-    ("hotel", "upcoming", "Accepting bookings", []),
+    ("hotel", "hotels", "Accepting bookings", ["arrivals", "in_house", "departures", "revenue"]),
+    ("resort", "hotels", "Accepting bookings", ["arrivals", "in_house", "departures", "revenue"]),
+    ("sports-venue", "upcoming", "Accepting bookings", []),
     ("parcel-partner", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
     ("electrician", "services", "Available", ["jobs", "completed", "earnings", "rating"]),
     ("delivery-rider", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
@@ -93,6 +95,15 @@ def test_each_category_gets_its_own_home(slug, kind, on, metrics):
 
         cat = ServiceCategory.objects.create(slug=f"cat-{slug}", name="Electrical", profession="Electrician", group="home")
         ProviderProfile.objects.create(partner=partner, category=cat)
+    if kind == "hotels":
+        from datetime import time
+        from decimal import Decimal as D
+
+        from apps.hotels.models import Destination, HotelProperty
+
+        d = Destination.objects.create(slug=f"d-{slug}", name="City", latitude=D("17.4"), longitude=D("78.4"))
+        HotelProperty.objects.create(partner=partner, destination=d, address="x", latitude=D("17.4"), longitude=D("78.4"),
+                                     check_in_time=time(14), check_out_time=time(11))
     if kind == "venue":
         PartnerVenue.objects.create(partner=partner, venue=Venue.objects.create(name="Hall", slug=f"hall-{slug}", kind="cinema", city="B"))
     home = client.get("/api/v1/partner/home").json()

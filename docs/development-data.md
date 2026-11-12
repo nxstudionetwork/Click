@@ -144,3 +144,10 @@ reviewed bookings from the dev viewers so ratings and counts are real aggregates
 reviewed birthday, one upcoming confirmed booking, one saved event team and a 25th-anniversary plan with one quote waiting
 and one request not answered yet. (`devseed/events.py` remains the Showtime movies/live-events seed.)
 
+Hotels (`devseed/hotels.py`, from `devseed/partners.py`): 6 real destinations (Hyderabad, Bengaluru, Goa, Mysuru, Coorg,
+Vijayawada) with real public landmarks and coordinates, 19 amenities, and 20 fictional properties with room types, rate plans
+(room only / breakfast / non-refundable saver; weekday and weekend prices), a few sold-out nights and 5 offers (incl. coupon
+STAYCLICK). No photos (a designed placeholder shows). The dev Partner App hotel login ("Lakeview Residency") owns a listing.
+`seed_hotel_history` (from `devseed/customer.py`) adds completed stays with verified reviews from dev viewers (ratings are
+recomputed from them); the test customer has one past reviewed stay, one upcoming stay and one saved hotel.
+

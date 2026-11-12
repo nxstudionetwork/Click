@@ -6,6 +6,7 @@ from apps.notifications.services import notify
 from apps.orders.models import Order
 from apps.parcels.models import ParcelOrder
 from apps.eventhub.models import EventBooking
+from apps.hotels.models import HotelBooking
 from apps.professionals.models import ServiceBooking
 
 from .models import SupportTicket
@@ -21,10 +22,12 @@ class SupportTicketSerializer(serializers.ModelSerializer):
     service_booking_number = serializers.CharField(source="service_booking.number", read_only=True, default=None)
     event_booking_id = serializers.PrimaryKeyRelatedField(source="event_booking", queryset=EventBooking.objects.none(), required=False, allow_null=True)
     event_booking_number = serializers.CharField(source="event_booking.number", read_only=True, default=None)
+    hotel_booking_id = serializers.PrimaryKeyRelatedField(source="hotel_booking", queryset=HotelBooking.objects.none(), required=False, allow_null=True)
+    hotel_booking_number = serializers.CharField(source="hotel_booking.number", read_only=True, default=None)
 
     class Meta:
         model = SupportTicket
-        fields = ["id", "reference", "category", "subject", "message", "status", "order_id", "order_number", "parcel_id", "parcel_number", "service_booking_id", "service_booking_number", "event_booking_id", "event_booking_number", "created_at", "resolved_at"]
+        fields = ["id", "reference", "category", "subject", "message", "status", "order_id", "order_number", "parcel_id", "parcel_number", "service_booking_id", "service_booking_number", "event_booking_id", "event_booking_number", "hotel_booking_id", "hotel_booking_number", "created_at", "resolved_at"]
         read_only_fields = ["id", "reference", "status", "created_at", "resolved_at"]
 
     def __init__(self, *args, **kwargs):
@@ -36,6 +39,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             self.fields["parcel_id"].queryset = ParcelOrder.objects.filter(customer=request.user.customer_profile)
             self.fields["service_booking_id"].queryset = ServiceBooking.objects.filter(customer=request.user.customer_profile)
             self.fields["event_booking_id"].queryset = EventBooking.objects.filter(customer=request.user.customer_profile)
+            self.fields["hotel_booking_id"].queryset = HotelBooking.objects.filter(customer=request.user.customer_profile)
 
 
 class SupportTicketListCreateView(generics.ListCreateAPIView):
@@ -43,7 +47,7 @@ class SupportTicketListCreateView(generics.ListCreateAPIView):
     serializer_class = SupportTicketSerializer
 
     def get_queryset(self):
-        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking", "event_booking")
+        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking", "event_booking", "hotel_booking")
 
     def perform_create(self, serializer):
         ticket = serializer.save(customer=self.request.user.customer_profile)
@@ -56,4 +60,4 @@ class SupportTicketDetailView(generics.RetrieveAPIView):
     serializer_class = SupportTicketSerializer
 
     def get_queryset(self):
-        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking", "event_booking")
+        return SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related("order", "parcel", "service_booking", "event_booking", "hotel_booking")

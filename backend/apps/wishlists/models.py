@@ -9,7 +9,7 @@ from apps.customers.models import CustomerProfile
 from apps.stores.models import Store
 
 
-TARGETS = ("store", "product", "provider", "event_provider", "event_package")
+TARGETS = ("store", "product", "provider", "event_provider", "event_package", "hotel")
 
 
 def _exactly_one(fields) -> Q:
@@ -32,16 +32,19 @@ class WishlistItem(BaseModel):
     # Events: a saved event team / venue, or a saved package.
     event_provider = models.ForeignKey("eventhub.EventProvider", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
     event_package = models.ForeignKey("eventhub.EventPackage", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    # Hotels: a saved property.
+    hotel = models.ForeignKey("hotels.HotelProperty", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
 
 
     class Meta:
         ordering = ["-created_at"]
         constraints = [
             # Exactly one target per row (new saveable entities add a column + extend this check).
-            models.CheckConstraint(condition=_exactly_one(TARGETS), name="wishlists_exactly_one_target_v3"),
+            models.CheckConstraint(condition=_exactly_one(TARGETS), name="wishlists_exactly_one_target_v4"),
             models.UniqueConstraint(fields=["customer", "store"], condition=Q(store__isnull=False), name="wishlists_unique_store"),
             models.UniqueConstraint(fields=["customer", "product"], condition=Q(product__isnull=False), name="wishlists_unique_product"),
             models.UniqueConstraint(fields=["customer", "provider"], condition=Q(provider__isnull=False), name="wishlists_unique_provider"),
             models.UniqueConstraint(fields=["customer", "event_provider"], condition=Q(event_provider__isnull=False), name="wishlists_unique_event_provider"),
             models.UniqueConstraint(fields=["customer", "event_package"], condition=Q(event_package__isnull=False), name="wishlists_unique_event_package"),
+            models.UniqueConstraint(fields=["customer", "hotel"], condition=Q(hotel__isnull=False), name="wishlists_unique_hotel"),
         ]

@@ -4,6 +4,7 @@ One shared API for all Click products, versioned under /api/v1/.
   public      /api/v1/stores...               discovery (no auth)
   auth        /api/v1/auth/..., /api/v1/me    shared identity
   bookings    /api/v1/events, /api/v1/shows   movies & live events (public)
+  hotels      /api/v1/hotels/...              Click. Hotels: search, properties, rooms, bookings (public + customer + partner)
   eventhub    /api/v1/eventhub/...            Click. Events: plan events, teams, venues, quotes (public + customer + partner)
   customer    /api/v1/customer/...            Customer App (IsCustomer + ownership)
   partner     /api/v1/partner/...             Click Partner App (resolved from request.user)
@@ -16,6 +17,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
+from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
 from apps.buzz.views import BuzzFeedView
@@ -24,6 +26,7 @@ from apps.groceries import urls as grocery_urls
 from apps.parcels import urls as parcel_urls
 from apps.professionals import urls as services_urls
 from apps.eventhub import urls as eventhub_urls
+from apps.hotels import urls as hotel_urls
 from apps.rides.urls import customer_urlpatterns as ride_customer_urls, partner_urlpatterns as ride_partner_urls
 from apps.wallet.views import WalletView
 from apps.carts import views as cart_views
@@ -47,6 +50,7 @@ customer_urls = [
     path("parcels/", include(parcel_urls.customer)),
     path("services/", include(services_urls.customer)),
     path("eventhub/", include(eventhub_urls.customer)),
+    path("hotels/", include(hotel_urls.customer)),
     path("profile/summary", ProfileSummaryView.as_view(), name="profile-summary"),
     *ride_customer_urls,
     *shop_customer_urls,
@@ -73,6 +77,12 @@ customer_urls = [
     path("support/tickets", support_views.SupportTicketListCreateView.as_view(), name="support-tickets"),
     path("support/tickets/<uuid:pk>", support_views.SupportTicketDetailView.as_view(), name="support-ticket"),
     path("assistant/messages", CustomerAssistantView.as_view(), name="assistant"),
+    path("assistant/conversations", ai_conv.ConversationsView.as_view(), name="assistant-conversations"),
+    path("assistant/conversations/<uuid:pk>", ai_conv.ConversationDetailView.as_view(), name="assistant-conversation"),
+    path("assistant/conversations/<uuid:pk>/messages", ai_conv.ConversationMessagesView.as_view(), name="assistant-conversation-messages"),
+    path("assistant/actions", ai_conv.ActionsView.as_view(), name="assistant-actions"),
+    path("assistant/actions/<uuid:pk>/<slug:decision>", ai_conv.ActionDecisionView.as_view(), name="assistant-action-decision"),
+    path("assistant/events", ai_conv.EventsView.as_view(), name="assistant-events"),
     path("assistant/capabilities", AssistantCapabilitiesView.as_view(), name="assistant-capabilities"),
     path("assistant/transcribe", AssistantTranscribeView.as_view(), name="assistant-transcribe"),
     path("wallet", WalletView.as_view(), name="wallet"),
@@ -101,6 +111,8 @@ api_v1 = [
     path("partner/services/", include(services_urls.partner)),
     path("eventhub/", include(eventhub_urls.public)),
     path("partner/eventhub/", include(eventhub_urls.partner)),
+    path("hotels/", include(hotel_urls.public)),
+    path("partner/hotels/", include(hotel_urls.partner)),
     path("partner/grocery/", include(grocery_urls.partner_urls)),
     path("events", booking_views.EventListView.as_view(), name="events"),
     path("events/<slug:slug>", booking_views.EventDetailView.as_view(), name="event-detail"),

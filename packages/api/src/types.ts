@@ -471,7 +471,7 @@ export interface ReorderResult {
 // --- Engagement -------------------------------------------------------------
 export interface WishlistItem {
   id: UUID;
-  kind: 'store' | 'product' | 'provider' | 'event_provider' | 'event_package';
+  kind: 'store' | 'product' | 'provider' | 'event_provider' | 'event_package' | 'hotel';
   store: Store | null;
   product: ProductWithStore | null;
   /** A saved Services professional ("My Professionals"). */
@@ -479,6 +479,8 @@ export interface WishlistItem {
   /** A saved Click. Events team / venue, or package. */
   eventProvider?: import('./eventhub').EventProviderCard | null;
   eventPackage?: import('./eventhub').EventPackageInfo | null;
+  /** A saved Click. Hotels property. */
+  hotel?: Omit<import('./hotels').SavedHotel, 'favoriteId'> | null;
   createdAt: ISODateTime;
 }
 
@@ -533,6 +535,9 @@ export interface SupportTicket {
   /** Set when the request is about a Click. Events booking. */
   eventBookingId?: UUID | null;
   eventBookingNumber?: string | null;
+  /** Set when the request is about a Click. Hotels booking. */
+  hotelBookingId?: UUID | null;
+  hotelBookingNumber?: string | null;
   serviceBookingNumber?: string | null;
   createdAt: ISODateTime;
   resolvedAt: ISODateTime | null;
@@ -552,9 +557,14 @@ export type BuddyCard =
   | { type: 'booking'; booking: Booking }
   | { type: 'offer'; offer: OfferWithStore }
   | { type: 'grocery'; listing: import('./groceries').GroceryListing }
-  | { type: 'grocery_store'; store: import('./groceries').GroceryStoreCard };
+  | { type: 'grocery_store'; store: import('./groceries').GroceryStoreCard }
+  | { type: 'hotel'; hotel: import('./hotels').HotelCard }
+  | { type: 'hotel_booking'; booking: { id: UUID; number: string; property: string; checkIn: string; checkOut: string; status: string; payment: string; total: Money } }
+  | { type: 'action_result'; result: import('./buddy').BuddyActionRun };
 
-export type BuddyAction = { label: string; path: string } | { label: string; prompt: string };
+export type BuddyAction = { label: string; path: string } | { label: string; prompt: string }
+  /** A typed action for the server's action layer (validated and permission-checked there). */
+  | { label: string; action: string; args: Record<string, unknown>; auto?: boolean };
 
 export interface BuddyReply {
   message: AssistantMessage;
@@ -585,7 +595,7 @@ export interface AssistantCapabilities {
 export interface BuzzItem {
   id: string;
   kind: 'offer' | 'event' | 'trailer' | 'store' | 'product' | 'event_team' | 'post';
-  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'events' | 'ride' | 'parcel';
+  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'events' | 'hotels' | 'ride' | 'parcel';
   title: string;
   body: string;
   tag: string;

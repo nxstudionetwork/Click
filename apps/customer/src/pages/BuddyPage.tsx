@@ -1,153 +1,233 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { ApiError, type AssistantMessage, type BuddyCard, type BuddyReply } from '@click/api';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError, type BuddyAttachment, type BuddyConversation } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
-import { Button, Icon, Sheet } from '../components/ui';
-import { VoiceInput } from '../features/assist/VoiceInput';
-import { BookingCard } from '../features/bookings/BookingCard';
-import { EventCard } from '../features/bookings/EventCard';
-import { useAddToCart } from '../features/menu/useAddToCart';
-import { OfferCard } from '../features/offers/OfferCard';
-import { OrderCard } from '../features/orders/OrderCard';
-import { ProductCard } from '../features/stores/ProductCard';
-import { StoreCard } from '../features/stores/StoreCard';
-import { ProductCard as GroceryCard, StoreCard as GroceryStoreCard } from '../features/groceries/parts';
+import { Icon, Sheet, Skeleton, useConfirm } from '../components/ui';
+import { useCapabilities } from '../features/assist/useCapabilities';
+import { useRecorder } from '../features/assist/useRecorder';
+import { ConfirmCard, MessageView, QUICK } from '../features/buddy/parts';
+import { useBuddyChat } from '../features/buddy/useBuddyChat';
 import { api } from '../lib/api';
+import { useDeliveryLocation } from '../location/LocationProvider';
 
-type Turn = { role: 'user'; content: string } | { role: 'assistant'; reply: BuddyReply };
-
-const historyOf = (turns: Turn[]): AssistantMessage[] =>
-  turns.map((t): AssistantMessage => (t.role === 'user' ? t : { role: 'assistant', content: t.reply.message.content })).slice(-20);
-
-const SUGGESTIONS = ['Find me a good biryani', 'What’s on tonight?', 'Where is my order?', 'Plan dinner and a movie tonight', 'Cheapest rice', 'What’s my wallet balance?'];
+const desktopEnter = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches;
 
 /**
- * Buddy MAN: the full conversation with Click.'s assistant. Own layout (no app header or bottom navigation).
- * Every answer comes from the backend (/customer/assistant/messages), which only uses real, customer-scoped
- * Click. data. Buddy prepares; the customer reviews and pays.
+ * Buddy MAN — Click.'s conversational workspace (its own layout: no Click header or bottom navigation; the Home icon
+ * returns to Click). Conversations are stored on the server and only ever shown again, never re-run. Buddy answers
+ * from real Click data, runs safe actions through the server's action layer, and asks before anything that needs a
+ * confirmation. It never pays: payments happen in Click.'s normal checkout.
  */
 export function BuddyPage() {
   const { status } = useAuth();
-  const [params, setParams] = useSearchParams();
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const [sp, setSp] = useSearchParams();
+  const cid = sp.get('c');
+  const chat = useBuddyChat('man', cid, (id) => setSp({ c: id }, { replace: true }));
   const [draft, setDraft] = useState('');
-  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [attachment, setAttachment] = useState<(BuddyAttachment & { label: string }) | null>(null);
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
   const endRef = useRef<HTMLDivElement>(null);
-  const { addToCart, isAdding } = useAddToCart();
-
-  const send = useMutation({
-    mutationFn: api.customer.assistant.send,
-    onSuccess: (reply) => setTurns((t) => [...t, { role: 'assistant', reply }]),
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const caps = useCapabilities();
+  const transcribe = useMutation({
+    mutationFn: (audio: Blob) => api.customer.assistant.transcribe(audio),
+    onSuccess: (r) => { if (r.text) { api.buddy.track('voice_success'); chat.send(r.text, { viaVoice: true }); } },
+    onError: () => api.buddy.track('voice_failed'),
   });
+  const rec = useRecorder((audio) => transcribe.mutate(audio));
+  const voiceOn = caps.data?.voice === true;
 
-  useEffect(() => { endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' }); }, [turns, send.isPending]);
+  useEffect(() => { endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' }); }, [chat.messages.length, chat.busy, chat.pending]);
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener('online', on); window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+  useEffect(() => { if (rec.state === 'denied') api.buddy.track('mic_denied'); }, [rec.state]);
+  // A question handed over from search / GO ("?q=") is sent once.
+  const q0 = sp.get('q');
+  useEffect(() => {
+    if (q0 && status === 'authenticated') { setSp(cid ? { c: cid } : {}, { replace: true }); chat.send(q0); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q0, status]);
+  useEffect(() => { const t = inputRef.current; if (t) { t.style.height = 'auto'; t.style.height = `${Math.min(160, t.scrollHeight)}px`; } }, [draft]);
 
-  function ask(text: string) {
-    const content = text.trim();
-    if (!content || send.isPending) return;
-    const next: Turn[] = [...turns, { role: 'user', content }];
-    setTurns(next);
-    setDraft('');
-    send.mutate(historyOf(next));
+  const submit = (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!draft.trim() || chat.busy) return;
+    chat.send(draft, { attachment: attachment ? { kind: attachment.kind, id: attachment.id } : null });
+    setDraft(''); setAttachment(null);
+  };
+  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && desktopEnter()) { e.preventDefault(); submit(); }
+  };
+  const newChat = async () => {
+    if ((draft.trim() || chat.pending) && !(await confirm({ title: 'Start a new chat?', message: chat.pending ? 'The action waiting for your OK will be dropped.' : 'Your unsent message will be cleared.', confirmLabel: 'New chat' }))) return;
+    chat.reset(); setDraft(''); setAttachment(null); setSp({}, { replace: true }); inputRef.current?.focus();
+  };
+  const open = (c: BuddyConversation) => { setHistoryOpen(false); setSp({ c: c.id }, { replace: true }); chat.load(c.id); };
+
+  if (status !== 'authenticated') {
+    return (
+      <div className="bd-page" data-theme="buddy">
+        <div className="bd-gate"><span className="bd-orb bd-orb--sm" aria-hidden="true" /><h1>Buddy</h1><p>Sign in so Buddy can use your addresses, orders and bookings — only yours.</p>
+          <Link to="/login?next=/buddy" className="bd-btn">Sign in</Link><Link to="/" className="bd-link small">Back to Click.</Link></div>
+      </div>
+    );
   }
 
-  // A query handed over from global search ("Ask Buddy") is sent once.
-  const initial = params.get('q');
-  useEffect(() => {
-    if (initial && status === 'authenticated') { ask(initial); setParams({}, { replace: true }); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial, status]);
-
-  const submit = (e: FormEvent) => { e.preventDefault(); ask(draft); };
-  const newChat = () => { setTurns([]); setDraft(''); send.reset(); };
-  const mode = [...turns].reverse().find((t): t is Extract<Turn, { role: 'assistant' }> => t.role === 'assistant')?.reply.mode;
-
-  const renderCard = (c: BuddyCard, i: number) => {
-    switch (c.type) {
-      case 'store': return <StoreCard key={i} store={c.store} />;
-      case 'product': return <ProductCard key={i} product={c.product} currency={c.product.store.currency} canOrder={c.product.store.isOpen} busy={isAdding} onAdd={() => addToCart(c.product)} showStore />;
-      case 'event': return <EventCard key={i} event={c.event} />;
-      case 'order': return <div key={i} className="card"><OrderCard order={c.order} /></div>;
-      case 'booking': return <div key={i} className="card"><BookingCard booking={c.booking} /></div>;
-      case 'offer': return <OfferCard key={i} offer={c.offer} />;
-      case 'grocery': return <div key={i} className="gr-scope"><GroceryCard l={c.listing} /></div>;
-      case 'grocery_store': return <div key={i} className="gr-scope"><GroceryStoreCard s={c.store} /></div>;
-    }
-  };
-
   return (
-    <div className="buddy buddy--page" data-theme="buddy">
-      <header className="buddy__head">
-        <div className="buddy__title"><span className="buddy__orb" aria-hidden="true"><Icon name="sparkle" size={18} /></span><div><strong>Buddy</strong><span className="small muted" style={{ display: 'block' }}>{mode === 'basic' ? 'Basic mode' : 'Your Click. assistant'}</span></div></div>
-        <div className="row" style={{ gap: 6 }}>
-          <button className="btn btn--secondary btn--sm" onClick={newChat} disabled={!turns.length && !send.isError}><Icon name="plus" size={16} /> New chat</button>
-          <Link to="/" className="icon-btn" aria-label="Click. home"><Icon name="home" /></Link>
-        </div>
+    <div className="bd-page" data-theme="buddy">
+      <header className="bd-header">
+        <div className="bd-brand"><span className="bd-orb bd-orb--sm" aria-hidden="true" /><span><strong>Buddy</strong>{chat.title && <span className="small bd-muted">{chat.title}</span>}</span></div>
+        <nav className="bd-header__acts" aria-label="Buddy">
+          <button type="button" className="bd-icon" onClick={newChat} aria-label="New chat" title="New chat"><Icon name="plus" size={20} /></button>
+          <button type="button" className="bd-icon" onClick={() => navigate('/')} aria-label="Click. Home" title="Home"><Icon name="home" size={20} /></button>
+          <button type="button" className="bd-icon" onClick={() => setHistoryOpen(true)} aria-label="Recent chats" title="Recent chats"><Icon name="history" size={20} /></button>
+        </nav>
       </header>
+      {!online && <div className="bd-banner" role="status"><Icon name="alert" size={14} /> You’re offline. Buddy will answer when you’re back.</div>}
 
-      {status === 'anonymous' ? (
-        <div className="state">
-          <div className="state__icon"><Icon name="sparkle" /></div>
-          <h2>Sign in to use Buddy</h2>
-          <p>Buddy uses your orders, bookings and location to help.</p>
-          <Link to="/login?next=/buddy" className="btn btn--primary">Sign in</Link>
-        </div>
-      ) : (
-        <>
-          <div className="buddy__chat" aria-live="polite">
-            {turns.length === 0 && (
-              <div className="buddy__welcome">
-                <span className="buddy__orb buddy__orb--lg" aria-hidden="true"><Icon name="sparkle" size={28} /></span>
-                <h2>How can I help?</h2>
-                <p className="muted">I can find food, groceries, products and shows, check your orders and bookings, and help you plan. I only use Click. data and your own account, and I never pay for you: you review and confirm.</p>
-                <div className="chips" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>{SUGGESTIONS.map((s) => <button key={s} className="chip" onClick={() => ask(s)}>{s}</button>)}</div>
-              </div>
-            )}
-            {turns.map((t, i) => t.role === 'user' ? (
-              <div key={i} className="bubble bubble--user">{t.content}</div>
-            ) : (
-              <div key={i} className="buddy__reply">
-                <div className="bubble bubble--assistant">{t.reply.message.content}</div>
-                {t.reply.cards.length > 0 && <div className="buddy__cards">{t.reply.cards.map(renderCard)}</div>}
-                {t.reply.actions.length > 0 && (
-                  <div className="chips" style={{ flexWrap: 'wrap' }}>
-                    {t.reply.actions.map((a, j) => 'path' in a
-                      ? <Link key={j} to={a.path} className="chip chip--link">{a.label} <Icon name="right" size={14} /></Link>
-                      : <button key={j} className="chip" onClick={() => ask(a.prompt)}>{a.label}</button>)}
-                  </div>
-                )}
-              </div>
+      <main className="bd-main" aria-live="polite">
+        {chat.loading ? <div className="bd-stream"><Skeleton height={60} /><Skeleton height={120} /></div> : chat.messages.length === 0 ? (
+          <section className="bd-welcome">
+            <span className="bd-orb" aria-hidden="true" />
+            <h1>Hi, I’m Buddy.</h1>
+            <p>What would you like to do with Click. today?</p>
+            <div className="bd-quick">{QUICK.map((x) => (
+              <button key={x.label} type="button" className="bd-quickbtn" onClick={() => chat.send(x.prompt)}><Icon name={x.icon} size={18} /> {x.label}</button>
+            ))}</div>
+            <p className="small bd-muted"><Icon name="shield" size={12} /> Buddy uses Click. data only, asks before anything important, and never pays for you.</p>
+          </section>
+        ) : (
+          <div className="bd-stream">
+            {chat.messages.map((m) => (
+              <MessageView key={m.id} m={m} acting={chat.acting} onPrompt={(t) => chat.send(t)} onAction={(a) => chat.runAction(a.action, a.args, a.label)} />
             ))}
-            {send.isPending && <div className="bubble bubble--assistant buddy__typing" aria-label="Buddy is thinking"><span /><span /><span /></div>}
-            {send.isError && (
-              <div className="card card--pad stack" role="alert" style={{ gap: 6 }}>
-                <strong>{send.error instanceof ApiError && send.error.code === 'ai_unavailable' ? 'Buddy isn’t available right now' : 'Buddy couldn’t answer'}</strong>
-                <span className="small muted">{send.error.message}</span>
-                <div className="row">
-                  <button className="btn btn--primary btn--sm" onClick={() => send.mutate(historyOf(turns))}>Retry</button>
-                  <Link to="/search" className="btn btn--outline btn--sm">Search instead</Link>
-                </div>
-              </div>
+            {chat.busy && <div className="bd-msg bd-msg--buddy"><span className="bd-avatar bd-avatar--live" aria-hidden="true" /><div className="bd-thinking" aria-label="Buddy is thinking"><span /><span /><span /> <span className="small bd-muted">Checking Click…</span></div></div>}
+            {chat.pending && <ConfirmCard p={chat.pending} busy={chat.acting} onDecide={(d) => chat.decide(d)} />}
+            {chat.error && (
+              <div className="bd-error" role="alert"><Icon name="alert" size={16} /><span>{chat.error.message}</span>
+                {chat.error.text && <button type="button" className="bd-chip" onClick={chat.retry}>Retry</button>}
+                <button type="button" className="bd-x" aria-label="Dismiss" onClick={() => chat.setError(null)}><Icon name="close" size={14} /></button></div>
             )}
             <div ref={endRef} />
           </div>
-          <form className="composer" onSubmit={submit}>
-            <textarea className="field__input" value={draft} maxLength={2000} placeholder="Ask Buddy…" aria-label="Message Buddy"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(draft); } }} />
-            <button type="button" className="icon-btn composer__mic" aria-label="Talk to Buddy" onClick={() => setVoiceOpen(true)}><Icon name="mic" /></button>
-            <Button type="submit" aria-label="Send" disabled={!draft.trim()} loading={send.isPending}><Icon name="send" size={18} /></Button>
-          </form>
-        </>
-      )}
+        )}
+      </main>
 
-      <Sheet open={voiceOpen} onClose={() => setVoiceOpen(false)} label="Talk to Buddy">
-        <div className="stack" style={{ padding: 'var(--s-5)' }}>
-          <div className="spread"><h2>Talk to Buddy</h2><button className="icon-btn" aria-label="Close" onClick={() => setVoiceOpen(false)}><Icon name="close" /></button></div>
-          <VoiceInput onText={(t) => { setVoiceOpen(false); ask(t); }} placeholder="Or type here" listeningLabel="Buddy is listening…" />
+      <form className="bd-input" onSubmit={submit}>
+        {attachment && <div className="bd-attached small"><Icon name="pin" size={12} /> {attachment.label}<button type="button" aria-label="Remove attachment" onClick={() => setAttachment(null)}><Icon name="close" size={12} /></button></div>}
+        {(rec.state === 'denied' || rec.state === 'unsupported' || transcribe.isError) && (
+          <p className="bd-voicenote small" role="status">{rec.state === 'denied' ? 'Microphone access is blocked. Allow it in your browser, or type.' : rec.state === 'unsupported' ? 'This browser can’t record audio.' : 'Couldn’t hear that clearly. Try again.'}</p>
+        )}
+        <div className="bd-input__bar">
+          <button type="button" className="bd-icon" aria-label="Attach Click. context" onClick={() => setAttachOpen(true)}><Icon name="pin" size={20} /></button>
+          <textarea ref={inputRef} rows={1} value={draft} maxLength={2000} placeholder={rec.state === 'listening' ? 'Listening…' : transcribe.isPending ? 'Understanding…' : 'Ask Buddy anything…'}
+            aria-label="Ask Buddy anything" onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} />
+          <button type="button" className={`bd-icon bd-mic${rec.state === 'listening' ? ' is-live' : ''}`} style={{ ['--lvl' as string]: rec.level }}
+            disabled={!voiceOn || transcribe.isPending || chat.busy} aria-pressed={rec.state === 'listening'}
+            aria-label={!voiceOn ? 'Voice isn’t switched on yet' : rec.state === 'listening' ? 'Stop listening' : 'Speak to Buddy'}
+            title={!voiceOn ? 'Voice isn’t switched on for Click. yet' : undefined}
+            onClick={() => { if (rec.state === 'listening') rec.stop(); else { api.buddy.track('voice_started'); rec.start(); } }}>
+            <Icon name="mic" size={20} />
+          </button>
+          {chat.busy ? <button type="button" className="bd-send bd-send--stop" onClick={chat.stop} aria-label="Stop"><span /></button>
+            : <button type="submit" className="bd-send" disabled={!draft.trim()} aria-label="Send"><Icon name="send" size={18} /></button>}
         </div>
-      </Sheet>
+      </form>
+
+      <AttachSheet open={attachOpen} onClose={() => setAttachOpen(false)} onPick={(a) => { setAttachment(a); setAttachOpen(false); inputRef.current?.focus(); }}
+        imageOn={caps.data?.visualSearch === true} />
+      <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} onOpen={open} currentId={chat.id} onDeleted={(id) => { if (id === chat.id) { chat.reset(); setSp({}, { replace: true }); } }} />
     </div>
+  );
+}
+
+function AttachSheet({ open, onClose, onPick, imageOn }: { open: boolean; onClose: () => void; onPick: (a: BuddyAttachment & { label: string }) => void; imageOn: boolean }) {
+  const { addresses } = useDeliveryLocation();
+  const orders = useQuery({ queryKey: ['buddy', 'attach', 'orders'], queryFn: () => api.customer.orders.list(), enabled: open });
+  const stays = useQuery({ queryKey: ['buddy', 'attach', 'hotels'], queryFn: () => api.hotels.bookings('upcoming'), enabled: open });
+  const services = useQuery({ queryKey: ['buddy', 'attach', 'services'], queryFn: () => api.services.bookings('active'), enabled: open });
+  const events = useQuery({ queryKey: ['buddy', 'attach', 'events'], queryFn: () => api.eventHub.bookings('active'), enabled: open });
+  const items: (BuddyAttachment & { label: string; detail: string; icon: string })[] = [
+    ...(orders.data?.results ?? []).slice(0, 4).map((o) => ({ kind: 'order' as const, id: o.id, label: `Order ${o.number}`, detail: o.store.name, icon: 'receipt' })),
+    ...(stays.data?.results ?? []).slice(0, 3).map((b) => ({ kind: 'hotel_booking' as const, id: b.id, label: `Stay ${b.number}`, detail: b.property.name, icon: 'hotel' })),
+    ...(services.data?.results ?? []).slice(0, 3).map((b) => ({ kind: 'service_booking' as const, id: b.id, label: `Service ${b.number}`, detail: b.job.name, icon: 'wrench' })),
+    ...(events.data?.results ?? []).slice(0, 3).map((b) => ({ kind: 'event_booking' as const, id: b.id, label: `Event ${b.number}`, detail: b.title, icon: 'gift' })),
+    ...addresses.slice(0, 3).map((a) => ({ kind: 'address' as const, id: a.id, label: `Address: ${a.label}`, detail: a.line1, icon: 'pin' })),
+  ];
+  return (
+    <Sheet open={open} onClose={onClose} label="Attach">
+      <div className="bd-sheet">
+        <h2>Attach to your message</h2>
+        <p className="small bd-muted">Point Buddy at one of your Click. items. Only your own items are listed, and only its reference is shared.</p>
+        {orders.isPending ? <Skeleton height={120} /> : items.length === 0 ? <p className="small">Nothing to attach yet.</p> : (
+          <ul className="bd-attachlist">{items.map((it) => (
+            <li key={`${it.kind}-${it.id}`}><button type="button" onClick={() => onPick({ kind: it.kind, id: it.id, label: it.label })}>
+              <Icon name={it.icon as never} size={18} /><span><strong>{it.label}</strong><span className="small bd-muted">{it.detail}</span></span></button></li>
+          ))}</ul>
+        )}
+        <div className="bd-attach-off small"><Icon name="camera" size={16} /> {imageOn ? 'Photo search lives in Click. search.' : 'Photos and documents: image understanding isn’t switched on for Click. yet.'}</div>
+      </div>
+    </Sheet>
+  );
+}
+
+function HistoryPanel({ open, onClose, onOpen, currentId, onDeleted }: {
+  open: boolean; onClose: () => void; onOpen: (c: BuddyConversation) => void; currentId: string | null; onDeleted: (id: string) => void;
+}) {
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const [archived, setArchived] = useState(false);
+  const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
+  const list = useInfiniteQuery({
+    queryKey: ['buddy', 'conversations', archived], initialPageParam: 1, enabled: open,
+    queryFn: ({ pageParam }) => api.buddy.conversations(archived, pageParam), getNextPageParam: (l, all) => (l.hasMore ? all.length + 1 : undefined),
+  });
+  const edit = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: { title?: string; archived?: boolean } }) => api.buddy.edit(id, body),
+    onSuccess: () => { setRenaming(null); qc.invalidateQueries({ queryKey: ['buddy', 'conversations'] }); },
+  });
+  const del = useMutation({ mutationFn: (id: string) => api.buddy.remove(id), onSuccess: (_, id) => { onDeleted(id); qc.invalidateQueries({ queryKey: ['buddy', 'conversations'] }); } });
+  const rows = list.data?.pages.flatMap((p) => p.results) ?? [];
+  return (
+    <Sheet open={open} onClose={onClose} label="Recent chats" variant="full">
+      <div className="bd-sheet bd-history">
+        <div className="bd-history__head"><h2>Recent chats</h2>
+          <button type="button" className="bd-chip" aria-pressed={archived} onClick={() => setArchived(!archived)}>{archived ? 'Show recent' : 'Show archived'}</button></div>
+        {list.isError ? <p className="small">{list.error instanceof ApiError ? list.error.message : 'Couldn’t load chats.'} <button type="button" className="bd-link" onClick={() => list.refetch()}>Retry</button></p>
+          : list.isPending ? <Skeleton height={200} /> : rows.length === 0 ? <p className="small bd-muted">{archived ? 'No archived chats.' : 'Your chats will appear here.'}</p> : (
+            <ul className="bd-convs">{rows.map((c) => (
+              <li key={c.id} className={c.id === currentId ? 'is-current' : ''}>
+                {renaming?.id === c.id ? (
+                  <form className="bd-rename" onSubmit={(e) => { e.preventDefault(); if (renaming.title.trim()) edit.mutate({ id: c.id, body: { title: renaming.title } }); }}>
+                    <input value={renaming.title} maxLength={80} autoFocus aria-label="Chat name" onChange={(e) => setRenaming({ id: c.id, title: e.target.value })} />
+                    <button type="submit" className="bd-chip bd-chip--primary">Save</button><button type="button" className="bd-chip" onClick={() => setRenaming(null)}>Cancel</button>
+                  </form>
+                ) : (
+                  <button type="button" className="bd-conv" onClick={() => onOpen(c)}>
+                    <strong>{c.title}</strong><span className="small bd-muted">{c.preview}</span>
+                    <span className="bd-conv__meta small">{c.topic && <span className="bd-tag">{c.topic}</span>}{new Date(c.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span>
+                  </button>
+                )}
+                {renaming?.id !== c.id && (
+                  <div className="bd-conv__acts">
+                    <button type="button" className="bd-x" aria-label={`Rename ${c.title}`} onClick={() => setRenaming({ id: c.id, title: c.title })}><Icon name="edit" size={14} /></button>
+                    <button type="button" className="bd-x" aria-label={`${archived ? 'Unarchive' : 'Archive'} ${c.title}`} onClick={() => edit.mutate({ id: c.id, body: { archived: !archived } })}><Icon name="download" size={14} /></button>
+                    <button type="button" className="bd-x" aria-label={`Delete ${c.title}`} onClick={async () => { if (await confirm({ title: 'Delete this chat?', message: 'It can’t be restored.', confirmLabel: 'Delete', danger: true })) del.mutate(c.id); }}><Icon name="close" size={14} /></button>
+                  </div>
+                )}
+              </li>
+            ))}</ul>
+          )}
+        {list.hasNextPage && <button type="button" className="bd-chip" onClick={() => list.fetchNextPage()}>Load more</button>}
+      </div>
+    </Sheet>
   );
 }

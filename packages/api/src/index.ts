@@ -11,4 +11,6 @@ export * from './groceries-endpoints';
 export * from './parcels-endpoints';
 export * from './services-market';
 export * from './eventhub';
+export * from './hotels';
+export * from './buddy';
 export * from './session';

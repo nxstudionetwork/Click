@@ -301,6 +301,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .eventhub import seed_event_history
 
     seed_event_history(profile, log)
+    from .hotels import seed_hotel_history
+
+    seed_hotel_history(profile, log)
     from .shop import seed_shop_history
 
     seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart

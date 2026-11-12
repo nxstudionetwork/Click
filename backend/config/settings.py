@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "apps.parcels",
     "apps.professionals",
     "apps.eventhub",
+    "apps.hotels",
 ]
 
 MIDDLEWARE = [

@@ -52,10 +52,14 @@ def reply(text: str, customer) -> BuddyReply | None:
         pricing = f" {pricing}."
     lead = (f"Sounds like {cat.name.lower()}. {len(now)} {cat.profession.lower()}{'s are' if len(now) != 1 else ' is'} available now near you"
             if now else f"Sounds like {cat.name.lower()}. No {cat.profession.lower()} is free right now, but you can schedule one") + \
-        f".{pricing} Pick someone and confirm the booking yourself; I don't book or pay for you." + \
+        f".{pricing} I can send a request for you once you confirm; you pay only after the work, and I never pay for you." + \
         ("" if point else " Add a map pin to your address so I can check who serves it.")
     lines = "; ".join(f"{p['name']} ({p['availability_label'].lower()}, {p['price_label']}"
                       f"{', ' + p['rating']['average'] + '★' if p['rating'] else ''})" for p in pros[:3])
-    return BuddyReply(f"{lead} Options: {lines}.", actions=[{"label": f"See {cat.profession.lower()}s", "path": path},
+    book = []
+    if job is not None and now and job.instant and customer is not None:
+        first = now[0]
+        book = [{"label": f"Request {first['name'].split()[0]} now", "action": "book_service", "args": {"provider_id": first["id"], "job_id": str(job.id)}}]
+    return BuddyReply(f"{lead} Options: {lines}.", actions=[*book, {"label": f"See {cat.profession.lower()}s", "path": path},
                                                             *[{"label": f"Book {p['name'].split()[0]}", "path": f"/services/pro/{p['id']}" + (f"?job={job.id}" if job else "")}
                                                               for p in pros[:2]]])

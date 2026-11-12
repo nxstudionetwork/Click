@@ -101,3 +101,6 @@ def seed_partners(log) -> None:
     from .eventhub import seed_eventhub
 
     seed_eventhub(log)  # Click. Events registries, event teams, specialists and venues
+    from .hotels import seed_hotels
+
+    seed_hotels(log)  # Click. Hotels destinations, properties, rooms, rates and offers

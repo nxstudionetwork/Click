@@ -339,6 +339,68 @@ service registry (`config/services.ts`, id `events`, theme `events`). API: `/api
   package (deep link to the profile); Buddy turns "plan a birthday for 30 next Saturday" into real matches, packages,
   availability and a checklist, pre-fills the planner and never sends, books or pays.
 
+## Hotels (accommodation)
+
+Customer-facing name: **Hotels** (`/hotels`, `/hotels/search`, `/hotels/:id`, `/hotels/compare`, `/hotels/book`, `/hotels/bookings`,
+`/hotels/bookings/:id`), in Explore via the service registry (id `hotels`, theme `hotels`). Separate from Travel and Showtime.
+API: `/api/v1/hotels/...` (public), `/api/v1/customer/hotels/...`, `/api/v1/partner/hotels/inventory`.
+
+- **Destination ≠ current location.** The search destination is what the customer types (real `Destination`s, `Landmark`s and
+  properties only); the Click. active location is never forced into it. Distances are straight-line km from the destination
+  centre or a chosen landmark (airport, station, beach…).
+- **Inventory:** `HotelProperty` (a Partner in Hotels & Venues, listed by Business OS), `RoomType` (beds, occupancy, size,
+  units), `RatePlan` (meal plan, refundable + free-cancellation days, fee %, pay now / at property, weekday + weekend price),
+  `RoomInventory` (per-night units / closures / price overrides). Free rooms per night = units − rooms held by pending
+  bookings (until their hold expires) and confirmed bookings. `apps.hotels.search.ClickInventory` is the inventory
+  provider; an external hotel-inventory provider would implement the same `search` / `rooms` methods
+  (`CLICK_HOTEL_INVENTORY`) — none is connected.
+- **Price:** nightly price × rooms, the best live offer the stay qualifies for (early booking, last minute, weekend,
+  long stay, coupon) computed on the server, and GST on hotel stays by nightly tariff (none below ₹1,000, 12% up to
+  ₹7,500, 18% above). A free-cancellation window that has already closed is never offered.
+- **Search:** every filter is server-side (price per night, type, stars, guest rating, amenities, room class, breakfast,
+  free cancellation, pay at property, near a landmark, distance) with sorts (recommended — a published score of shrunken
+  verified rating, flexibility and distance — price, rating, distance, stars, best value). Highlights only when a data
+  rule holds (Top rated, Best value, Great for families, Good for business, Free cancellation).
+- **Booking:** room → guest details (no ID numbers collected) → review (server-priced) → confirm & pay → confirmation.
+  The booking must match the reviewed total (`price_changed`), is idempotent and row-locks the room type. Pay now = Click.
+  Wallet, verified in the same transaction; if it fails the room is held 15 minutes as *pending payment* for a retry, then
+  the booking fails and the room is released. Pay at the property = confirmed, nothing charged online. The agreed policy is
+  snapshotted on the booking.
+- **After:** policy-based cancellation (free before the deadline → full wallet refund; after → fee %; non-refundable keeps
+  all; pay-at-property never charged), confirmed stays complete after check-out, verified 1–10 reviews with six aspects.
+  Modification (dates/room/guests) isn't online yet: cancel and rebook, or support.
+- **Partner App:** hotel / resort / homestay / serviced-apartment partners use the `hotels` workspace (arrivals, in-house,
+  departures; actions guest arrived, payment collected at property, check out) and the inventory endpoint.
+- **Across Click.:** Wishlist (saved hotels), Activity ("Stays"), support tickets (`SupportTicket.hotel_booking`),
+  notifications at each step, Buddy hotel search and "my hotel bookings". `HotelBooking.trip_ref` is reserved for a future
+  Trip / itinerary. Card/UPI gateways and webhooks are not connected: only the wallet ledger and pay-at-property exist.
+
+## Buddy (AI assistant and action layer)
+
+Header icon → a **Man / Go** chooser. **MAN** (`/buddy`) is its own workspace (no Click header / bottom nav): Buddy header
+(New chat, Home, Recent chats), conversation with rich cards, input dock (pin for Click. context, text, voice). **GO**
+(`/buddy/go`) is voice first with an orb that shows Ready / Listening / Thinking / Acting / Speaking / Done / Error.
+
+- **Intelligence:** `apps.ai.providers` (swappable via `CLICK_AI_PROVIDER`; default Buddy basic mode, which answers only
+  from Click data through `apps.ai.tools` and the per-feature helpers: groceries, parcels, services, events, hotels). No
+  Google AI services.
+- **Conversations:** `Conversation` / `ConversationMessage` (owner-scoped; titles generated, renameable; archive; delete),
+  explicit `context` = `{topic, query}` so "only vegetarian" / "the cheapest one" refine the last search. Likely secrets
+  (card numbers, CVV/OTP/PIN) are redacted before storage. Reopening a chat only shows it — nothing re-runs.
+- **Action layer (`apps.ai.actions`):** the AI can only propose typed actions; the server validates every argument
+  (types, ownership, listing / stock / state) and checks the tier. *Safe* (run immediately): `open_page` (allow-listed
+  routes), `wishlist_add`, `cart_add`, `cart_remove`. *Confirm* (server-built summary, customer taps Confirm, expires in
+  10 min): `book_service` (a request, paid after the work), `cancel_order`. *High-risk* (account, security, payment
+  methods) is refused — Buddy opens the page instead. Payments are never actions: Buddy opens the normal checkout.
+  Every run is an `ActionExecution` (audit).
+- **Voice:** recorded locally (stops after 8 s), transcribed only by Click.'s configured speech provider (off by default →
+  Buddy says so and offers typing; the browser's built-in recognition is not used because it sends audio to Google).
+  Spoken replies use on-device voices only.
+- **Analytics:** `BuddyEvent` (opened, mode chosen, action requested/completed/failed, navigation, voice outcome, latency)
+  with no message content and no audio.
+- **Roles:** this is the customer surface; Partner and Business OS assistants would use the same provider layer with
+  their own role-scoped context and action registries.
+
 ## Customer App frontend
 
 - **Brand:** the logo is the supplied glossy app icon (`assets/Glossy Click App Logo.png`, cropped without stretching

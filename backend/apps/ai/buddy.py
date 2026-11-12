@@ -48,8 +48,19 @@ class ClickBasicBuddy:
         if _has(text, "hi", "hello", "hey", "help") and len(text.split()) <= 4:
             return self._help()
 
-        from . import event_buddy, grocery_buddy, parcel_buddy, service_buddy
+        from . import event_buddy, grocery_buddy, hotel_buddy, parcel_buddy, service_buddy
 
+        if nav := self._navigate(text):
+            return nav
+        if cart := self._add_to_cart(customer, messages[-1].content):
+            return cart
+        note = ""
+        if _has(text, "remind", "reminder", "reminders", "alarm"):
+            note = "Reminders aren’t available in Click yet, so I can’t set one"
+
+        if hotel_buddy.wants_hotel(text):
+            if (h := hotel_buddy.reply(text, customer)) is not None:
+                return h
         if event_buddy.wants_event(text):
             if (ev := event_buddy.reply(text, customer)) is not None:
                 return ev
@@ -63,15 +74,23 @@ class ClickBasicBuddy:
             if (grocery := grocery_buddy.reply(text, customer)) is not None:
                 return grocery
         wants_food = _has(text, "dinner", "lunch", "breakfast", "eat", "food", "hungry", "biryani", "pizza", "burger", "dosa", "restaurant")
-        movie_text = re.sub(r"\bshow (me|us)\b", "", text)  # "show me smart watches" is not about shows
+        movie_text = re.sub(r"\bshow (me|us|my|our)\b", "", text)  # "show me smart watches" is not about shows
         wants_movie = _has(movie_text, "movie", "movies", "film", "films", "cinema", "show", "shows", "showtime", "playing", "imax", "4dx", "tickets?", "event", "events", "concert") or bool(re.search(
             r"\b(what|something)\b.{0,20}\bwatch\b|\bwatch\b.{0,12}\b(tonight|today|tomorrow|this weekend|movie|film|show)\b", text))
 
-        if wants_food and wants_movie:
+        if wants_food and wants_movie and not note:
             return self._dinner_and_movie(text)
+        if (_has(text, "restaurants?", "places to eat", "somewhere to eat", "veg", "vegetarian", "pure veg") or re.search(r"\bfood (near|nearby|around)", text)) \
+                and not _has(text, "groceries", "grocery"):
+            return self._restaurants(text)
         if _has(text, "ride", "cab", "taxi", "auto", "bike taxi", "take me", "drop me", "get me to", "go to"):
-            return self._ride(messages[-1].content)
-        if _has(text, "order", "orders", "delivery", "track", "delayed", "late", "where") and not wants_movie and not _has(text, "pizza", "biryani"):
+            r = self._ride(messages[-1].content)
+            if note:
+                r.content = f"{note}, but here’s the ride. {r.content}"
+            return r
+        if note:
+            return BuddyReply(f"{note}. Tell me what you’d like me to find or open instead.")
+        if _has(text, "order", "orders", "delivery", "track", "delayed", "late", "where", "cancel") and not wants_movie and not _has(text, "pizza", "biryani"):
             return self._orders(customer, text)
         if _has(text, "booking", "bookings", "my tickets"):
             return self._bookings(customer)
@@ -95,6 +114,73 @@ class ClickBasicBuddy:
         return self._search(text)
 
     # --- intents ---------------------------------------------------------
+    NAV = [("wishlist", "/wishlist", "Wishlist"), ("payments?|payment methods?", "/account/payments", "Payments"), ("wallet", "/wallet", "Wallet"),
+           ("rewards?|points", "/rewards", "Rewards"), ("(saved )?addresses", "/account/addresses", "Addresses"), ("profile|account", "/account", "Profile"),
+           ("settings", "/settings", "Settings"), ("support|help", "/help", "Support"), ("buzz", "/buzz", "Buzz"), ("explore", "/explore", "Explore"),
+           ("home", "/", "Home"), ("food", "/food", "Food"), ("rides?", "/rides", "Ride"), ("shop|shopping", "/shopping", "Shop"),
+           ("groceries", "/groceries", "Groceries"), ("parcels?", "/parcels", "Parcel"), ("services", "/services", "Services"),
+           ("events", "/events", "Events"), ("hotels", "/hotels", "Hotels"), ("shows|showtime|movies", "/showtime", "Shows"),
+           ("orders", "/orders", "Orders"), ("cart|basket", "/cart", "Cart"), ("notifications", "/notifications", "Notifications"),
+           ("activity|history", "/activity", "Activity"), ("offers", "/offers", "Offers"), ("click id|id card", "/account/card", "Click ID card")]
+
+    def _navigate(self, text):
+        """“Open my wishlist”, “take me to Payments”: a safe action the app performs straight away."""
+        m = re.match(r"^(?:please\s+)?(?:open|go to|goto|take me to|show me|show|launch|navigate to)\s+(?:my\s+|the\s+)?(.+?)[.!?]*$", text)
+        if not m:
+            return None
+        target = m.group(1).strip()
+        for words, path, name in self.NAV:
+            if re.fullmatch(rf"(?:{words})(?: page| screen| tab)?", target):
+                return BuddyReply(f"Opening {name}.", actions=[{"label": f"Open {name}", "action": "open_page", "args": {"path": path}, "auto": True}])
+        return None
+
+    def _add_to_cart(self, customer, original):
+        """“Add milk and bread to my cart”: preparing a cart is a safe action. Buddy picks the clear match (what you bought
+        before, else the cheapest in-stock item), adds it through the cart service and says exactly what it added;
+        nothing is ordered or paid."""
+        m = re.search(r"\badd\s+(.+?)\s+(?:to|in|into)\s+(?:my\s+|the\s+)?(?:cart|basket)\b", original, flags=re.I)
+        if not m:
+            return None
+        if customer is None:
+            return BuddyReply("Sign in so I can add things to your cart.", actions=[{"label": "Sign in", "path": "/login"}])
+        items, missing = [], []
+        for it in re.split(r"\s*(?:,|\band\b|&)\s*", m.group(1).lower()):
+            qty = 1
+            mq = re.match(r"^(\d{1,2})\s+(.+)$", it.strip())
+            if mq:
+                qty, it = int(mq.group(1)), mq.group(2)
+            it = re.sub(r"^(a|an|some|the)\s+", "", it.strip())
+            if not it:
+                continue
+            p = tools.grocery_match(customer, it)
+            if p is not None:
+                items.append({"label": f"Add {p.name}", "action": "cart_add", "args": {"product_id": str(p.id), "quantity": qty}, "auto": True})
+                continue
+            found = tools.search_products(it, limit=1)
+            if found:
+                items.append({"label": f"Add {found[0]['name']}", "action": "cart_add", "args": {"product_id": str(found[0]["id"]), "quantity": qty}, "auto": True})
+            else:
+                missing.append(it)
+        lead = "" if items else "I couldn’t find any of those on Click right now."
+        if missing and items:
+            lead = f"Nothing on Click matches {', '.join(missing)} right now."
+        return BuddyReply(lead, actions=[*items, {"label": "View cart", "path": "/cart"}])
+
+    def _restaurants(self, text):
+        veg = _has(text, "veg", "vegetarian", "pure veg") and not re.search(r"\bnon[- ]?veg", text)
+        cheapest = _has(text, "cheap", "cheapest", "budget", "affordable", "cheaper")
+        q = _keywords(re.sub(r"\b(veg|vegetarian|pure|only|just|one|ones|the|first|cheaper|nearest|closest|best|top|nearby|near|me)\b", " ", text))
+        stores = tools.search_restaurants(q, veg=veg, cheapest=cheapest) or (tools.search_restaurants("", veg=veg, cheapest=cheapest) if q else [])
+        if not stores:
+            return BuddyReply("No restaurant on Click matches that right now" + (" among pure-veg kitchens" if veg else "") + ".",
+                              actions=[{"label": "Open Food", "path": "/food"}])
+        bits = [x for x in [f"“{q}”" if q else "", "pure-veg kitchens" if veg else "", "lowest prices first" if cheapest else ""] if x]
+        lead = ("Here are restaurants taking orders now" + (f" ({', '.join(bits)})" if bits else "") + ". "
+                + ("Pure veg means no non-veg dish on their menu. " if veg else "") + "Ratings and delivery times come from each restaurant.")
+        if cheapest:
+            lead += f" The most affordable is {stores[0]['name']}."
+        return BuddyReply(lead, cards=[{"type": "store", "store": st} for st in stores], actions=[{"label": "Open Food", "path": "/food"}])
+
     def _ride(self, original: str):
         """Hand a ride request to Click. Ride with the destination pre-filled. Buddy never books or pays for a ride."""
         import re
@@ -132,7 +218,9 @@ class ClickBasicBuddy:
     def _search(self, text):
         q = _keywords(text)
         if not q:
-            return self._help()
+            return BuddyReply("I’m not sure what you mean. Do you want me to search Click, open a feature, or help you complete something?",
+                              actions=[{"label": "Search Click", "path": "/search"}, {"label": "Open Explore", "path": "/explore"},
+                                       {"label": "What can you do?", "prompt": "What can you do?"}])
         cheapest = _has(text, "cheap", "cheapest", "budget", "affordable")
         products = tools.search_products(q, cheapest=cheapest)
         stores = tools.search_stores(q)
@@ -150,6 +238,14 @@ class ClickBasicBuddy:
         o = orders[0]
         msg = f"Your latest order {o.number} from {o.store.name} is {STATUS_TEXT.get(o.status, o.status)}."
         actions = [{"label": "Open order", "path": f"/orders/{o.id}"}]
+        if _has(text, "cancel"):
+            from apps.orders.models import CUSTOMER_CANCELLABLE
+
+            if o.status in CUSTOMER_CANCELLABLE:
+                actions.insert(0, {"label": f"Cancel {o.number}", "action": "cancel_order", "args": {"order_id": str(o.id)}})
+                msg += " I can cancel it — you’ll confirm first."
+            else:
+                msg += " It can’t be cancelled at this stage."
         if o.status not in ("delivered", "cancelled") and o.estimated_delivery_at:
             eta = timezone.localtime(o.estimated_delivery_at)
             if eta < timezone.now():

@@ -37,6 +37,8 @@ class SupportTicket(BaseModel):
                                         related_name="support_tickets")
     event_booking = models.ForeignKey("eventhub.EventBooking", on_delete=models.SET_NULL, null=True, blank=True,
                                         related_name="support_tickets")
+    hotel_booking = models.ForeignKey("hotels.HotelBooking", on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name="support_tickets")
     category = models.CharField(max_length=20, choices=Category.choices)
     subject = models.CharField(max_length=150)
     message = models.TextField(max_length=4000)

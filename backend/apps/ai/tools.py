@@ -100,3 +100,35 @@ def wallet(customer):
 
 def rewards(customer):
     return reward_balance(customer)
+
+
+def search_restaurants(q: str = "", veg: bool = False, cheapest: bool = False, limit: int = 4):
+    """Restaurants taking orders. `veg` = pure-veg kitchens (no non-veg dish on the menu); `cheapest` = lowest average
+    dish price first. Both come from the menus themselves, never from a label someone typed."""
+    from django.db.models import Avg, Count
+
+    qs = public_stores().filter(is_accepting_orders=True, store_type="restaurant")
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(categories__name__icontains=q) | Q(products__name__icontains=q))
+    ids = list(qs.values_list("pk", flat=True).distinct())
+    qs = public_stores().filter(pk__in=ids).annotate(
+        avg_price=Avg("products__price"), nonveg=Count("products", filter=Q(products__dietary="non_veg"), distinct=True))
+    if veg:
+        qs = qs.filter(nonveg=0)
+    qs = qs.order_by("avg_price") if cheapest else qs.order_by("-rating_average")
+    return StoreSerializer(qs[:limit], many=True).data
+
+
+def grocery_match(customer, item: str):
+    """The grocery product to add for "milk": what this customer bought before if it's still available, otherwise the
+    cheapest in-stock match from an open grocery store. None when nothing matches (Buddy then says so)."""
+    from apps.orders.models import OrderItem
+
+    qs = (public_products().filter(store__store_type="grocery", store__is_accepting_orders=True, is_available=True, name__icontains=item)
+          .filter(Q(stock_quantity__isnull=True) | Q(stock_quantity__gt=0)).select_related("store"))
+    if customer is not None:
+        bought = list(OrderItem.objects.filter(order__customer=customer, product__in=qs).order_by("-order__created_at")
+                      .values_list("product_id", flat=True)[:1])
+        if bought:
+            return qs.filter(pk=bought[0]).first()
+    return qs.order_by("price").first()

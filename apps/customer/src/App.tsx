@@ -12,6 +12,7 @@ import { AddressesPage } from './pages/AddressesPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
+import { BuddyGoPage } from './pages/BuddyGoPage';
 import { BuddyPage } from './pages/BuddyPage';
 import { BuzzPage } from './pages/BuzzPage';
 import { useAppearance } from './appearance';
@@ -60,6 +61,13 @@ import { EventProviderPage } from './pages/EventProviderPage';
 import { EventsMinePage } from './pages/EventsMinePage';
 import { EventsPage } from './pages/EventsPage';
 import { EventTeamsPage } from './pages/EventTeamsPage';
+import { HotelBookingPage } from './pages/HotelBookingPage';
+import { HotelBookingsPage } from './pages/HotelBookingsPage';
+import { HotelBookPage } from './pages/HotelBookPage';
+import { HotelComparePage } from './pages/HotelComparePage';
+import { HotelPropertyPage } from './pages/HotelPropertyPage';
+import { HotelSearchPage } from './pages/HotelSearchPage';
+import { HotelsPage } from './pages/HotelsPage';
 import { ProProfilePage } from './pages/ProProfilePage';
 import { ServiceBookingPage } from './pages/ServiceBookingPage';
 import { ServiceBookPage } from './pages/ServiceBookPage';
@@ -114,6 +122,7 @@ function AppRoutes() {
       <Route path="register" element={<Navigate to="/login" replace />} />
       {/* Immersive experiences with their own layouts (no app header / bottom navigation) */}
       <Route path="buddy" element={<BuddyPage />} />
+      <Route path="buddy/go" element={<BuddyGoPage />} />
       <Route path="buzz" element={<BuzzPage />} />
       {/* Profile: a dedicated personal page with its own header (no app header or bottom navigation) */}
       <Route path="account" element={guard(<ProfilePage />)} />
@@ -155,6 +164,13 @@ function AppRoutes() {
         <Route path="parcels/:id" element={guard(<ParcelDetailPage />)} />
         <Route path="track/:token" element={<ParcelSharedPage />} />
         <Route path="parcel" element={<Navigate to="/parcels" replace />} />
+        <Route path="hotels" element={<HotelsPage />} />
+        <Route path="hotels/search" element={<HotelSearchPage />} />
+        <Route path="hotels/compare" element={<HotelComparePage />} />
+        <Route path="hotels/book" element={guard(<HotelBookPage />)} />
+        <Route path="hotels/bookings" element={guard(<HotelBookingsPage />)} />
+        <Route path="hotels/bookings/:id" element={guard(<HotelBookingPage />)} />
+        <Route path="hotels/:id" element={<HotelPropertyPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/teams" element={<EventTeamsPage />} />
         <Route path="events/venues" element={<EventTeamsPage key="venues" venues />} />

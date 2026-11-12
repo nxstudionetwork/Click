@@ -388,6 +388,10 @@ TYPES: list[dict] = [
              "configuration": {"defaults": {"property_type": "resort"}}},
             {"slug": "venue", "name": "Venue", "description": "Banquet halls and event venues.", "icon": "ticket",
              "configuration": {"defaults": {"property_type": "banquet"}, "field_labels": {"capacity": "Guest capacity"}}},
+            {"slug": "homestay", "name": "Homestay", "description": "Homestays and guest houses.", "icon": "home",
+             "configuration": {"defaults": {"property_type": "guest_house"}, "field_labels": {"capacity": "Rooms"}}},
+            {"slug": "serviced-apartment", "name": "Serviced Apartment", "description": "Serviced apartments and villas.", "icon": "hotel",
+             "configuration": {"defaults": {"property_type": "other"}, "field_labels": {"capacity": "Units"}}},
             {"slug": "sports-venue", "name": "Sports Venue", "description": "Turfs, courts and sports clubs.", "icon": "ball",
              "configuration": {"defaults": {"property_type": "sports"}, "field_labels": {"capacity": "Courts / players capacity"}}},
             {"slug": "activity-provider", "name": "Activity Provider", "description": "Adventure, tours and activities.",
@@ -546,6 +550,14 @@ CATEGORY_HOME: dict[str, dict] = {
               "metrics": ["requests", "upcoming", "earnings", "rating"], "quick_actions": ["requests", "active", "earnings"],
               "earnings_label": "Completed today", "performance": []}
        for slug in ("event-service", "event-planner", "event-decorator", "event-photographer", "event-entertainer", "event-makeup", "venue")},
+    # Click. Hotels: stays get arrivals, in-house guests, check-outs and pay-at-property collection.
+    **{slug: {"workspace": "hotels", "location": "business", "work_noun": "stay",
+              "status": _status("Accepting bookings", "Not accepting", "Accept bookings", "Stop bookings",
+                                "Guests can book your rooms on Click.", "Guests can’t make new bookings.",
+                                "Guests won’t be able to book until you accept bookings again. Existing reservations stay confirmed."),
+              "metrics": ["arrivals", "in_house", "departures", "revenue"], "quick_actions": ["arrivals", "in_house", "earnings"],
+              "earnings_label": "Today’s stays", "performance": []}
+       for slug in ("hotel", "resort", "homestay", "serviced-apartment")},
     **{slug: {"workspace": "upcoming", "location": "business", "upcoming": {
         "service": "Click. Fleet", "what": "your vehicles, drivers, trips and fleet earnings"}}
        for slug in ("fleet-operator", "rental-vehicle", "transport-provider")},

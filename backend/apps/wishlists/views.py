@@ -20,15 +20,23 @@ class WishlistItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WishlistItem
-        fields = ["id", "kind", "store", "product", "provider", "event_provider", "event_package", "created_at"]
+        fields = ["id", "kind", "store", "product", "provider", "event_provider", "event_package", "hotel", "created_at"]
 
     provider = serializers.SerializerMethodField()
     event_provider = serializers.SerializerMethodField()
     event_package = serializers.SerializerMethodField()
+    hotel = serializers.SerializerMethodField()
 
     def get_kind(self, item) -> str:
         return ("store" if item.store_id else "product" if item.product_id else "provider" if item.provider_id
-                else "event_provider" if item.event_provider_id else "event_package")
+                else "event_provider" if item.event_provider_id else "event_package" if item.event_package_id else "hotel")
+
+    def get_hotel(self, item):
+        if not item.hotel_id:
+            return None
+        from apps.hotels.views import property_card
+
+        return property_card(item.hotel, self.context.get("request"))
 
     def get_event_provider(self, item):
         if not item.event_provider_id:
@@ -58,10 +66,11 @@ class AddWishlistSerializer(serializers.Serializer):
     provider_id = serializers.UUIDField(required=False)
     event_provider_id = serializers.UUIDField(required=False)
     event_package_id = serializers.UUIDField(required=False)
+    hotel_id = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
-        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id", "event_provider_id", "event_package_id")) != 1:
-            raise serializers.ValidationError("Provide exactly one of storeId, productId, providerId, eventProviderId or eventPackageId.")
+        if sum(bool(attrs.get(k)) for k in ("store_id", "product_id", "provider_id", "event_provider_id", "event_package_id", "hotel_id")) != 1:
+            raise serializers.ValidationError("Provide exactly one of storeId, productId, providerId, eventProviderId, eventPackageId or hotelId.")
         return attrs
 
 
@@ -69,7 +78,7 @@ def _items(customer):
     return (
         WishlistItem.objects.filter(customer=customer)
         .select_related("product__store", "product__category", "store", "provider__partner__profile", "provider__category",
-                        "event_provider__partner", "event_package__provider__partner")
+                        "event_provider__partner", "event_package__provider__partner", "hotel__partner", "hotel__destination")
         .prefetch_related("store__categories", "store__offers", "product__variants", "product__option_groups__options")
     )
 
@@ -98,6 +107,10 @@ class WishlistView(APIView):
             from apps.eventhub.models import EventPackage
 
             target = {"event_package": get_object_or_404(EventPackage.objects.filter(is_active=True, provider__is_listed=True), pk=kid)}
+        elif hid := s.validated_data.get("hotel_id"):
+            from apps.hotels.models import HotelProperty
+
+            target = {"hotel": get_object_or_404(HotelProperty.objects.filter(is_listed=True), pk=hid)}
         else:
             target = {"product": get_object_or_404(public_products(), pk=s.validated_data["product_id"])}
         item, created = WishlistItem.objects.get_or_create(customer=customer, **target)

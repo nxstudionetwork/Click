@@ -17,7 +17,7 @@ PLAN = re.compile(
     r"\b(plan|planning|organi[sz]e|host|hosting|arrange|throw|celebrate)\b.{0,50}\b(party|birthday|wedding|engagement|anniversary|"
     r"shower|reception|function|celebration|event|ceremony|housewarming|farewell|reunion|conference|seminar|workshop|launch)\b")
 VENDOR = re.compile(
-    r"\b(event planner|wedding planner|event team|event management|decorator|decoration for|caterer|catering for|banquet|"
+    r"\b((birthday|party|wedding|event|engagement|anniversary|corporate) (planner|organi[sz]er|decorator|team)s?|planners?|event team|event management|decorator|decoration for|caterer|catering for|banquet|"
     r"party hall|wedding venue|event venue|venue for|dj for|photographer for|videographer|anchor for|emcee|mehendi|mehndi|"
     r"stage setup|tent house)\b")
 DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { EmptyState, ErrorState, Skeleton } from '../components/ui';
 import { PackageCardView, ProviderCardView } from '../features/events/parts';
+import { addDays, HotelImage, RatingBadge, SaveHotel, todayIso } from '../features/hotels/parts';
 import { ProCardView } from '../features/pros/parts';
 import { ProductCard } from '../features/stores/ProductCard';
 import { StoreCard } from '../features/stores/StoreCard';
@@ -14,6 +15,7 @@ export function WishlistPage() {
   const products = wishlist.data.filter((i) => i.product).map((i) => i.product!);
   const pros = wishlist.data.filter((i) => i.provider).map((i) => ({ ...i.provider!, favoriteId: i.id }));
   const evTeams = wishlist.data.filter((i) => i.eventProvider).map((i) => ({ ...i.eventProvider!, favoriteId: i.id }));
+  const hotels = wishlist.data.filter((i) => i.hotel).map((i) => ({ ...i.hotel!, favoriteId: i.id }));
   const evPkgs = wishlist.data.filter((i) => i.eventPackage).map((i) => ({ ...i.eventPackage!, favoriteId: i.id }));
 
   return (
@@ -39,6 +41,18 @@ export function WishlistPage() {
             <section className="stack sv-scope" data-theme="services">
               <h2>My Professionals</h2>
               <div className="sv-prolist">{pros.map((p) => <ProCardView key={p.id} p={p} wide />)}</div>
+            </section>
+          )}
+          {hotels.length > 0 && (
+            <section className="stack ht-scope" data-theme="hotels">
+              <h2>Hotels</h2>
+              <div className="ht-savedgrid">{hotels.map((h) => (
+                <Link key={h.id} to={`/hotels/${h.id}?check_in=${addDays(todayIso(), 1)}&check_out=${addDays(todayIso(), 2)}`} className="ht-saved">
+                  <HotelImage src={h.imageUrl} name={h.name} accent={h.accent} />
+                  <span className="ht-saved__body"><span className="ht-kicker">{h.typeLabel} · {h.destination}</span><strong>{h.name}</strong><RatingBadge r={h.rating} /></span>
+                  <SaveHotel id={h.id} favoriteId={h.favoriteId} name={h.name} />
+                </Link>
+              ))}</div>
             </section>
           )}
           {evTeams.length + evPkgs.length > 0 && (

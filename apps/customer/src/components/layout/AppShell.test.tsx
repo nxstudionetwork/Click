@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
     addresses: { list: vi.fn().mockResolvedValue([]) },
     assistant: { capabilities: vi.fn().mockResolvedValue({ mode: 'basic', voice: false, visualSearch: false }), send: vi.fn() },
   },
+  buddy: { track: vi.fn() },
 }));
 vi.mock('../../lib/api', () => ({ api }));
 const { AppShell } = await import('./AppShell');
@@ -78,16 +79,14 @@ describe('AppShell', () => {
     expect(document.body.textContent).not.toMatch(/development|mock data|dev mode|debug/i);
   });
 
-  it('Buddy opens a GO / MAN choice; GO is honest when voice is not enabled', async () => {
+  it('Buddy opens a premium Man / Go choice first, not a chat', async () => {
     auth.value = signedIn;
     renderWithProviders(<AppShell />);
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: /^Buddy/ }));
-    const sheet = screen.getByRole('dialog', { name: 'Buddy' });
-    expect(within(sheet).getByRole('button', { name: /MAN/ })).toBeInTheDocument();
-    await userEvent.click(within(sheet).getByRole('button', { name: /GO/ }));
-    expect(await screen.findByText(/Voice isn’t switched on for Click\. yet/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Voice unavailable' })).toBeDisabled();
-    expect(screen.getByLabelText('Tell Buddy what you need')).toBeInTheDocument();
+    const sheet = screen.getByRole('dialog', { name: 'Choose Buddy' });
+    expect(within(sheet).getByRole('button', { name: /Man.*Talk, ask, search, plan and control Click\./ })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: /Go.*Just speak\. Tell Click what you need\./ })).toBeInTheDocument();
+    expect(api.buddy.track).toHaveBeenCalledWith('opened');
   });
 
   it('search offers voice and camera, and shows hints when focused', async () => {

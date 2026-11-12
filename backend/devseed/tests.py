@@ -18,7 +18,7 @@ def seeded(db):
 def test_test_customer_has_real_related_history(seeded):
     assert seeded.user.email == "test.customer@click.local" and seeded.addresses.count() == 4
     assert seeded.orders.count() == 26 and seeded.bookings.count() >= 20 and seeded.support_tickets.count() == 20
-    assert seeded.wishlist_items.count() == 22 and seeded.cart.items.count() == 2  # incl. 1 saved professional and 1 saved event team
+    assert seeded.wishlist_items.count() == 23 and seeded.cart.items.count() == 2  # incl. 1 saved professional, event team and hotel
     # Click. Events: ratings only from completed bookings; one upcoming booking and one plan with a quote for the test customer.
     from apps.eventhub.models import EventBooking, EventProvider, EventReview
 
