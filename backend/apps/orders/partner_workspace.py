@@ -66,7 +66,7 @@ class OrdersProvider(Provider):
         return self._ids
 
     def _orders(self):
-        return (Order.objects.filter(store_id__in=self._store_ids())
+        return (Order.objects.filter(store_id__in=self._store_ids()).exclude(status=S.AWAITING_PAYMENT)  # unpaid: not the store's yet
                 .select_related("store", "customer__user").prefetch_related("items", "payments"))
 
     def connection(self):

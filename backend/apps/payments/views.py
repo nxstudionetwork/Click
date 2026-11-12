@@ -138,12 +138,25 @@ class OverviewView(APIView):
             "methods": [{**m, "default": (pref.default_method if pref else "wallet") == m["code"],
                          "detail": f"Balance ₹{balance(c):,.2f}" if m["code"] == "wallet" else ""} for m in METHODS],
             "default_method": pref.default_method if pref else "wallet",
-            "online_methods": {"available": False,
-                               "note": "Card and UPI checkout need a connected payment provider. Click. never stores card numbers, CVVs or UPI PINs."},
+            "online_methods": _online(),
             "counts": {"pending": qs.filter(STATUS_FILTER["pending"]).count(), "pay_later": qs.filter(STATUS_FILTER["pay_later"]).count(), "failed": qs.filter(status="failed").count(),
                        "refunds": refunds.count()},
             "recent": [payment_out(p) for p in with_relations(qs).order_by("-created_at")[:5]],
         })
+
+
+def _online() -> dict:
+    from apps.wallet import providers
+
+    from .gateway import LABEL, available_methods
+
+    p = providers.current()
+    methods = available_methods()
+    return {"available": bool(methods), "test_mode": bool(p and getattr(p, "test_mode", False)),
+            "methods": [{"code": m, "label": LABEL[m]} for m in methods],
+            "where": "Food, Groceries and Shop checkout, and adding money to Click. Wallet" if methods else "",
+            "note": ("You pay on the payment provider’s page. Click. never sees or stores card numbers, CVVs or UPI PINs."
+                     if methods else "UPI and card payments need a connected payment provider, which isn’t available right now.")}
 
 
 class PreferenceInput(serializers.Serializer):
@@ -181,3 +194,40 @@ class RefundsView(APIView):
         return Response({"results": out})
 
 
+
+
+class IntentView(APIView):
+    """GET /customer/payments/intents/<reference> — the state of an online checkout payment (only your own)."""
+
+    permission_classes = [IsCustomer]
+
+    def get(self, request, reference):
+        from . import gateway
+
+        if not gateway.owned_reference(request.user.customer_profile, reference):
+            raise DomainError("Not found.", code="not_found", status_code=404)
+        return Response(gateway.intent(reference))
+
+
+class IntentSandboxView(APIView):
+    """POST /customer/payments/intents/<reference>/sandbox {outcome} — test mode only: Click. plays the provider and
+    sends the signed event through the same verified webhook path a real provider uses."""
+
+    permission_classes = [IsCustomer]
+
+    def post(self, request, reference):
+        from decimal import Decimal
+
+        from apps.wallet import providers
+
+        from . import gateway
+
+        prov = providers.current()
+        if not isinstance(prov, providers.SandboxProvider) or not gateway.owned_reference(request.user.customer_profile, reference):
+            raise DomainError("Not found.", code="not_found", status_code=404)
+        outcome = request.data.get("outcome")
+        if outcome not in ("succeeded", "failed"):
+            raise DomainError("Choose an outcome.", code="validation_error")
+        amount = sum((p.amount for p in Payment.objects.filter(provider_reference=reference, wallet_topup__isnull=True)), Decimal("0"))
+        body, sig = prov.event(gateway._Ref(reference, amount), outcome, "Declined by the test bank" if outcome == "failed" else "")
+        return Response(providers.handle_event(body, sig))

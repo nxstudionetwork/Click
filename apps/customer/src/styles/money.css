@@ -235,3 +235,13 @@
 .mn-claimed__code { height: 30px; padding: 0 10px; border-radius: var(--r-pill); border: 1px dashed currentColor; background: transparent; color: inherit;
   font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .03em; cursor: pointer; opacity: .9; }
 .mn-claimed__code:hover { opacity: 1; }
+
+/* Online payment step (checkouts) */
+.pay-online { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-brand); }
+.pay-online__head { display: flex; gap: 12px; align-items: flex-start; }
+.pay-online__head > svg, .pay-online > svg { flex: none; color: var(--c-brand); margin-top: 2px; }
+.pay-online__test { display: flex; gap: 6px; align-items: center; color: var(--c-warning); }
+.pay-online--ok, .pay-online--bad { flex-direction: row; align-items: flex-start; }
+.pay-online--ok { border-color: var(--c-success); } .pay-online--ok > svg { color: var(--c-success); }
+.pay-online--bad { border-color: var(--c-danger); } .pay-online--bad > svg { color: var(--c-danger); }
+.pay-online .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }

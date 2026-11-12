@@ -244,6 +244,8 @@ CLICK_IDENTITY_PROVIDERS = {
 # Who delivers the code: "" = none (sign-in unavailable until the SMS provider is configured), "console" = development
 # only (code printed in the API log), or a dotted path to your SMS sender class (see apps/identity/sms.py).
 CLICK_SMS_PROVIDER = os.environ.get("CLICK_SMS_PROVIDER", "console" if (DEBUG or TESTING) else "")
+# Online checkout payments not confirmed by the provider within this time are cancelled (stock released).
+CLICK_ONLINE_PAYMENT_TTL_MINUTES = int(os.environ.get("CLICK_ONLINE_PAYMENT_TTL_MINUTES", "15"))
 CLICK_OTP_TTL_SECONDS = int(os.environ.get("CLICK_OTP_TTL_SECONDS", "300"))
 CLICK_OTP_RESEND_SECONDS = int(os.environ.get("CLICK_OTP_RESEND_SECONDS", "30"))
 CLICK_OTP_MAX_ATTEMPTS = int(os.environ.get("CLICK_OTP_MAX_ATTEMPTS", "5"))

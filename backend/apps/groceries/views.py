@@ -195,7 +195,7 @@ class QuoteSerializer(serializers.Serializer):
 
 class CheckoutInput(QuoteSerializer):
     address_id = serializers.UUIDField()
-    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET])
+    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET, "upi", "card", "netbanking"])
     idempotency_key = serializers.UUIDField()
     substitution = serializers.ChoiceField(choices=GroceryOrderDetails.Substitution.choices)
     substitution_note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")

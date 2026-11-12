@@ -44,6 +44,10 @@ class SandboxProvider:
         return {"provider": self.name, "test_mode": True, "reference": topup.provider_reference,
                 "instructions": "Test mode: approve or decline a test payment. No real money moves."}
 
+    def refund(self, payment) -> str:
+        """Test mode: the refund is accepted immediately. A real gateway calls its refund API here."""
+        return "SBXR-" + secrets.token_hex(5).upper()
+
     def event(self, topup, outcome: str, reason: str = "") -> tuple[bytes, str]:
         body = json.dumps({"reference": topup.provider_reference, "outcome": outcome, "amount": str(topup.amount), "reason": reason},
                           sort_keys=True).encode()
@@ -68,4 +72,11 @@ def handle_event(body: bytes, signature: str):
     if not verify(body, signature):
         raise DomainError("Invalid signature.", code="invalid_signature", status_code=400)
     data = json.loads(body)
-    return apply_provider_result(str(data["reference"]), str(data["outcome"]), Decimal(str(data["amount"])), str(data.get("reason") or ""))
+    args = (str(data["reference"]), str(data["outcome"]), Decimal(str(data["amount"])), str(data.get("reason") or ""))
+    from .models import WalletTopUp
+
+    if WalletTopUp.objects.filter(provider_reference=args[0]).exists():
+        return apply_provider_result(*args)
+    from apps.payments.gateway import apply_result  # checkout payments (orders)
+
+    return apply_result(*args)

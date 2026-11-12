@@ -1,6 +1,7 @@
 import type { OrderStatus, StoreType } from '@click/api';
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
+  awaiting_payment: 'Awaiting payment',
   placed: 'Order placed',
   confirmed: 'Confirmed by restaurant',
   preparing: 'Being prepared',

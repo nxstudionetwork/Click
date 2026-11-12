@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { PayOnline } from '../features/payments/OnlinePay';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type OrderDetail } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, Skeleton, useConfirm, useToast } from '../components/ui';
@@ -79,7 +80,8 @@ export function OrderPage() {
   return (
     <div className="checkout">
       <div className="stack">
-        {(location.state as { justPlaced?: boolean } | null)?.justPlaced && (
+        {o.paymentIntent && (o.status === 'awaiting_payment' || o.paymentIntent.status !== 'succeeded') && <PayOnline intent={o.paymentIntent} />}
+        {(location.state as { justPlaced?: boolean } | null)?.justPlaced && o.status !== 'awaiting_payment' && o.status !== 'cancelled' && (
           <section className="placed" data-theme={serviceForStoreType(o.store.storeType).theme} role="status" aria-labelledby="placed-h">
             <span className="placed__check" aria-hidden="true"><Icon name="check" size={30} /></span>
             <h2 id="placed-h">Order placed</h2>

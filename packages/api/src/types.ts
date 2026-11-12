@@ -325,6 +325,7 @@ export interface Cart {
 
 // --- Orders -----------------------------------------------------------------
 export type OrderStatus =
+  | 'awaiting_payment'
   | 'placed'
   | 'confirmed'
   | 'preparing'
@@ -335,7 +336,7 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type PaymentMethod = 'cash_on_delivery' | 'pay_at_venue' | 'wallet';
+export type PaymentMethod = 'cash_on_delivery' | 'pay_at_venue' | 'wallet' | 'upi' | 'card' | 'netbanking';
 export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'failed' | 'cancelled' | 'refunded';
 
 export interface OrderSummary {
@@ -410,6 +411,8 @@ export interface Payment {
 }
 
 export interface OrderDetail extends OrderSummary {
+  /** Online payment (UPI / card / net banking) state, read from the payment records. */
+  paymentIntent?: import('./money').PaymentIntent | null;
   items: OrderItem[];
   events: OrderStatusEvent[];
   payments: Payment[];

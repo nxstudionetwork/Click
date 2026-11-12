@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type PaymentMethod } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
-import { Button, EmptyState, ErrorState, Icon, Skeleton, TextArea } from '../components/ui';
+import { Button, EmptyState, ErrorState, Skeleton, TextArea } from '../components/ui';
 import { AddressForm } from '../features/addresses/AddressForm';
 import { useAddresses } from '../features/addresses/useAddresses';
 import { OfferPicker } from '../features/cart/OfferPicker';
@@ -12,6 +12,7 @@ import { cartKey, useCart } from '../features/cart/useCart';
 import { deliveryWindow } from '../features/shop/time';
 import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
+import { OnlineMethodOptions } from '../features/payments/OnlinePay';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
 import { formatMoney } from '../lib/format';
@@ -165,7 +166,7 @@ export function CheckoutPage() {
             </div></div>
           </label>
           <WalletOption total={c.totals.total} currency={currency} checked={payment === 'wallet'} onSelect={() => setPayment('wallet')} />
-          <p className="small muted"><Icon name="shield" size={14} /> Online card and UPI payments aren’t connected yet.</p>
+          <OnlineMethodOptions value={payment} onChange={(m) => setPayment(m as PaymentMethod)} />
         </section>
       </div>
 

@@ -57,9 +57,14 @@ export interface PaymentDetail extends PaymentRow {
   refunds: RefundRow[]; breakdown: { lines: { label: string; amount: Money }[]; offer: string | null } | null; receipt: boolean;
   tickets: { id: UUID; reference: string; status: string }[]; retry: { label: string; path: string } | null;
 }
+export interface PaymentIntent {
+  reference: string; status: 'pending' | 'succeeded' | 'failed' | 'cancelled'; amount: Money; method: string; methodLabel: string;
+  orders: { id: UUID; number: string; status: string }[]; expiresAt: ISODateTime;
+  client?: { provider: string; testMode: boolean; reference: string; instructions: string };
+}
 export interface PaymentsOverview {
   methods: { code: string; label: string; description: string; where: string; canDefault: boolean; default: boolean; detail: string }[];
-  defaultMethod: string; onlineMethods: { available: boolean; note: string };
+  defaultMethod: string; onlineMethods: { available: boolean; testMode: boolean; methods: { code: string; label: string }[]; where: string; note: string };
   counts: { pending: number; payLater: number; failed: number; refunds: number }; recent: PaymentRow[];
 }
 export interface PaymentsQuery { service?: string; status?: string; period?: string; from?: string; to?: string; q?: string; page?: number }
@@ -183,6 +188,10 @@ export const moneyApi = (http: HttpClient) => ({
     overview: () => http.request<PaymentsOverview>('/customer/payments/overview'),
     setDefault: (defaultMethod: string) => http.request<{ defaultMethod: string }>('/customer/payments/preferences', { method: 'PATCH', body: { defaultMethod } }),
     refunds: (page = 1) => http.request<Page<RefundRow>>('/customer/payments/refunds', { query: { page } }),
+    intent: (reference: string) => http.request<PaymentIntent>(`/customer/payments/intents/${encodeURIComponent(reference)}`),
+    /** Test mode only: the sandbox provider's approve / decline step (signed and verified on the server). */
+    sandbox: (reference: string, outcome: 'succeeded' | 'failed') =>
+      http.request<PaymentIntent>(`/customer/payments/intents/${encodeURIComponent(reference)}/sandbox`, { method: 'POST', body: { outcome } }),
   },
   rewards: {
     get: () => http.request<Rewards>('/customer/rewards'),

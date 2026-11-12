@@ -15,6 +15,7 @@ from apps.core.api.exceptions import ConflictError, DomainError
 from apps.customers.models import CustomerProfile
 from apps.notifications.models import NotificationCategory
 from apps.notifications.services import notify
+from apps.payments.gateway import ONLINE, available_methods, start_for_orders
 from apps.payments.models import PaymentMethod
 from apps.payments.services import cancel_pending_payments, start_payment
 from apps.stores.models import StoreType
@@ -82,6 +83,9 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
         g = next((g for g in groups if g.store.id == cart.offer.store_id), None)
         if problem := offer_problem(cart.offer, g.store if g else None, g.subtotal if g else 0):
             raise ConflictError(problem, code="offer_not_applicable")
+    online = payment_method in ONLINE
+    if online and payment_method not in available_methods():
+        raise DomainError("Online payment isn’t available right now. Choose another way to pay.", code="online_payment_unavailable", status_code=503)
     if payment_method == PaymentMethod.CASH_ON_DELIVERY:
         no_cod = [i.product.name for g in groups for i in g.items if not (g.store.cod_enabled and i.product.is_cod_available)]
         if no_cod:
@@ -99,6 +103,8 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
     for g in groups:
         key = idempotency_key if not marketplace else uuid.uuid5(uuid.UUID(str(idempotency_key)), str(g.store.id))
         orders.append(_create_order(customer, g, address, key, customer_note, payment_method, checkout))
+    if online:  # one provider intent for the whole checkout; orders wait for its verified confirmation
+        start_for_orders(orders, payment_method)
     clear_cart(cart)
     if checkout:
         record(customer, "checkout.placed", {"total": str(checkout.total), "orders": len(orders)}, obj=checkout)
@@ -156,8 +162,9 @@ def _create_order(customer, g, address, key, customer_note, payment_method, chec
         # Midday on both days, so the dates read the same in any customer time zone.
         est_from = timezone.make_aware(datetime.combine(datetime.fromisoformat(est["from_date"]), time(12)), tz)
         est_to = timezone.make_aware(datetime.combine(datetime.fromisoformat(est["to_date"]), time(12)), tz)
+    online = payment_method in ONLINE
     order = Order.objects.create(
-        customer=customer, store=store, checkout=checkout,
+        customer=customer, store=store, checkout=checkout, status=OrderStatus.AWAITING_PAYMENT if online else OrderStatus.PLACED,
         delivery_address=address.snapshot(), delivery_address_ref=address, customer_note=customer_note,
         subtotal=g.subtotal, delivery_fee=g.delivery_fee, tax=g.tax, discount=g.discount,
         offer_title=g.offer.title if g.offer and g.discount else "", total=g.total, currency=store.currency,
@@ -181,10 +188,11 @@ def _create_order(customer, g, address, key, customer_note, payment_method, chec
         ))
         Product.objects.filter(pk=i.product_id).update(units_sold=F("units_sold") + i.quantity)
     OrderItem.objects.bulk_create(lines)
-    OrderStatusEvent.objects.create(order=order, to_status=OrderStatus.PLACED, actor=customer.user)
-    start_payment(order, payment_method)
-    notify(customer, NotificationCategory.ORDERS, f"Order placed with {store.name}",
-           f"{order.number} · we'll update you as it progresses.", f"/orders/{order.id}")
+    OrderStatusEvent.objects.create(order=order, to_status=order.status, actor=customer.user)
+    if not online:  # online orders are paid (and announced) by payments.gateway once the provider confirms
+        start_payment(order, payment_method)
+        notify(customer, NotificationCategory.ORDERS, f"Order placed with {store.name}",
+               f"{order.number} · we'll update you as it progresses.", f"/orders/{order.id}")
     record(customer, "order.placed", {"total": str(order.total), "store": store.slug}, obj=order)
     audit.info("order.placed", extra={"order": order.number, "customer": str(customer.id)})
     return order

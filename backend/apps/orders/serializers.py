@@ -109,8 +109,17 @@ class OrderDetailSerializer(OrderSummarySerializer):
         fields = OrderSummarySerializer.Meta.fields + [
             "items", "events", "payments", "delivery_address", "customer_note", "subtotal", "delivery_fee",
             "tax", "discount", "offer_title", "estimated_delivery_at", "estimated_delivery_from", "cancelled_at", "delivered_at",
-            "can_cancel", "review", "can_review", "checkout", "grocery",
+            "can_cancel", "review", "can_review", "checkout", "grocery", "payment_intent",
         ]
+
+    payment_intent = serializers.SerializerMethodField()
+
+    def get_payment_intent(self, order):
+        """Online payment state (UPI / card / net banking), read from the payment records — never assumed."""
+        from apps.payments.gateway import ONLINE, intent
+
+        p = next((p for p in order.payments.all() if p.method in ONLINE and p.provider_reference), None)
+        return intent(p.provider_reference) if p else None
 
     grocery = serializers.SerializerMethodField()
 
@@ -148,7 +157,7 @@ class OrderDetailSerializer(OrderSummarySerializer):
 
 class PlaceOrderSerializer(serializers.Serializer):
     address_id = serializers.UUIDField()
-    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET])
+    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET, "upi", "card", "netbanking"])
     idempotency_key = serializers.UUIDField()
     customer_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
 

@@ -21,6 +21,7 @@ def generate_checkout_number() -> str:
 
 
 class OrderStatus(models.TextChoices):
+    AWAITING_PAYMENT = "awaiting_payment", "Awaiting payment"
     PLACED = "placed", "Placed"
     CONFIRMED = "confirmed", "Confirmed by store"
     PREPARING = "preparing", "Preparing"
@@ -36,6 +37,8 @@ class OrderStatus(models.TextChoices):
 # Food and groceries: confirmed -> preparing -> ready -> out for delivery.
 # Shopping (retail sellers): confirmed -> packed -> shipped -> out for delivery.
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
+    # Online payment: only a verified provider event (payments.gateway) moves it on; never the store.
+    OrderStatus.AWAITING_PAYMENT: {OrderStatus.PLACED, OrderStatus.CANCELLED},
     OrderStatus.PLACED: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
     OrderStatus.CONFIRMED: {OrderStatus.PREPARING, OrderStatus.PACKED, OrderStatus.CANCELLED},
     OrderStatus.PREPARING: {OrderStatus.READY},
@@ -46,7 +49,7 @@ ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     OrderStatus.DELIVERED: set(),
     OrderStatus.CANCELLED: set(),
 }
-CUSTOMER_CANCELLABLE = {OrderStatus.PLACED, OrderStatus.CONFIRMED}
+CUSTOMER_CANCELLABLE = {OrderStatus.AWAITING_PAYMENT, OrderStatus.PLACED, OrderStatus.CONFIRMED}
 
 
 class CheckoutGroup(BaseModel):

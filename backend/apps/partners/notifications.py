@@ -72,9 +72,12 @@ def _store_partner(store_id):
 
 
 def _on_order(sender, instance, created, **kwargs):
-    if not created:
+    if not created or instance.status == "awaiting_payment":  # announced once the online payment is confirmed
         return
-    order_id, store_id = instance.pk, instance.store_id
+    _announce_order(instance.pk, instance.store_id)
+
+
+def _announce_order(order_id, store_id):
 
     def send():  # after commit, so the order's items exist and a rolled-back placement never notifies
         from apps.orders.models import Order
@@ -90,7 +93,10 @@ def _on_order(sender, instance, created, **kwargs):
 
 
 def _on_order_event(sender, instance, created, **kwargs):
-    if not created or instance.to_status != "cancelled":
+    if created and instance.to_status == "placed" and instance.from_status == "awaiting_payment":
+        _announce_order(instance.order_id, instance.order.store_id)
+        return
+    if not created or instance.to_status != "cancelled" or instance.from_status == "awaiting_payment":
         return
     order = instance.order
     partner = _store_partner(order.store_id)

@@ -49,6 +49,11 @@ def settle_on_cancel(payments, customer, label: str) -> None:
         elif p.status == Payment.Status.CAPTURED and p.method == PaymentMethod.WALLET:
             refund(customer, p.amount, p, f"Refund for {label}")
             p.status = Payment.Status.REFUNDED
+        elif p.status == Payment.Status.CAPTURED and p.method in ("upi", "card", "netbanking"):
+            from .gateway import refund_online
+
+            refund_online(p, customer, label)
+            p.status = Payment.Status.REFUNDED
         else:
             continue
         p.save(update_fields=["status", "updated_at"])
