@@ -20,6 +20,8 @@ from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
 from apps.search import views as search_views
+from apps.reviews import views as review_views
+from apps.invoices import views as invoice_views
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
@@ -100,6 +102,11 @@ customer_urls = [
     path("support/articles/<slug:slug>/feedback", support_views.ArticleFeedbackView.as_view(), name="support-article-feedback"),
     path("activity", ActivityView.as_view(), name="activity"),
     path("search/recent", search_views.RecentView.as_view(), name="search-recent"),
+    path("reviews", review_views.ReviewsView.as_view(), name="reviews"),
+    path("invoices", invoice_views.InvoicesView.as_view(), name="invoices"),
+    path("invoices/<uuid:pk>", invoice_views.InvoiceView.as_view(), name="invoice"),
+    path("invoices/<uuid:pk>/document", invoice_views.InvoiceDocumentView.as_view(), name="invoice-document"),
+    path("reviews/report", review_views.ReportView.as_view(), name="reviews-report"),
     path("search/recent/<uuid:pk>", search_views.RecentView.as_view(), name="search-recent-one"),
     path("payments", payment_views.PaymentsView.as_view(), name="payments"),
     path("payments/overview", payment_views.OverviewView.as_view(), name="payments-overview"),

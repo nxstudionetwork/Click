@@ -95,6 +95,8 @@ INSTALLED_APPS = [
     "apps.experiences",
     "apps.offers",
     "apps.search",
+    "apps.reviews",
+    "apps.invoices",
 ]
 
 MIDDLEWARE = [
@@ -183,7 +185,8 @@ REST_FRAMEWORK = {
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
         "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
-        "search": os.environ.get("THROTTLE_SEARCH", "120/min"),  # Shopping search
+        "search": os.environ.get("THROTTLE_SEARCH", "120/min"),
+        "reviews": os.environ.get("THROTTLE_REVIEWS", "20/min"),  # writing / reporting reviews  # Shopping search
         "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

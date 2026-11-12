@@ -13,6 +13,8 @@ import { ActivityPage } from './pages/ActivityPage';
 import { WalletEntryPage } from './pages/WalletEntryPage';
 import { PaymentDetailPage } from './pages/PaymentDetailPage';
 import { HelpArticlePage } from './pages/HelpArticlePage';
+import { ReviewsPage } from './pages/ReviewsPage';
+import { InvoicePage, InvoicesPage } from './pages/InvoicesPage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BuddyGoPage } from './pages/BuddyGoPage';
@@ -249,6 +251,9 @@ function AppRoutes() {
         <Route path="account/card" element={guard(lazyCard(false))} />
         <Route path="account/payments" element={guard(<PaymentsPage />)} />
         <Route path="account/payments/:id" element={guard(<PaymentDetailPage />)} />
+        <Route path="account/invoices" element={guard(<InvoicesPage />)} />
+        <Route path="account/invoices/:id" element={guard(<InvoicePage />)} />
+        <Route path="account/reviews" element={guard(<ReviewsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />
         <Route path="wallet/activity/:id" element={guard(<WalletEntryPage />)} />

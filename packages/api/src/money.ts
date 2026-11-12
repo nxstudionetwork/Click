@@ -179,9 +179,48 @@ export interface SearchSuggestions {
   query: string; suggestions: SearchHit[]; mine?: SearchHit[]; recent: { id: UUID; query: string; at: ISODateTime }[]; trending?: string[];
 }
 
+// --- Reviews & Invoices --------------------------------------------------------------------------------------
+export interface PendingReview {
+  kind: string; kindLabel: string; targetId: UUID; title: string; subtitle: string; completedAt: ISODateTime | null; link: string; service: string;
+  aspects: { code: string; label: string }[];
+}
+export interface MyReview { id: UUID; kind: string; kindLabel: string; title: string; rating: number; comment: string; createdAt: ISODateTime; link: string; status: string; service: string; target: string }
+export interface ReviewsState { pending: PendingReview[]; mine: MyReview[] }
+export interface ReviewInput { kind: string; targetId: string; rating: number; liked?: string; better?: string; aspects?: Record<string, number> }
+export interface InvoiceCard {
+  id: UUID | null; paymentId: UUID; number: string | null; service: string; label: string; vendor: string; reference: string; date: ISODateTime;
+  amount: Money; paymentStatus: string; invoiceStatus: 'generated' | 'updated' | 'refund_document' | 'cancelled' | 'pending'; invoiceStatusLabel: string;
+  link: string; refunded: string | null;
+}
+export interface InvoiceDetail {
+  id: UUID; number: string; title: string; status: string; statusLabel: string; issuedAt: ISODateTime; service: string; label: string; reference: string; link: string;
+  seller: { name: string; address?: string; partnerId?: string; gstin?: string };
+  buyer: { name: string; email: string; phone: string; customerId: string; address?: string };
+  lines: { description: string; quantity: number; unitPrice: Money | null; discount: Money; tax: Money | null; total: Money }[];
+  totals: { subtotal: Money; discount: Money; deliveryFee: Money; fees: Money; tax: Money; total: Money; paid: Money; offer: string };
+  refunds: { number: string; amount: Money; at: ISODateTime; to: string; reason: string }[];
+  payment: { id: UUID; reference: string; method: string; status: string; providerReference: string | null };
+  gstNote: string;
+}
+
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  reviews: {
+    get: () => http.request<ReviewsState>('/customer/reviews'),
+    submit: (input: ReviewInput) => http.request<ReviewsState>('/customer/reviews', { method: 'POST', body: input }),
+    report: (kind: string, reviewId: string, reason: string, note = '') =>
+      http.request<{ reported: boolean }>('/customer/reviews/report', { method: 'POST', body: { kind, reviewId, reason, note } }),
+  },
+  invoices: {
+    list: (q: { service?: string; status?: string; q?: string; from?: string; to?: string } = {}) =>
+      http.request<{ results: InvoiceCard[]; services: string[] }>('/customer/invoices', { query: { ...q } }),
+    get: (id: string) => http.request<InvoiceDetail>(`/customer/invoices/${id}`),
+    document: (id: string) => {
+      if (!http.blob) throw new Error('Downloads are not supported by this client.');
+      return http.blob(`/customer/invoices/${id}/document`);
+    },
+  },
   search: {
     global: (q: string, group = '') => http.request<GlobalSearchResult>('/search/global', { query: { q, group: group || undefined } }),
     suggest: (q: string) => http.request<SearchSuggestions>('/search/suggest', { query: { q } }),
