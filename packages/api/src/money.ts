@@ -172,7 +172,7 @@ export interface SearchHit {
   image?: string; rating?: string | null; price?: Money | null; badge?: string; score?: number;
 }
 export interface GlobalSearchResult {
-  query: string; count: number; top: SearchHit[]; mine: SearchHit[];
+  query: string; count: number; top: SearchHit[]; mine: SearchHit[]; sponsored?: DiscoverCard[];
   groups: { code: string; label: string; count: number; results: SearchHit[] }[];
 }
 export interface SearchSuggestions {
@@ -232,9 +232,22 @@ export interface SafetyState {
   sessions: { active: number };
 }
 
+// --- Discover --------------------------------------------------------------------------------------------------
+export interface DiscoverCard {
+  type: string; id: string; service: string; title: string; subtitle: string; image: string; rating: string | null; ratingCount: number | null;
+  eta: string | null; offer: string | null; open: boolean; link: string; cta: string; why: string; city?: string;
+  sponsored?: boolean; campaign?: string; advertiser?: string; headline?: string; token?: string;
+}
+export interface DiscoverFeed { city: string; service: string; sections: { code: string; title: string; subtitle: string; cards: DiscoverCard[] }[] }
+
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  discover: {
+    feed: (q: { city?: string; service?: string } = {}) => http.request<DiscoverFeed>('/discover', { query: { city: q.city || undefined, service: q.service || undefined } }),
+    track: (token: string, kind: 'impression' | 'click') => http.request<{ counted: boolean }>('/discover/events', { method: 'POST', body: { token, kind } }),
+    hide: (campaign: string) => http.request<{ hidden: boolean }>('/customer/discover/hide', { method: 'POST', body: { campaign } }),
+  },
   giftCards: {
     designs: () => http.request<{ categories: { code: string; label: string; designs: GiftDesign[] }[] }>('/gift-cards', { auth: false }),
     mine: () => http.request<{ held: GiftCardView[]; sent: GiftCardView[] }>('/customer/gift-cards'),

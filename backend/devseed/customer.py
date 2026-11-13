@@ -293,6 +293,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .money import seed_money
 
     seed_money(profile, log)
+    from .discover import seed_discover
+
+    seed_discover(log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
     from .showtime import seed_showtime_history

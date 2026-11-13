@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "apps.reviews",
     "apps.invoices",
     "apps.giftcards",
+    "apps.discover",
 ]
 
 MIDDLEWARE = [

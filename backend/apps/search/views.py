@@ -34,6 +34,7 @@ class GlobalSearchView(APIView):
         q = request.query_params.get("q", "")
         data = engine.search(q, c, group=request.query_params.get("group", ""))
         data["mine"] = engine.lookup_id(c, q)
+        data["sponsored"] = _sponsored(request, c, data["query"], request.query_params.get("group", ""))
         if c and len(data["query"]) >= 2 and request.query_params.get("record") != "0":
             last = c.search_history.first()
             if not last or last.normalized != data["query"]:
@@ -98,3 +99,17 @@ class RecentView(APIView):
         else:
             c.search_history.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _sponsored(request, customer, q: str, group: str) -> list[dict]:
+    """At most one clearly labelled sponsored result, and only if the promoted listing itself matches the search."""
+    if len(q) < 3:
+        return []
+    from apps.discover.engine import auction, viewer_key
+
+    words = [w for w in q.split() if len(w) > 2]
+    for ad in auction(customer, viewer_key(request), service=group, city="", placement="search", slots=3):
+        text = f"{ad['title']} {ad['subtitle']} {ad.get('headline') or ''}".lower()
+        if words and all(w in text for w in words):
+            return [ad]
+    return []

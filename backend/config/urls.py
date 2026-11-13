@@ -24,6 +24,7 @@ from apps.reviews import views as review_views
 from apps.invoices import views as invoice_views
 from apps.giftcards import views as giftcard_views
 from apps.support import safety as safety_views
+from apps.discover import views as discover_views
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
@@ -107,6 +108,7 @@ customer_urls = [
     path("reviews", review_views.ReviewsView.as_view(), name="reviews"),
     path("invoices", invoice_views.InvoicesView.as_view(), name="invoices"),
     path("safety", safety_views.SafetyView.as_view(), name="safety"),
+    path("discover/hide", discover_views.HideView.as_view(), name="discover-hide"),
     path("safety/sign-out-others", safety_views.SignOutOthersView.as_view(), name="safety-sign-out-others"),
     path("gift-cards", giftcard_views.MyCardsView.as_view(), name="gift-cards-mine"),
     path("gift-cards/redeem", giftcard_views.RedeemView.as_view(), name="gift-cards-redeem"),
@@ -163,6 +165,8 @@ api_v1 = [
     path("search", SearchView.as_view(), name="search"),
     path("search/global", search_views.GlobalSearchView.as_view(), name="search-global"),
     path("gift-cards", giftcard_views.DesignsView.as_view(), name="gift-card-designs"),
+    path("discover", discover_views.FeedView.as_view(), name="discover"),
+    path("discover/events", discover_views.EventView.as_view(), name="discover-events"),
     path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),

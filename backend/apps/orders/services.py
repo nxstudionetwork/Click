@@ -193,6 +193,9 @@ def _create_order(customer, g, address, key, customer_note, payment_method, chec
         start_payment(order, payment_method, gift_card_id)
         notify(customer, NotificationCategory.ORDERS, f"Order placed with {store.name}",
                f"{order.number} · we'll update you as it progresses.", f"/orders/{order.id}")
+        from apps.discover.engine import attribute_order
+
+        attribute_order(order)
     record(customer, "order.placed", {"total": str(order.total), "store": store.slug}, obj=order)
     audit.info("order.placed", extra={"order": order.number, "customer": str(customer.id)})
     return order

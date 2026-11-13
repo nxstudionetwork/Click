@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { EmptyState, ErrorState, Icon, Skeleton, SmartImage } from '../components/ui';
 import { THEME, iconFor } from '../features/money/parts';
 import { api } from '../lib/api';
+import { DiscoverTile } from './DiscoverPage';
 import { formatMoney } from '../lib/format';
 
 const ICON: Record<string, Parameters<typeof Icon>[0]['name']> = {
@@ -87,6 +88,7 @@ export function SearchPage() {
             </div>
           )}
           {r.mine.length > 0 && <Group title="Your records" rows={r.mine} />}
+          {r.sponsored?.map((ad) => <div key={ad.campaign} className="gs-ad"><DiscoverTile c={ad} /></div>)}
           {!group && r.top.length > 0 && <Group title="Top results" rows={r.top} />}
           {r.groups.map((g) => <Group key={g.code} title={g.label} rows={g.results} more={!group && g.count > g.results.length ? () => go(q, g.code) : undefined} total={g.count} />)}
           {r.count === 0 && r.mine.length === 0 && (

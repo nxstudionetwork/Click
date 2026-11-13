@@ -121,6 +121,9 @@ def apply_result(reference: str, outcome: str, amount: Decimal, reason: str = ""
                 paid(r.gift_card)
             if r.order and r.order.status == OrderStatus.AWAITING_PAYMENT:
                 transition_order(r.order, OrderStatus.PLACED, note=f"Paid by {LABEL.get(r.method, r.method)} · {reference}")
+                from apps.discover.engine import attribute_order
+
+                attribute_order(r.order)
                 notify(r.order.customer, NotificationCategory.ORDERS, f"Order placed with {r.order.store.name}",
                        f"{r.order.number} · payment received. We'll update you as it progresses.", f"/orders/{r.order.id}")
         return intent(reference)
