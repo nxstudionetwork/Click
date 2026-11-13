@@ -641,5 +641,9 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
 - **Pharma** (`apps/pharma`): pharmacies are stores, medicines are products (prescription flag, composition, limits);
   prescriptions are private uploads reviewed by that pharmacy (`/partner/pharma/prescriptions/<id>/review`); checkout
   refuses prescription items without a verified, valid prescription, which is then marked used.
-- **Scheduled jobs to run in production:** `payments.gateway.expire_unpaid`, `giftcards.services.run_due`,
-  `pharma.views.run_due`, plus the wallet / rewards sweeps listed above.
+- **Scheduled jobs:** one command runs them all, idempotently — schedule `python manage.py click_jobs --frequent` every
+  5 minutes (unpaid online checkouts, abandoned top-ups) and `python manage.py click_jobs --daily` once a day (wallet
+  credit and points expiry, expiry reminders, scheduled gift-card delivery and expiry, refill reminders).
+- **Also:** invoices are issued the moment a payment is captured (refund documents are notified); delivered orders
+  ask for a review; Activity includes gift cards, reviews and prescriptions; checkout shows the points an order earns
+  and how to redeem points for Wallet credit.

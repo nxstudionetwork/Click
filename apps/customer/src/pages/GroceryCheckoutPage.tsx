@@ -13,6 +13,7 @@ import { StatusPill } from '../features/groceries/parts';
 import { basketKey } from '../features/groceries/useGroceries';
 import { OnlineMethodOptions } from '../features/payments/OnlinePay';
 import { GiftCardOption } from './GiftCardsPage';
+import { CheckoutRewards } from '../features/payments/CheckoutRewards';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
 import { api } from '../lib/api';
@@ -165,6 +166,8 @@ export function GroceryCheckoutPage() {
             <h3 id="g-off">4. Offers</h3>
             <OfferPicker cart={c} />
           </section>
+
+          <CheckoutRewards subtotal={c.totals.subtotal} />
 
           <section className="card card--pad stack" aria-labelledby="g-pay">
             <h3 id="g-pay">5. Payment</h3>

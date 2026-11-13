@@ -74,7 +74,12 @@ def settle_on_cancel(payments, customer, label: str) -> None:
 
 def collect_on_delivery(order) -> int:
     """Delivered means the partner collected the cash: a pending cash-on-delivery payment becomes captured."""
-    return order.payments.filter(method=PaymentMethod.CASH_ON_DELIVERY, status=Payment.Status.PENDING).update(status=Payment.Status.CAPTURED)
+    n = 0
+    for p in order.payments.filter(method=PaymentMethod.CASH_ON_DELIVERY, status=Payment.Status.PENDING):
+        p.status = Payment.Status.CAPTURED
+        p.save(update_fields=["status", "updated_at"])  # saved one by one so the invoice is issued (post_save)
+        n += 1
+    return n
 
 
 def cancel_pending_payments(order) -> None:

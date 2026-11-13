@@ -24,7 +24,7 @@ def _tone(status: str) -> str:
     s = status.lower()
     if any(w in s for w in ("cancel", "fail", "not completed", "rejected", "expired")):
         return "bad"
-    if any(w in s for w in ("deliver", "complet", "paid", "confirm", "success", "refund", "credited", "resolved", "added", "earned")):
+    if any(w in s for w in ("deliver", "complet", "paid", "confirm", "success", "refund", "credited", "resolved", "added", "earned", "active", "verified", "used")):
         return "ok"
     return "pending"
 
@@ -115,6 +115,27 @@ def gather(c, before: datetime, cats: set[str], n: int) -> list[dict]:
         rows += _simple("support", c.support_tickets.filter(created_at__lt=before), n, lambda t: _row(
             "support", "ticket", f"Support request · {t.subject}", t.get_category_display(), t.created_at, f"/help/tickets/{t.id}",
             status=t.get_status_display(), tone=_tone(t.get_status_display()), ref=t.reference, obj_id=t.id))
+    if "gift_cards" in cats:
+        from django.db.models import Q
+
+        from apps.giftcards.models import GiftCard
+
+        qs = GiftCard.objects.filter(Q(buyer=c) | Q(holder=c), created_at__lt=before).exclude(status="cancelled").select_related("design")
+        rows += _simple("gift_cards", qs, n, lambda g: _row(
+            "gift_cards", "gift_card", f"Gift card for {g.recipient_name}" if g.buyer_id == c.id and g.holder_id != c.id else f"Gift card · {g.design.title}",
+            "Bought" if g.buyer_id == c.id and g.holder_id != c.id else "Received", g.created_at, f"/gift-cards/mine/{g.id}", amount=g.amount,
+            status=g.get_status_display(), tone=_tone(g.get_status_display()), ref=g.code[-4:], obj_id=g.id))
+    if "reviews" in cats:
+        from apps.reviews.hub import history
+
+        for r in [x for x in history(c) if x["created_at"] < before.isoformat()][:n]:
+            rows.append({"id": f"reviews:{r['kind']}:{r['id']}", "category": "reviews", "kind": r["kind"], "title": f"Reviewed {r['title']}",
+                         "subtitle": f"{'★' * r['rating']} · {r['kind_label']}", "at": r["created_at"], "link": r["link"], "amount": None,
+                         "status": "Published" if r["status"] == "published" else "Under review", "tone": "ok", "reference": r["target"]})
+    if "pharma" in cats:
+        rows += _simple("pharma", c.prescriptions.filter(created_at__lt=before).select_related("pharmacy"), n, lambda p: _row(
+            "pharma", "prescription", f"Prescription for {p.pharmacy.name}", "Uploaded for pharmacist review", p.created_at, "/pharma/prescriptions",
+            status=p.get_status_display(), tone=_tone(p.get_status_display()), ref=p.reference, obj_id=p.id))
     return rows
 
 
@@ -139,7 +160,7 @@ def _wishlist(c, before, n):
 
 
 CATEGORIES = ["food", "groceries", "shop", "ride", "parcel", "services", "travel", "hotels", "shows", "events", "bookings", "payments", "wallet",
-              "rewards", "wishlist", "buddy", "support"]
+              "rewards", "gift_cards", "reviews", "pharma", "wishlist", "buddy", "support"]
 
 
 def timeline(c, category: str | None, before: datetime, q: str = "", status: str = "") -> dict:

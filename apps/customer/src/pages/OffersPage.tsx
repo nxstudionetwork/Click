@@ -76,6 +76,8 @@ export function OffersPage() {
               <Section title="Everything" id="mn-all-offers"><Grid rows={h.results} onOpen={setOpen} /></Section>
             </>
           )}
+          <Link to="/gift-cards" className="mn-row mn-row--card"><span className="mn-row__icon"><Icon name="gift" size={18} /></span>
+            <span className="mn-row__text"><strong>Gift Cards</strong><span className="small mn-muted">Give something they’ll love — for Food, Groceries or Shop</span></span><Icon name="right" size={16} /></Link>
           <p className="small mn-muted">Offers are set by Click. and its partners. Each one is checked again at checkout (dates, minimum spend, usage), so the price you see there is final.</p>
         </>
       )}

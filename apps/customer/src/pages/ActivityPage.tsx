@@ -7,7 +7,8 @@ import { api } from '../lib/api';
 
 const LABEL: Record<string, string> = {
   food: 'Food', groceries: 'Groceries', shop: 'Shop', ride: 'Rides', parcel: 'Parcel', services: 'Services', travel: 'Travel', hotels: 'Hotels', shows: 'Shows',
-  events: 'Events', bookings: 'Bookings', payments: 'Payments', wallet: 'Wallet', rewards: 'Rewards', wishlist: 'Saved', buddy: 'Buddy', support: 'Support',
+  events: 'Events', bookings: 'Bookings', payments: 'Payments', wallet: 'Wallet', rewards: 'Rewards', gift_cards: 'Gift Cards', reviews: 'Reviews',
+  pharma: 'Pharma', wishlist: 'Saved', buddy: 'Buddy', support: 'Support',
 };
 const START: Record<string, [string, string]> = {
   food: ['/food', 'Order food'], groceries: ['/groceries', 'Shop groceries'], shop: ['/shopping', 'Start shopping'], ride: ['/rides', 'Book a ride'],

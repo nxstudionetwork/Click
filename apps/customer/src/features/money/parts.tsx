@@ -9,7 +9,7 @@ const TZ = 'Asia/Kolkata';
 export const SERVICE_ICON: Record<string, IconName> = {
   food: 'food', groceries: 'grocery', shop: 'shop', ride: 'ride', rides: 'ride', parcel: 'parcel', services: 'wrench', service: 'wrench', shows: 'film',
   events: 'gift', hotels: 'hotel', travel: 'plane', bookings: 'temple', wallet: 'wallet', payments: 'card', payment: 'card', rewards: 'star', offers: 'tag',
-  pharma: 'plus', pharmacy: 'plus', wishlist: 'heart', buddy: 'sparkle', support: 'help', account: 'shield', orders: 'bag', order: 'bag', deliveries: 'parcel', system: 'shield', delivery: 'parcel',
+  pharma: 'plus', pharmacy: 'plus', gift_cards: 'gift', reviews: 'star', invoices: 'receipt', wishlist: 'heart', buddy: 'sparkle', support: 'help', account: 'shield', orders: 'bag', order: 'bag', deliveries: 'parcel', system: 'shield', delivery: 'parcel',
 };
 export const iconFor = (s: string): IconName => SERVICE_ICON[s] ?? 'receipt';
 

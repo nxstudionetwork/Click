@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
 import { OnlineMethodOptions } from '../features/payments/OnlinePay';
 import { GiftCardOption } from './GiftCardsPage';
+import { CheckoutRewards } from '../features/payments/CheckoutRewards';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
 import { formatMoney } from '../lib/format';
@@ -160,6 +161,8 @@ export function CheckoutPage() {
           <h3 id="offer-h">3. Offers</h3>
           <OfferPicker cart={c} />
         </section>
+
+        <CheckoutRewards subtotal={c.totals.subtotal} />
 
         <section className="card card--pad stack" aria-labelledby="pay-h">
           <h3 id="pay-h">4. Payment</h3>

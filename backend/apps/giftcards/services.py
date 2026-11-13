@@ -189,6 +189,13 @@ def run_due() -> dict:
     for c in GiftCard.objects.filter(status=S.SCHEDULED, deliver_on__lte=today):
         deliver(c)
         delivered += 1
+    # Once per card: the daily run sees it only on the day it enters the 6–7 day window.
+    for c in GiftCard.objects.filter(status=S.ACTIVE, holder__isnull=False, expires_at__gt=now + timedelta(days=6),
+                                     expires_at__lte=now + timedelta(days=7)).select_related("holder", "design"):
+        b = balance(c)
+        if b > 0:
+            notify(c.holder, NotificationCategory.PAYMENTS, f"₹{b:,.0f} on your gift card expires soon",
+                   f"Use it by {timezone.localtime(c.expires_at):%d %b} on {', '.join(c.design.services).title()}.", f"/gift-cards/mine/{c.id}")
     for c in GiftCard.objects.filter(status=S.ACTIVE, expires_at__lte=now):
         with transaction.atomic():
             c = _lock(c.pk)

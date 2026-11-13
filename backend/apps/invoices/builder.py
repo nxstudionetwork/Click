@@ -144,9 +144,16 @@ def ensure(p: Payment) -> Invoice | None:
             inv = Invoice.objects.get(payment=p)
     refunds = _refunds(p, inv.number)
     if refunds != inv.refunds:
+        new = len(refunds) > len(inv.refunds)
         inv.refunds = refunds
         inv.status = Invoice.Status.REFUND
         inv.save(update_fields=["refunds", "status", "updated_at"])
+        if new:
+            from apps.notifications.models import NotificationCategory
+            from apps.notifications.services import notify
+
+            notify(inv.customer, NotificationCategory.PAYMENTS, f"Refund document for {inv.number}",
+                   f"₹{float(refunds[-1]['amount']):,.2f} refunded to {refunds[-1]['to']}.", f"/account/invoices/{inv.id}")
     return inv
 
 

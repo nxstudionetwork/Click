@@ -68,3 +68,20 @@ def test_reviews_only_for_completed_purchases_once(auth_api, customer, other_cus
     assert r.status_code == 201 and r.json()["mine"][0]["rating"] == 5 and "Could be better: More raita" in r.json()["mine"][0]["comment"]
     assert not any(p["targetId"] == str(order.id) for p in r.json()["pending"])
     assert auth_api.post("/api/v1/customer/reviews", body, format="json").json()["error"]["code"] == "review_exists"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_invoice_issued_on_capture_review_reminder_activity_and_jobs(auth_api, customer, address, products):
+    from django.core.management import call_command
+
+    from apps.invoices.models import Invoice
+    from apps.notifications.models import Notification
+
+    order = deliver(place(auth_api, address, products))
+    assert Invoice.objects.filter(payment__order=order).exists()  # issued when the cash was collected, not only when viewed
+    assert Notification.objects.filter(customer=customer.customer_profile, title__startswith="How was your order").exists()
+    r = auth_api.post("/api/v1/customer/reviews", {"kind": "order", "targetId": str(order.id), "rating": 4}, format="json")
+    assert r.status_code == 201 and Notification.objects.filter(title="Thanks — your review is published").exists()
+    rows = auth_api.get("/api/v1/customer/activity", {"category": "reviews"}).json()["results"]
+    assert rows and rows[0]["title"].startswith("Reviewed ")
+    call_command("click_jobs")  # every scheduled job runs cleanly

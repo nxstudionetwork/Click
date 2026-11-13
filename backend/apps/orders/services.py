@@ -249,6 +249,8 @@ def transition_order(order: Order, to_status: str, *, actor=None, note: str = ""
         from apps.rewards.services import award_for_delivered_order
 
         award_for_delivered_order(order)
+        notify(order.customer, NotificationCategory.ORDERS, f"How was your order from {order.store.name}?",
+               "Rate it in a few seconds — it helps other customers and the store.", "/account/reviews")
     return order
 
 

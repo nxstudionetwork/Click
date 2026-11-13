@@ -36,6 +36,11 @@ class ReviewsView(APIView):
         d = s.validated_data
         hub.submit(c, d["kind"], str(d["target_id"]), d["rating"], d["liked"], d["better"], d["aspects"])
         record(c, "review.submitted", {"kind": d["kind"], "rating": d["rating"]})
+        from apps.notifications.models import NotificationCategory
+        from apps.notifications.services import notify
+
+        notify(c, NotificationCategory.ORDERS, "Thanks — your review is published", f"{hub.KINDS[d['kind']][0]} · {d['rating']} star{'s' if d['rating'] > 1 else ''}.",
+               "/account/reviews?tab=mine")
         return Response({"pending": hub.pending(c), "mine": hub.history(c)}, status=status.HTTP_201_CREATED)
 
 
