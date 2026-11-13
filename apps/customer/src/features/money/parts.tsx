@@ -9,14 +9,14 @@ const TZ = 'Asia/Kolkata';
 export const SERVICE_ICON: Record<string, IconName> = {
   food: 'food', groceries: 'grocery', shop: 'shop', ride: 'ride', rides: 'ride', parcel: 'parcel', services: 'wrench', service: 'wrench', shows: 'film',
   events: 'gift', hotels: 'hotel', travel: 'plane', bookings: 'temple', wallet: 'wallet', payments: 'card', payment: 'card', rewards: 'star', offers: 'tag',
-  wishlist: 'heart', buddy: 'sparkle', support: 'help', account: 'shield', orders: 'bag', order: 'bag', deliveries: 'parcel', system: 'shield', delivery: 'parcel',
+  pharma: 'plus', pharmacy: 'plus', wishlist: 'heart', buddy: 'sparkle', support: 'help', account: 'shield', orders: 'bag', order: 'bag', deliveries: 'parcel', system: 'shield', delivery: 'parcel',
 };
 export const iconFor = (s: string): IconName => SERVICE_ICON[s] ?? 'receipt';
 
 /** Theme per service (data-theme), so rows pick up each service's colour. */
 export const THEME: Record<string, string> = {
   food: 'food', groceries: 'groceries', shop: 'shop', ride: 'ride', rides: 'ride', parcel: 'parcel', services: 'services', shows: 'movies',
-  events: 'events', hotels: 'hotels', travel: 'travel', bookings: 'bookings',
+  events: 'events', hotels: 'hotels', travel: 'travel', bookings: 'bookings', pharma: 'pharma',
 };
 
 export const money = (v: string | number | null | undefined) => formatMoney(Number(v ?? 0));

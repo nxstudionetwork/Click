@@ -41,6 +41,11 @@ export const SERVICE_PAGES: Record<StoreType, ServicePageConfig> = {
     categoryIcons: { electronics: 'device', fashion: 'shirt', 'home-kitchen': 'home', sports: 'ball', books: 'receipt' },
     fallbackIcon: 'shop', dishesLabel: 'Products',
   },
+  pharmacy: {
+    storeType: 'pharmacy', title: 'Pharma', quote: 'Medicines and health essentials. One Click. away.',
+    searchPlaceholder: 'Search medicines, health products & pharmacies', categoriesLabel: 'Categories', plural: 'pharmacies', vegFilter: false,
+    categoryIcons: {}, fallbackIcon: 'plus', dishesLabel: 'Products',
+  },
 };
 
 export type ServiceSort = '' | 'rating' | 'eta' | 'price_low' | 'price_high' | 'distance';

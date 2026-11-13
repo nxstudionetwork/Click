@@ -34,6 +34,8 @@ class Cart(BaseModel):
     # Chosen offer; re-validated on every price calculation and at order placement (never trusted as-is).
     # In marketplace mode it applies to its own seller's part of the cart.
     offer = models.ForeignKey(StoreOffer, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    prescription = models.ForeignKey("pharma.Prescription", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+                                     help_text="Pharmacy carts: the verified prescription for prescription-only items.")
 
 
 class CartItem(BaseModel):

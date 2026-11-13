@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "apps.invoices",
     "apps.giftcards",
     "apps.discover",
+    "apps.pharma",
 ]
 
 MIDDLEWARE = [

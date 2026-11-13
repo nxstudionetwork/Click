@@ -35,11 +35,12 @@ class CartItemSerializer(serializers.ModelSerializer):
     line_total = serializers.SerializerMethodField()
     is_available = serializers.SerializerMethodField()
     price_change = serializers.SerializerMethodField()
+    requires_prescription = serializers.BooleanField(source="product.requires_prescription", read_only=True)
 
     class Meta:
         model = CartItem
         fields = ["id", "product", "store_id", "variant", "options", "quantity", "note", "unit_price", "line_total", "is_available",
-                  "price_change"]
+                  "price_change", "requires_prescription"]
 
     def get_variant(self, item):
         v = item.variant
@@ -90,10 +91,23 @@ class CartSerializer(serializers.ModelSerializer):
     item_count = serializers.SerializerMethodField()
     offer = serializers.SerializerMethodField()
     offers = serializers.SerializerMethodField()
+    prescription = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ["id", "mode", "store", "items", "groups", "item_count", "totals", "offer", "offers"]
+        fields = ["id", "mode", "store", "items", "groups", "item_count", "totals", "offer", "offers", "prescription"]
+
+    def get_prescription(self, cart: Cart):
+        """Pharmacy carts: the attached prescription and the customer's prescriptions this pharmacy verified."""
+        if not cart.store_id or cart.store.store_type != "pharmacy":
+            return None
+        from apps.pharma.views import usable
+
+        r = cart.prescription
+        u = usable(cart.customer, cart.store_id)
+        return {"required": any(i.product.requires_prescription for i in self._items(cart)),
+                "attached": {"id": str(r.id), "reference": r.reference, "status": r.status} if r else None,
+                "available": {"id": str(u.id), "reference": u.reference} if u else None}
 
     def _items(self, cart: Cart):
         if not hasattr(self, "_cached_items"):

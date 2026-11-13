@@ -18,6 +18,7 @@ class StoreType(models.TextChoices):
     RESTAURANT = "restaurant", "Restaurant"
     GROCERY = "grocery", "Grocery"
     RETAIL = "retail", "Retail"
+    PHARMACY = "pharmacy", "Pharmacy"
 
 
 class StoreCategory(BaseModel):

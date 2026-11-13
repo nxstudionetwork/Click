@@ -8,7 +8,7 @@ export type UUID = string;
 export type Money = string;
 export type ISODateTime = string;
 
-export type StoreType = 'restaurant' | 'grocery' | 'retail';
+export type StoreType = 'restaurant' | 'grocery' | 'retail' | 'pharmacy';
 export type Dietary = 'veg' | 'non_veg' | 'vegan' | 'unspecified';
 
 export interface Paginated<T> {
@@ -149,6 +149,9 @@ export interface StoreQuery {
 export interface Product {
   id: UUID;
   storeId: UUID;
+  /** Pharmacy listings: prescription-only medicine. */
+  requiresPrescription?: boolean;
+  storeType?: StoreType;
   categoryId: UUID | null;
   name: string;
   description: string;
@@ -260,6 +263,7 @@ export interface CartItem {
   isAvailable: boolean;
   /** The live price differs from the one shown when the item was added (groceries require acknowledging it). */
   priceChange: { from: Money; to: Money } | null;
+  requiresPrescription?: boolean;
 }
 
 export interface CartStore {
@@ -321,6 +325,8 @@ export interface Cart {
   offer: CartOffer | null;
   /** Offers of this store that can be applied at checkout. */
   offers: CartOffer[];
+  /** Pharmacy carts: whether a verified prescription is needed, the one attached, and one ready to attach. */
+  prescription?: { required: boolean; attached: { id: UUID; reference: string; status: string } | null; available: { id: UUID; reference: string } | null } | null;
 }
 
 // --- Orders -----------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { CartPrescription } from './PharmaPage';
 import type { Cart, CartGroup } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, QuantityStepper, Skeleton, SmartImage, useToast } from '../components/ui';
 import { Totals } from '../features/cart/Totals';
@@ -32,13 +33,15 @@ export function CartPage() {
   const marketplace = c.mode === 'marketplace';
   const currency = c.groups[0]?.store.currency ?? 'INR';
   const repriced = c.items.filter((i) => i.priceChange);
-  const blocked = c.groups.some((g) => g.belowMinimum || !g.store.isOpen) || c.items.some((i) => !i.isAvailable) || repriced.length > 0;
+  const rxBlocked = !!c.prescription?.required && !c.prescription.attached;
+  const blocked = c.groups.some((g) => g.belowMinimum || !g.store.isOpen) || c.items.some((i) => !i.isAvailable) || repriced.length > 0 || rxBlocked;
   const busy = update.isPending || remove.isPending;
 
   return (
     <div className="checkout" data-theme={marketplace ? 'shopping' : undefined}>
       <div className="stack">
         <div className="spread"><h1>Your cart</h1>{marketplace && c.groups.length > 1 && <span className="small muted">{c.groups.length} sellers · {c.groups.length} deliveries</span>}</div>
+        {c.prescription && c.store && <CartPrescription required={c.prescription.required} attached={c.prescription.attached} available={c.prescription.available} pharmacyId={c.store.id} />}
         {c.groups.map((g) => (
           <GroupCard key={g.store.id} cart={c} g={g} marketplace={marketplace} busy={busy}
             onQty={(id, n) => (n <= 0 ? remove.mutate(id, { onError }) : update.mutate({ id, quantity: n }, { onError }))} />
@@ -82,6 +85,7 @@ function GroupCard({ cart, g, marketplace, busy, onQty }: { cart: Cart; g: CartG
             {i.options.length > 0 && <div className="muted small">{i.options.map((o) => o.name).join(' · ')}</div>}
             {i.note && <div className="muted small">“{i.note}”</div>}
             {!i.isAvailable && <span className="badge badge--warning">Currently unavailable</span>}
+            {i.requiresPrescription && <span className="ph-rx">Rx · Prescription required</span>}
             {i.priceChange && <PriceNotice id={i.id} change={i.priceChange} currency={s.currency} />}
             <LineActions id={i.id} productId={i.product.id} name={i.product.name} unavailable={!i.isAvailable} />
           </div>

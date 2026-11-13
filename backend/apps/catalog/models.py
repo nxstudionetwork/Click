@@ -140,6 +140,14 @@ class Product(BaseModel):
     warranty = models.CharField(max_length=120, blank=True, help_text="e.g. '1 year manufacturer warranty'.")
     is_cod_available = models.BooleanField(default=True, help_text="Cash on delivery allowed for this item.")
 
+    # Pharma (pharmacy listings): prescription-only items can be ordered only with a prescription that pharmacy verified.
+    requires_prescription = models.BooleanField(default=False)
+    composition = models.CharField(max_length=200, blank=True, help_text="Salt / composition and strength, e.g. 'Paracetamol 500 mg'.")
+    pack_size = models.CharField(max_length=60, blank=True)
+    manufacturer = models.CharField(max_length=120, blank=True)
+    health_category = models.CharField(max_length=20, blank=True, help_text="Pharma aisle code (apps.pharma.views.CATEGORIES).")
+    max_per_order = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Quantity limit per order (e.g. for medicines).")
+
     # Groceries: the canonical product this listing sells (same item + size across stores), freshness and weighing.
     grocery_item = models.ForeignKey("groceries.GroceryItem", on_delete=models.SET_NULL, null=True, blank=True, related_name="listings")
     received_on = models.DateField(null=True, blank=True, help_text="Date the vendor received this stock (fresh produce).")

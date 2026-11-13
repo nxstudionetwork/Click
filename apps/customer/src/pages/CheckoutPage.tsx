@@ -84,7 +84,8 @@ export function CheckoutPage() {
   const showForm = adding || list.length === 0;
   const open = c.groups.every((g) => g.store.isOpen);
   const belowMin = c.groups.filter((g) => g.belowMinimum);
-  const canPlace = !!addressId && !showForm && open && c.items.every((i) => i.isAvailable && !i.priceChange) && belowMin.length === 0;
+  const rxMissing = !!c.prescription?.required && !c.prescription.attached;
+  const canPlace = !!addressId && !showForm && open && c.items.every((i) => i.isAvailable && !i.priceChange) && belowMin.length === 0 && !rxMissing;
   const err = [place.error, checkout.error].find((e): e is ApiError => e instanceof ApiError) ?? null;
   const estimateFor = (storeId: string) => estimates.data?.groups.find((g) => g.store.id === storeId)?.deliveryEstimate ?? null;
 
@@ -189,6 +190,7 @@ export function CheckoutPage() {
         {!open && <p className="small muted">A store in your cart isn’t taking orders right now.</p>}
         {belowMin.map((g) => <p key={g.store.id} className="small muted">Add {formatMoney(Number(g.store.minOrderAmount) - Number(g.subtotal), currency)} more from {g.store.name} to reach its minimum order.</p>)}
         {c.items.some((i) => i.priceChange) && <p className="small muted">A price changed. <Link to="/cart">Review it in your cart</Link>.</p>}
+        {rxMissing && <p className="small muted">Prescription medicines need a verified prescription. <Link to="/cart">Attach it in your cart</Link>.</p>}
       </aside>
     </div>
   );

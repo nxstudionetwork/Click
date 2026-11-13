@@ -8,7 +8,7 @@ import type { StoreType } from '@click/api';
 import type { IconName } from '../components/ui';
 
 export type ServiceStatus = 'live' | 'soon';
-export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'travel' | 'bookings' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers';
+export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'travel' | 'bookings' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers' | 'pharma';
 
 export interface ClickService {
   id: string;
@@ -39,6 +39,7 @@ export const SERVICES: ClickService[] = [
   { id: 'liveshows', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
   { id: 'travel', name: 'Travel', tagline: 'Buses, trains and flights — all in one journey', icon: 'bus', path: '/travel', status: 'live', theme: 'travel' },
   { id: 'bookings', name: 'Bookings', tagline: 'Temples, attractions, experiences — and all your bookings', icon: 'temple', path: '/bookings', status: 'live', theme: 'bookings' },
+  { id: 'pharma', name: 'Pharma', tagline: 'Medicines and health essentials from local pharmacies', icon: 'plus', path: '/pharma', status: 'live', theme: 'pharma', storeType: 'pharmacy' },
   { id: 'services', name: 'Services', short: 'Services', tagline: 'Plumbers, electricians, cleaners and more', icon: 'wrench', path: '/services', status: 'live', theme: 'services' },
   { id: 'buzz', name: 'Buzz', tagline: 'Instants you can act on', icon: 'play', path: '/buzz', status: 'live', theme: 'buzz' },
 ];
@@ -73,10 +74,12 @@ export const STORE_TYPE_LABEL: Record<StoreType, { singular: string; plural: str
   restaurant: { singular: 'restaurant', plural: 'restaurants' },
   grocery: { singular: 'grocery store', plural: 'grocery stores' },
   retail: { singular: 'shop', plural: 'shops' },
+  pharmacy: { singular: 'pharmacy', plural: 'pharmacies' },
 };
 
 /** Route → visual theme. Every theme shares Click's type, spacing and components; only accents change. */
 const THEME_ROUTES: [RegExp, Theme][] = [
+  [/^\/pharma/, 'pharma'],
   [/^\/food/, 'food'],
   [/^\/groceries/, 'grocery'],
   [/^\/shopping/, 'shopping'],

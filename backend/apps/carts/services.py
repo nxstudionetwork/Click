@@ -154,7 +154,7 @@ def _mode_for(product: Product) -> str:
 
 
 MULTI_STORE = (Cart.Mode.MARKETPLACE, Cart.Mode.BASKET)
-_MODE_NOUN = {Cart.Mode.STORE: "food", Cart.Mode.MARKETPLACE: "shopping", Cart.Mode.BASKET: "grocery"}
+_MODE_NOUN = {Cart.Mode.STORE: "food or pharmacy", Cart.Mode.MARKETPLACE: "shopping", Cart.Mode.BASKET: "grocery"}
 
 
 @transaction.atomic
@@ -191,7 +191,8 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
         cart.mode, cart.store = mode, new_store
         if mode == Cart.Mode.STORE:
             cart.offer = None  # offers belong to a store
-        cart.save(update_fields=["mode", "store", "offer", "updated_at"])
+        cart.prescription = None  # a prescription belongs to one pharmacy
+        cart.save(update_fields=["mode", "store", "offer", "prescription", "updated_at"])
 
     from apps.activity.services import record
 
@@ -225,6 +226,8 @@ def ensure_stock(product: Product, quantity: int, variant: ProductVariant | None
 def _ensure_line_stock(cart, product, variant, quantity, exclude=None) -> None:
     """Stock is per variant when there is one, else per product; other lines of the same stock count too."""
     others = CartItem.objects.filter(cart=cart, product=product, variant=variant).exclude(pk=exclude)
+    if product.max_per_order and quantity + sum(others.values_list("quantity", flat=True)) > product.max_per_order:
+        raise DomainError(f"You can order up to {product.max_per_order} of this item at a time.", code="quantity_limit", details={"max": product.max_per_order})
     ensure_stock(product, quantity + sum(others.values_list("quantity", flat=True)), variant)
 
 
@@ -246,8 +249,8 @@ def update_item(item: CartItem, quantity: int | None = None, note: str | None = 
 
 def _reset_if_empty(cart: Cart) -> None:
     if not cart.items.exists():
-        cart.mode, cart.store, cart.offer = Cart.Mode.EMPTY, None, None
-        cart.save(update_fields=["mode", "store", "offer", "updated_at"])
+        cart.mode, cart.store, cart.offer, cart.prescription = Cart.Mode.EMPTY, None, None, None
+        cart.save(update_fields=["mode", "store", "offer", "prescription", "updated_at"])
     elif cart.offer_id and cart.mode in MULTI_STORE and not cart.items.filter(product__store_id=cart.offer.store_id).exists():
         cart.offer = None  # the offer's seller is no longer in the cart
         cart.save(update_fields=["offer", "updated_at"])

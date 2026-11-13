@@ -240,9 +240,42 @@ export interface DiscoverCard {
 }
 export interface DiscoverFeed { city: string; service: string; sections: { code: string; title: string; subtitle: string; cards: DiscoverCard[] }[] }
 
+// --- Pharma ----------------------------------------------------------------------------------------------------
+export interface PharmaProduct {
+  id: UUID; name: string; brand: string; composition: string; packSize: string; manufacturer: string; price: Money; mrp: Money | null; image: string;
+  requiresPrescription: boolean; category: string; categoryLabel: string; available: boolean; maxPerOrder: number | null; description: string;
+  pharmacy: { id: UUID; name: string; slug: string; open: boolean };
+}
+export interface Pharmacy { id: UUID; name: string; slug: string; image: string; locality: string; city: string; open: boolean; rating: string | null; ratingCount: number; eta: string; verified: boolean }
+export interface PharmaHome {
+  categories: { code: string; label: string; icon: string; count: number }[]; pharmacies: Pharmacy[]; trending: PharmaProduct[]; orderAgain: PharmaProduct[]; disclaimer: string;
+}
+export interface PrescriptionView {
+  id: UUID; reference: string; status: string; statusLabel: string; note: string; pharmacistNote: string; alternativeNote: string; fileName: string; fileType: string;
+  pharmacy: { id: UUID; name: string }; uploadedAt: ISODateTime; reviewedAt: ISODateTime | null; validUntil: string | null;
+  approvedItems: { id: UUID; name: string }[]; order: { id: UUID; number: string } | null;
+}
+
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  pharma: {
+    home: () => http.request<PharmaHome>('/pharma/home'),
+    products: (q: { category?: string; q?: string; pharmacy?: string; rx?: string } = {}) =>
+      http.request<{ results: PharmaProduct[]; count: number; disclaimer: string }>('/pharma/products', { query: { ...q } }),
+    product: (id: string) => http.request<PharmaProduct & { sameComposition: PharmaProduct[]; disclaimer: string }>(`/pharma/products/${id}`),
+    prescriptions: () => http.request<{ results: PrescriptionView[] }>('/customer/pharma/prescriptions'),
+    upload: (file: File, pharmacyId: string, note: string) => {
+      const f = new FormData(); f.append('file', file); f.append('pharmacyId', pharmacyId); if (note) f.append('note', note);
+      return http.request<PrescriptionView>('/customer/pharma/prescriptions', { method: 'POST', body: f });
+    },
+    cancel: (id: string) => http.request<PrescriptionView>(`/customer/pharma/prescriptions/${id}`, { method: 'DELETE' }),
+    file: (id: string) => { if (!http.blob) throw new Error('Downloads are not supported.'); return http.blob(`/pharma/prescriptions/${id}/file`); },
+    attach: (prescriptionId: string) => http.request<{ attached: PrescriptionView }>('/customer/cart/prescription', { method: 'POST', body: { prescriptionId } }),
+    refills: () => http.request<{ results: { id: UUID; everyDays: number; nextOn: string; product: PharmaProduct }[] }>('/customer/pharma/refills'),
+    addRefill: (productId: string, everyDays: number) => http.request<{ id: UUID; nextOn: string }>('/customer/pharma/refills', { method: 'POST', body: { productId, everyDays } }),
+    removeRefill: (id: string) => http.request<void>(`/customer/pharma/refills/${id}`, { method: 'DELETE' }),
+  },
   discover: {
     feed: (q: { city?: string; service?: string } = {}) => http.request<DiscoverFeed>('/discover', { query: { city: q.city || undefined, service: q.service || undefined } }),
     track: (token: string, kind: 'impression' | 'click') => http.request<{ counted: boolean }>('/discover/events', { method: 'POST', body: { token, kind } }),

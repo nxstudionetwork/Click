@@ -53,11 +53,12 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id", "store_id", "category_id", "name", "description", "image_url", "price", "compare_at_price",
             "discount_percent", "brand", "unit_label", "dietary", "is_available", "low_stock", "is_featured",
-            "option_groups", "shop_category_id", "has_variants",
+            "option_groups", "shop_category_id", "has_variants", "requires_prescription", "store_type",
         ]
         list_serializer_class = DealAwareListSerializer
 
     shop_category_id = serializers.UUIDField(read_only=True, allow_null=True)
+    store_type = serializers.CharField(source="store.store_type", read_only=True)
     has_variants = serializers.SerializerMethodField()
 
     def get_has_variants(self, p) -> bool:

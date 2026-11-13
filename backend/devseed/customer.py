@@ -296,6 +296,9 @@ def seed_test_customer(log) -> CustomerProfile:
     from .discover import seed_discover
 
     seed_discover(log)
+    from .pharma import seed_pharma
+
+    seed_pharma(log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
     from .showtime import seed_showtime_history

@@ -83,6 +83,18 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
         g = next((g for g in groups if g.store.id == cart.offer.store_id), None)
         if problem := offer_problem(cart.offer, g.store if g else None, g.subtotal if g else 0):
             raise ConflictError(problem, code="offer_not_applicable")
+    rx_items = [i for i in items if i.product.requires_prescription]
+    if rx_items:
+        from apps.pharma.models import Prescription
+
+        rx = cart.prescription
+        ok = (rx is not None and rx.customer_id == customer.id and rx.pharmacy_id == cart.store_id
+              and rx.status in (Prescription.Status.VERIFIED, Prescription.Status.PARTIAL)
+              and (rx.valid_until is None or rx.valid_until >= timezone.localdate()))
+        approved = set(rx.approved_items.values_list("id", flat=True)) if ok else set()
+        if not ok or (approved and any(i.product_id not in approved for i in rx_items)):
+            raise ConflictError("Prescription items need a prescription this pharmacy has verified.", code="prescription_required",
+                                details={"items": [i.product.name for i in rx_items]})
     online = payment_method in ONLINE
     if online and payment_method not in available_methods():
         raise DomainError("Online payment isn’t available right now. Choose another way to pay.", code="online_payment_unavailable", status_code=503)
@@ -105,6 +117,10 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
         orders.append(_create_order(customer, g, address, key, customer_note, payment_method, checkout, gift_card_id))
     if online:  # one provider intent for the whole checkout; orders wait for its verified confirmation
         start_for_orders(orders, payment_method)
+    if rx_items:
+        from apps.pharma.models import Prescription
+
+        Prescription.objects.filter(pk=cart.prescription_id).update(status=Prescription.Status.USED, order=orders[0])
     clear_cart(cart)
     if checkout:
         record(customer, "checkout.placed", {"total": str(checkout.total), "orders": len(orders)}, obj=checkout)
