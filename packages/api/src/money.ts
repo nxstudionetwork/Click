@@ -157,7 +157,7 @@ export interface SupportMessage {
 }
 export type SupportLink = 'orderId' | 'parcelId' | 'serviceBookingId' | 'eventBookingId' | 'hotelBookingId' | 'travelBookingId' | 'experienceBookingId'
   | 'rideId' | 'showBookingId' | 'paymentId' | 'walletTransactionId';
-export type SupportCreate = { category: string; issueType?: string; subject: string; message: string; idempotencyKey?: string } & Partial<Record<SupportLink, string>>;
+export type SupportCreate = { category: string; issueType?: string; subject: string; message: string; idempotencyKey?: string; isSafety?: boolean; urgency?: 'urgent' | 'important'; contactPreference?: 'call' | 'message' | 'email' } & Partial<Record<SupportLink, string>>;
 
 /** The related-item type (from the API) → the field a new request sends it in. */
 export const SUPPORT_LINK_FIELD: Record<string, SupportLink> = {
@@ -203,9 +203,50 @@ export interface InvoiceDetail {
   gstNote: string;
 }
 
+// --- Gift Cards & Safety ------------------------------------------------------------------------------------
+export interface GiftDesign {
+  id: UUID; title: string; category: string; categoryLabel: string; occasion: string; tagline: string; colors: string[];
+  minAmount: Money; maxAmount: Money; presets: string[]; validityDays: number; services: { code: string; label: string }[]; terms: string;
+}
+export interface GiftCardView {
+  id: UUID; design: GiftDesign; amount: Money; balance: Money; status: 'awaiting_payment' | 'scheduled' | 'active' | 'used' | 'expired' | 'cancelled';
+  statusLabel: string; recipientName: string; message: string; delivery: 'click' | 'share'; deliveryLabel: string; deliverOn: string | null;
+  deliveredAt: ISODateTime | null; expiresAt: ISODateTime | null; fromName: string; role: 'holder' | 'buyer'; redeemed: boolean; code: string; createdAt: ISODateTime;
+  entries?: { id: UUID; kind: string; kindLabel: string; amount: Money; description: string; at: ISODateTime; paymentId: UUID | null }[];
+  paymentIntent?: PaymentIntent | null;
+}
+export interface GiftPurchase {
+  designId: string; amount: string; recipientName: string; recipientPhone?: string; message?: string; delivery: 'click' | 'share';
+  deliverOn?: string | null; paymentMethod: string; idempotencyKey: string;
+}
+export interface SafetyState {
+  emergencyNumber: string; support: { email: string; phone: string; phoneCallable: boolean };
+  active: {
+    rides: { id: UUID; number: string; title: string; status: string; driver: string | null; link: string }[];
+    parcels: { id: UUID; number: string; title: string; status: string; link: string }[];
+    services: { id: UUID; number: string; title: string; status: string; link: string; professional: string | null; verified: boolean; rating: string | null; jobs: number | null }[];
+    trips: { id: UUID; title: string; status: string; pnr: string; link: string }[];
+    stays: { id: UUID; title: string; status: string; link: string }[];
+  };
+  reports: { id: UUID; reference: string; subject: string; status: string; statusLabel: string; priority: string; createdAt: ISODateTime }[];
+  sessions: { active: number };
+}
+
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  giftCards: {
+    designs: () => http.request<{ categories: { code: string; label: string; designs: GiftDesign[] }[] }>('/gift-cards', { auth: false }),
+    mine: () => http.request<{ held: GiftCardView[]; sent: GiftCardView[] }>('/customer/gift-cards'),
+    get: (id: string) => http.request<GiftCardView>(`/customer/gift-cards/${id}`),
+    buy: (input: GiftPurchase) => http.request<GiftCardView>('/customer/gift-cards', { method: 'POST', body: input }),
+    redeem: (code: string) => http.request<GiftCardView>('/customer/gift-cards/redeem', { method: 'POST', body: { code } }),
+    usable: (service: string) => http.request<{ results: { id: UUID; title: string; balance: Money; codeEnd: string; expiresAt: ISODateTime | null }[] }>('/customer/gift-cards/usable', { query: { service } }),
+  },
+  safety: {
+    get: () => http.request<SafetyState>('/customer/safety'),
+    signOutOthers: () => http.request<{ signedOut: number; active: number }>('/customer/safety/sign-out-others', { method: 'POST' }),
+  },
   reviews: {
     get: () => http.request<ReviewsState>('/customer/reviews'),
     submit: (input: ReviewInput) => http.request<ReviewsState>('/customer/reviews', { method: 'POST', body: input }),

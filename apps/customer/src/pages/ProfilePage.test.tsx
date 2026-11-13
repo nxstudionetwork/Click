@@ -56,7 +56,7 @@ describe('Profile', () => {
     renderWithProviders(<ProfilePage />);
     const account = screen.getByRole('navigation', { name: 'Account' });
     expect(within(account).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual([
-      '/account/card', '/account/addresses', '/account/payments', '/notifications', '/settings', '/help',
+      '/account/card', '/account/addresses', '/account/payments', '/account/invoices', '/account/reviews', '/gift-cards/mine', '/safety', '/notifications', '/settings', '/help',
     ]);
     expect(await within(account).findByLabelText('3 unread')).toBeInTheDocument();
     expect(screen.getByText('A venture of IFX Group')).toBeInTheDocument();

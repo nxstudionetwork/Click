@@ -13,6 +13,7 @@ import { deliveryWindow } from '../features/shop/time';
 import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
 import { OnlineMethodOptions } from '../features/payments/OnlinePay';
+import { GiftCardOption } from './GiftCardsPage';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
 import { formatMoney } from '../lib/format';
@@ -27,6 +28,7 @@ export function CheckoutPage() {
   const [addressId, setAddressId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [payment, setPayment] = useState<PaymentMethod>('cash_on_delivery');
+  const [giftCard, setGiftCard] = useState('');
   const [note, setNote] = useState('');
   // One key per checkout attempt: retries/double-clicks can never create two orders (or two checkouts).
   const idempotencyKey = useRef(crypto.randomUUID());
@@ -88,7 +90,7 @@ export function CheckoutPage() {
 
   const submit = () => {
     if (!addressId) return;
-    const input = { addressId, paymentMethod: payment, idempotencyKey: idempotencyKey.current, customerNote: note };
+    const input = { addressId, paymentMethod: payment, idempotencyKey: idempotencyKey.current, customerNote: note, ...(payment === 'gift_card' ? { giftCardId: giftCard } : {}) };
     if (marketplace) checkout.mutate(input); else place.mutate(input);
   };
 
@@ -167,6 +169,7 @@ export function CheckoutPage() {
             </div></div>
           </label>
           <WalletOption total={c.totals.total} currency={currency} checked={payment === 'wallet'} onSelect={() => setPayment('wallet')} />
+          <GiftCardOption service={marketplace ? 'shop' : c.groups[0]?.store.storeType === 'grocery' ? 'groceries' : 'food'} total={c.totals.total} value={{ method: payment, card: giftCard }} onSelect={(id) => { setPayment('gift_card'); setGiftCard(id); }} />
           <OnlineMethodOptions value={payment} onChange={(m) => setPayment(m as PaymentMethod)} />
         </section>
       </div>

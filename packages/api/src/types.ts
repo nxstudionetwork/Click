@@ -336,7 +336,7 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type PaymentMethod = 'cash_on_delivery' | 'pay_at_venue' | 'wallet' | 'upi' | 'card' | 'netbanking';
+export type PaymentMethod = 'cash_on_delivery' | 'pay_at_venue' | 'wallet' | 'upi' | 'card' | 'netbanking' | 'gift_card';
 export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'failed' | 'cancelled' | 'refunded';
 
 export interface OrderSummary {
@@ -464,6 +464,8 @@ export interface PlaceOrderInput {
   paymentMethod: PaymentMethod;
   idempotencyKey: UUID;
   customerNote?: string;
+  /** With paymentMethod "gift_card": one of the customer's own gift cards (checked on the server). */
+  giftCardId?: UUID;
 }
 
 export interface ReorderResult {

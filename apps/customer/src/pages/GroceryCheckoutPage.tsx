@@ -12,6 +12,7 @@ import { cartKey, useCart } from '../features/cart/useCart';
 import { StatusPill } from '../features/groceries/parts';
 import { basketKey } from '../features/groceries/useGroceries';
 import { OnlineMethodOptions } from '../features/payments/OnlinePay';
+import { GiftCardOption } from './GiftCardsPage';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
 import { api } from '../lib/api';
@@ -40,6 +41,7 @@ export function GroceryCheckoutPage() {
   const [subNote, setSubNote] = useState('');
   const [note, setNote] = useState('');
   const [payment, setPayment] = useState<string>('cash_on_delivery');
+  const [giftCard, setGiftCard] = useState('');
   const key = useRef(crypto.randomUUID());
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export function GroceryCheckoutPage() {
   const submit = () => {
     if (!addressId || !g) return;
     const chosen = Object.fromEntries(g.stores.map((s) => [s.storeId, choiceOf(s.storeId)!]));
-    place.mutate({ addressId, paymentMethod: payment as 'cash_on_delivery', idempotencyKey: key.current, substitution: sub, substitutionNote: sub === 'store_choice' ? subNote : '', customerNote: note, delivery: chosen });
+    place.mutate({ addressId, paymentMethod: payment as 'cash_on_delivery', ...(payment === 'gift_card' ? { giftCardId: giftCard } : {}), idempotencyKey: key.current, substitution: sub, substitutionNote: sub === 'store_choice' ? subNote : '', customerNote: note, delivery: chosen });
   };
 
   return (
@@ -169,6 +171,7 @@ export function GroceryCheckoutPage() {
             <label className="option"><input type="radio" name="payment" checked={payment === 'cash_on_delivery'} onChange={() => setPayment('cash_on_delivery')} />
               <div><strong>Cash on delivery</strong><div className="muted small">Pay with cash or UPI when each order arrives.</div></div></label>
             <WalletOption total={g?.total ?? c.totals.total} currency="INR" checked={payment === 'wallet'} onSelect={() => setPayment('wallet')} />
+            <GiftCardOption service="groceries" total={g?.total ?? c.totals.total} value={{ method: payment, card: giftCard }} onSelect={(id) => { setPayment('gift_card'); setGiftCard(id); }} />
             <OnlineMethodOptions value={payment} onChange={setPayment} />
           </section>
         </div>

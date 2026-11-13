@@ -53,6 +53,12 @@ export const PERSONAL_FEATURES: ClickService[] = [
   { id: 'offers', name: 'Offers', tagline: 'Live deals across Click.', icon: 'tag', path: '/offers', status: 'live', theme: 'offers' },
   { id: 'rewards', name: 'Rewards', tagline: 'Click. points on every order', icon: 'star', path: '/rewards', status: 'live', theme: 'rewards' },
   { id: 'wallet', name: 'Wallet', tagline: 'Balance, refunds and credits', icon: 'wallet', path: '/wallet', status: 'live', theme: 'wallet' },
+  { id: 'giftcards', name: 'Gift Cards', tagline: 'Give something they’ll love', icon: 'gift', path: '/gift-cards', status: 'live', theme: 'offers' },
+  { id: 'safety', name: 'Safety Center', tagline: 'Emergency help and reporting', icon: 'shield', path: '/safety', status: 'live', theme: 'ride' },
+  { id: 'invoices', name: 'Invoices', tagline: 'Invoices for orders and bookings', icon: 'receipt', path: '/account/invoices', status: 'live', theme: 'wallet' },
+  { id: 'reviews', name: 'Reviews', tagline: 'Rate what you bought and booked', icon: 'star', path: '/account/reviews', status: 'live', theme: 'rewards' },
+  { id: 'cart', name: 'Cart', tagline: 'Everything you picked, ready when you are', icon: 'bag', path: '/cart', status: 'live', theme: 'shopping' },
+  { id: 'search', name: 'Search', tagline: 'Search all of Click.', icon: 'search', path: '/search', status: 'live', theme: 'default' },
 ];
 
 /** Every Click. feature, alphabetically by its customer-facing name (computed, never hand-ordered). */

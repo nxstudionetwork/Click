@@ -22,6 +22,8 @@ from rest_framework.routers import SimpleRouter
 from apps.search import views as search_views
 from apps.reviews import views as review_views
 from apps.invoices import views as invoice_views
+from apps.giftcards import views as giftcard_views
+from apps.support import safety as safety_views
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
@@ -104,6 +106,12 @@ customer_urls = [
     path("search/recent", search_views.RecentView.as_view(), name="search-recent"),
     path("reviews", review_views.ReviewsView.as_view(), name="reviews"),
     path("invoices", invoice_views.InvoicesView.as_view(), name="invoices"),
+    path("safety", safety_views.SafetyView.as_view(), name="safety"),
+    path("safety/sign-out-others", safety_views.SignOutOthersView.as_view(), name="safety-sign-out-others"),
+    path("gift-cards", giftcard_views.MyCardsView.as_view(), name="gift-cards-mine"),
+    path("gift-cards/redeem", giftcard_views.RedeemView.as_view(), name="gift-cards-redeem"),
+    path("gift-cards/usable", giftcard_views.UsableView.as_view(), name="gift-cards-usable"),
+    path("gift-cards/<uuid:pk>", giftcard_views.CardView.as_view(), name="gift-card"),
     path("invoices/<uuid:pk>", invoice_views.InvoiceView.as_view(), name="invoice"),
     path("invoices/<uuid:pk>/document", invoice_views.InvoiceDocumentView.as_view(), name="invoice-document"),
     path("reviews/report", review_views.ReportView.as_view(), name="reviews-report"),
@@ -154,6 +162,7 @@ api_v1 = [
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
     path("search/global", search_views.GlobalSearchView.as_view(), name="search-global"),
+    path("gift-cards", giftcard_views.DesignsView.as_view(), name="gift-card-designs"),
     path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),

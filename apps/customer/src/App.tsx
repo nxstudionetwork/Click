@@ -15,6 +15,8 @@ import { PaymentDetailPage } from './pages/PaymentDetailPage';
 import { HelpArticlePage } from './pages/HelpArticlePage';
 import { ReviewsPage } from './pages/ReviewsPage';
 import { InvoicePage, InvoicesPage } from './pages/InvoicesPage';
+import { GiftCardDetailPage, GiftCardsPage, MyGiftCardsPage } from './pages/GiftCardsPage';
+import { SafetyPage } from './pages/SafetyPage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BuddyGoPage } from './pages/BuddyGoPage';
@@ -254,6 +256,10 @@ function AppRoutes() {
         <Route path="account/invoices" element={guard(<InvoicesPage />)} />
         <Route path="account/invoices/:id" element={guard(<InvoicePage />)} />
         <Route path="account/reviews" element={guard(<ReviewsPage />)} />
+        <Route path="gift-cards" element={<GiftCardsPage />} />
+        <Route path="gift-cards/mine" element={guard(<MyGiftCardsPage />)} />
+        <Route path="gift-cards/mine/:id" element={guard(<GiftCardDetailPage />)} />
+        <Route path="safety" element={guard(<SafetyPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />
         <Route path="wallet" element={guard(<WalletPage />)} />
         <Route path="wallet/activity/:id" element={guard(<WalletEntryPage />)} />

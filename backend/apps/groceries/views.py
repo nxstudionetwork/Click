@@ -195,7 +195,8 @@ class QuoteSerializer(serializers.Serializer):
 
 class CheckoutInput(QuoteSerializer):
     address_id = serializers.UUIDField()
-    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET, "upi", "card", "netbanking"])
+    payment_method = serializers.ChoiceField(choices=[PaymentMethod.CASH_ON_DELIVERY, PaymentMethod.WALLET, "upi", "card", "netbanking", "gift_card"])
+    gift_card_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     idempotency_key = serializers.UUIDField()
     substitution = serializers.ChoiceField(choices=GroceryOrderDetails.Substitution.choices)
     substitution_note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
@@ -277,7 +278,7 @@ class CheckoutView(APIView):
         record(customer, "grocery.checkout_started", {"stores": len(v["delivery"])})
         checkout, orders, created = place_checkout(
             customer=customer, address_id=v["address_id"], payment_method=v["payment_method"],
-            idempotency_key=v["idempotency_key"], customer_note=v["customer_note"],
+            idempotency_key=v["idempotency_key"], customer_note=v["customer_note"], gift_card_id=v.get("gift_card_id"),
             grocery={"delivery": v["delivery"], "substitution": v["substitution"], "substitution_note": v["substitution_note"]},
         )
         rows = Order.objects.filter(customer=customer, pk__in=[o.pk for o in orders]).select_related("store").prefetch_related("items", "payments")

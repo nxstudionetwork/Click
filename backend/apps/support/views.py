@@ -42,15 +42,17 @@ ISSUES = {
     "groceries": ["Missing item", "Damaged item", "Late delivery", "Wrong slot", "Refund", "Other"],
     "shop": ["Return or replacement", "Damaged item", "Wrong item", "Late delivery", "Refund", "Other"],
     "order": ["Missing item", "Wrong item", "Late delivery", "Cancellation", "Refund", "Other"],
-    "ride": ["Driver issue", "Pickup issue", "Fare issue", "Cancellation", "Lost item", "Safety concern", "Other"],
-    "parcel": ["Pickup issue", "Delivery failed", "Damaged parcel", "Tracking issue", "Other"],
+    "ride": ["Driver issue", "Pickup issue", "Fare issue", "Cancellation", "Lost item", "Safety concern", "Unsafe driving", "Driver or vehicle didn’t match",
+             "Inappropriate behaviour", "Other"],
+    "parcel": ["Pickup issue", "Delivery failed", "Damaged parcel", "Tracking issue", "Suspicious delivery", "Unsafe delivery behaviour", "Other"],
     "delivery": ["Late delivery", "Delivery partner issue", "Other"],
-    "travel": ["Ticket issue", "Cancellation", "Refund", "Schedule change", "Boarding issue", "Other"],
-    "hotels": ["Booking issue", "Check-in problem", "Room issue", "Cancellation", "Refund", "Other"],
+    "travel": ["Ticket issue", "Cancellation", "Refund", "Schedule change", "Boarding issue", "Safety concern", "Other"],
+    "hotels": ["Booking issue", "Check-in problem", "Room issue", "Cancellation", "Refund", "Suspicious listing", "Safety concern", "Other"],
     "shows": ["Ticket issue", "Seat issue", "Show changed or cancelled", "Refund", "Other"],
     "events": ["Booking issue", "Quote issue", "Team / provider issue", "Cancellation", "Refund", "Other"],
-    "bookings": ["Entry issue", "Slot issue", "Cancellation", "Refund", "Other"],
-    "service": ["Professional didn’t arrive", "Quote issue", "Work quality", "Payment issue", "Cancellation", "Other"],
+    "bookings": ["Entry issue", "Slot issue", "Cancellation", "Refund", "Suspicious provider", "Safety concern", "Other"],
+    "service": ["Professional didn’t arrive", "Quote issue", "Work quality", "Payment issue", "Cancellation", "Unsafe behaviour",
+                "Inappropriate conduct", "Professional didn’t match the profile", "Other"],
     "payment": ["Payment failed", "Payment pending", "Charged but order failed", "Charged twice", "Refund missing", "Wrong amount",
                 "Unauthorised payment", "Receipt issue", "Other"],
     "wallet": ["Top-up issue", "Wrong balance", "Cashback missing", "Refund missing", "Wallet debit issue", "Transaction I don’t recognise",
@@ -59,7 +61,8 @@ ISSUES = {
     "account": ["Login or OTP", "Profile or phone number", "Security concern", "Other"],
     "other": ["Other"],
 }
-URGENT = {"Security concern", "Unauthorised payment", "Transaction I don’t recognise", "Safety concern"}
+URGENT = {"Security concern", "Unauthorised payment", "Transaction I don’t recognise", "Safety concern", "Unsafe driving", "Inappropriate behaviour",
+          "Unsafe behaviour", "Inappropriate conduct", "Suspicious delivery", "Unsafe delivery behaviour"}
 IMPORTANT_CATS = {"payment", "wallet"}
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
 MAX_BYTES = 5 * 1024 * 1024
@@ -125,6 +128,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupportTicket
         fields = ["id", "reference", "category", "category_label", "issue_type", "subject", "message", "status", "status_label", "priority", "priority_label",
+                  "is_safety", "contact_preference",
                   *[f"{f}_id" for f in LINKS], "order_number", "parcel_number", "service_booking_number", "event_booking_number", "hotel_booking_number",
                   "travel_booking_number", "experience_booking_number", "related", "last_update", "created_at", "updated_at", "resolved_at", "idempotency_key"]
         read_only_fields = ["id", "reference", "status", "priority", "created_at", "updated_at", "resolved_at"]
@@ -171,6 +175,8 @@ class SupportTicketListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = SupportTicket.objects.filter(customer=self.request.user.customer_profile).select_related(*LINKS).prefetch_related("messages")
+        if self.request.query_params.get("safety") == "1":
+            qs = qs.filter(is_safety=True)
         if self.request.query_params.get("status") == "open":
             qs = qs.exclude(status__in=["resolved", "closed"])
         return qs
@@ -188,7 +194,11 @@ class SupportTicketListCreateView(generics.ListCreateAPIView):
             raise DomainError("You’ve raised several requests in the last hour. Add details to an existing request, or email Click. Support.",
                               code="rate_limited", status_code=429)
         v.pop("idempotency_key", None)
-        ticket = serializer.save(customer=c, priority=_priority(c, v["category"], v.get("issue_type") or ""))
+        prio = _priority(c, v["category"], v.get("issue_type") or "")
+        if v.get("is_safety"):  # Safety Center reports are triaged first: never below "important"
+            asked = str(self.request.data.get("urgency") or "")
+            prio = SupportTicket.Priority.URGENT if asked == "urgent" or prio == SupportTicket.Priority.URGENT else SupportTicket.Priority.IMPORTANT
+        ticket = serializer.save(customer=c, priority=prio)
         SupportMessage.objects.create(ticket=ticket, sender=SupportMessage.Sender.CUSTOMER, body=ticket.message)
         notify(c, NotificationCategory.SUPPORT, f"We received your request {ticket.reference}",
                "Click. Support will reply here.", f"/help/tickets/{ticket.id}")

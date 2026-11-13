@@ -43,7 +43,10 @@ def parse_date(text: str, today: date) -> date | None:
     m = re.search(r"\b(next|this|coming)?\s*(" + "|".join(DAYS) + r")\b", text)
     if m:
         target = DAYS.index(m.group(2))
-        return today + timedelta(days=(target - today.weekday()) % 7 or 7)  # the coming one ("next Saturday" said midweek)
+        delta = (target - today.weekday()) % 7 or 7  # the coming one ("next Saturday" said midweek)
+        if m.group(1) == "next" and delta <= 2:  # said on Thursday/Friday, "next Saturday" means the one after tomorrow's
+            delta += 7
+        return today + timedelta(days=delta)
     m = re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(" + "|".join(MONTHS) + r")[a-z]*\b", text) or \
         re.search(r"\b(" + "|".join(MONTHS) + r")[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b", text)
     if m:

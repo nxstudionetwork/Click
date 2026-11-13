@@ -70,6 +70,7 @@ def intent(reference: str) -> dict | None:
     amount = sum((r.amount for r in rows), Decimal("0"))
     out = {"reference": reference, "status": state, "amount": f"{amount:.2f}", "method": rows[0].method, "method_label": LABEL.get(rows[0].method, rows[0].method),
            "orders": [{"id": str(r.order_id), "number": r.order.number, "status": r.order.status} for r in rows if r.order_id],
+           "gift_card_id": next((str(r.gift_card_id) for r in rows if r.gift_card_id), None),
            "expires_at": (min(r.created_at for r in rows) + timedelta(minutes=settings.CLICK_ONLINE_PAYMENT_TTL_MINUTES)).isoformat()}
     if p and state == "pending" and p.name == rows[0].provider:
         out["client"] = p.client_data(_Ref(reference, amount))
@@ -77,7 +78,20 @@ def intent(reference: str) -> dict | None:
 
 
 def owned_reference(customer, reference: str) -> bool:
-    return Payment.objects.filter(provider_reference=reference, order__customer=customer).exists()
+    from django.db.models import Q
+
+    return Payment.objects.filter(Q(order__customer=customer) | Q(gift_card__buyer=customer), provider_reference=reference).exists()
+
+
+def start_for_gift_card(card, method: str) -> dict:
+    p = provider()
+    if p is None:
+        raise DomainError("Online payment isn’t available right now. Choose another way to pay.", code="online_payment_unavailable", status_code=503)
+    if method not in p.methods:
+        raise DomainError("This payment method isn’t available.", code="payment_method_unavailable")
+    reference = p.create_intent(None)
+    Payment.objects.create(gift_card=card, method=method, amount=card.amount, provider=p.name, provider_reference=reference)
+    return intent(reference)
 
 
 @transaction.atomic
@@ -88,7 +102,7 @@ def apply_result(reference: str, outcome: str, amount: Decimal, reason: str = ""
     from apps.orders.models import OrderStatus
     from apps.orders.services import transition_order
 
-    rows = list(Payment.objects.select_for_update(of=("self",)).filter(provider_reference=reference, wallet_topup__isnull=True).select_related("order__store", "order__customer"))
+    rows = list(Payment.objects.select_for_update(of=("self",)).filter(provider_reference=reference, wallet_topup__isnull=True).select_related("order__store", "order__customer", "gift_card__buyer"))
     if not rows:
         raise DomainError("Unknown payment reference.", code="unknown_reference", status_code=404)
     if any(r.status != Payment.Status.PENDING for r in rows):
@@ -101,6 +115,10 @@ def apply_result(reference: str, outcome: str, amount: Decimal, reason: str = ""
         for r in rows:
             r.status = Payment.Status.CAPTURED
             r.save(update_fields=["status", "updated_at"])
+            if r.gift_card_id:
+                from apps.giftcards.services import paid
+
+                paid(r.gift_card)
             if r.order and r.order.status == OrderStatus.AWAITING_PAYMENT:
                 transition_order(r.order, OrderStatus.PLACED, note=f"Paid by {LABEL.get(r.method, r.method)} · {reference}")
                 notify(r.order.customer, NotificationCategory.ORDERS, f"Order placed with {r.order.store.name}",
@@ -109,9 +127,16 @@ def apply_result(reference: str, outcome: str, amount: Decimal, reason: str = ""
     for r in rows:
         r.status = Payment.Status.FAILED
         r.save(update_fields=["status", "updated_at"])
+        if r.gift_card_id:
+            from apps.giftcards.services import failed
+
+            failed(r.gift_card)
         if r.order and r.order.status == OrderStatus.AWAITING_PAYMENT:
             transition_order(r.order, OrderStatus.CANCELLED, note=f"Payment didn’t go through{': ' + reason[:120] if reason else ''}")
     first = rows[0].order
+    if rows[0].gift_card_id:
+        notify(rows[0].gift_card.buyer, NotificationCategory.PAYMENTS, "Gift card payment didn’t go through",
+               "The gift card wasn’t bought. If money left your account, your bank or payment app returns it.", f"/gift-cards/mine/{rows[0].gift_card_id}")
     if first:
         notify(first.customer, NotificationCategory.PAYMENTS, "Payment didn’t go through",
                f"{LABEL.get(rows[0].method, rows[0].method)} payment for {first.number}{' and more' if len(rows) > 1 else ''} failed, so the order wasn’t placed. "

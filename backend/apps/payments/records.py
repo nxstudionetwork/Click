@@ -24,6 +24,7 @@ TARGETS = {
                        lambda p: f"/travel/bookings/{p.travel_booking_id}"),
     "experience_booking": ("bookings", "Booking", "experience_booking__customer", lambda p: p.experience_booking.number,
                            lambda p: f"/bookings/r/{p.experience_booking_id}"),
+    "gift_card": ("gift_cards", "Gift card", "gift_card__buyer", lambda p: f"GFT-{str(p.gift_card_id)[:8].upper()}", lambda p: f"/gift-cards/mine/{p.gift_card_id}"),
     "wallet_topup": ("wallet", "Wallet top-up", "wallet_topup__customer", lambda p: p.wallet_topup.provider_reference or str(p.wallet_topup_id)[:8].upper(),
                      lambda p: f"/wallet/activity/{p.wallet_topup.wallet_transaction_id}" if p.wallet_topup.wallet_transaction_id else "/wallet"),
 }
@@ -81,4 +82,4 @@ def status_of(p: Payment) -> tuple[str, str]:
 
 def with_relations(qs):
     return qs.select_related("order__store", "booking", "ride", "parcel", "service_booking", "event_booking", "hotel_booking", "travel_booking",
-                             "experience_booking", "wallet_topup").prefetch_related("wallet_transactions")
+                             "experience_booking", "wallet_topup", "gift_card").prefetch_related("wallet_transactions")

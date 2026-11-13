@@ -42,7 +42,10 @@ export function NewTicketPage() {
   const start = useMemo(() => initial(params), [params]);
   const home = useQuery({ queryKey: ['help', 'home'], queryFn: api.money.support.home });
   const [category, setCategory] = useState(start.category);
-  const [issue, setIssue] = useState('');
+  const safety = params.get('safety') === '1';
+  const [issue, setIssue] = useState(params.get('issue') ?? '');
+  const [urgency, setUrgency] = useState<'urgent' | 'important'>('important');
+  const [contact, setContact] = useState<'call' | 'message' | 'email'>('message');
   const [related, setRelated] = useState<{ type: string; id: string } | null>(start.related);
   const [subject, setSubject] = useState(params.get('subject') ?? '');
   const [message, setMessage] = useState('');
@@ -59,7 +62,8 @@ export function NewTicketPage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const body: SupportCreate = { category, issueType: issue || undefined, subject: subject.trim() || issue, message: message.trim(), idempotencyKey: key };
+      const body: SupportCreate = { category, issueType: issue || undefined, subject: subject.trim() || issue, message: message.trim(), idempotencyKey: key,
+        ...(safety ? { isSafety: true, urgency, contactPreference: contact } : {}) };
       if (related && SUPPORT_LINK_FIELD[related.type]) body[SUPPORT_LINK_FIELD[related.type]!] = related.id;
       const t = await api.money.support.create(body);
       if (file) await api.money.support.send(t.id, '', file).catch(() => undefined);
@@ -92,7 +96,7 @@ export function NewTicketPage() {
 
   return (
     <div className="mn-page">
-      <MoneyHead title="Contact support" back="/help" />
+      <MoneyHead title={safety ? 'Report a safety problem' : 'Contact support'} back={safety ? '/safety' : '/help'} />
       {!home.data ? <Skeleton height={300} /> : (
         <form className="mn-form mn-card" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <fieldset className="mn-field"><legend>What’s it about?</legend>
@@ -131,7 +135,19 @@ export function NewTicketPage() {
           </div>
 
           {err && <p className="mn-error small" role="alert">{err}</p>}
-          <Button type="submit" block loading={create.isPending}>Send request</Button>
+          {safety && (
+            <>
+              <fieldset className="mn-field"><legend>How urgent is it?</legend>
+                <label className="mn-option"><input type="radio" checked={urgency === 'urgent'} onChange={() => setUrgency('urgent')} /><span>Urgent — I need help now</span></label>
+                <label className="mn-option"><input type="radio" checked={urgency === 'important'} onChange={() => setUrgency('important')} /><span>Important — please look into it soon</span></label>
+              </fieldset>
+              <label className="mn-field"><span>How should we reach you?</span>
+                <select value={contact} onChange={(e) => setContact(e.target.value as 'call' | 'message' | 'email')}>
+                  <option value="message">Message in the app</option><option value="call">Call me</option><option value="email">Email</option></select></label>
+              <p className="small mn-warn">In immediate danger? Call 112 first.</p>
+            </>
+          )}
+          <Button type="submit" block loading={create.isPending}>{safety ? 'Send safety report' : 'Send request'}</Button>
           <p className="small mn-muted">Never share OTPs, UPI PINs, card numbers or passwords. Click. Support will never ask for them.</p>
         </form>
       )}

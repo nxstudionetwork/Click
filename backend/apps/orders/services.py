@@ -26,16 +26,16 @@ audit = logging.getLogger("click.audit")
 
 
 def place_order(*, customer: CustomerProfile, address_id, payment_method: str, idempotency_key, customer_note: str = "",
-                grocery: dict | None = None) -> tuple[Order, bool]:
+                grocery: dict | None = None, gift_card_id=None) -> tuple[Order, bool]:
     """Single-order view of `place_checkout` (food, groceries; first order of a marketplace checkout)."""
     _, orders, created = place_checkout(customer=customer, address_id=address_id, payment_method=payment_method,
-                                        idempotency_key=idempotency_key, customer_note=customer_note, grocery=grocery)
+                                        idempotency_key=idempotency_key, customer_note=customer_note, grocery=grocery, gift_card_id=gift_card_id)
     return orders[0], created
 
 
 @transaction.atomic
 def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str, idempotency_key,
-                   customer_note: str = "", grocery: dict | None = None) -> tuple[CheckoutGroup | None, list[Order], bool]:
+                   customer_note: str = "", grocery: dict | None = None, gift_card_id=None) -> tuple[CheckoutGroup | None, list[Order], bool]:
     """
     Converts the customer's cart into orders, recomputing every price server-side. A single-store cart becomes one
     order; a marketplace cart becomes one order per seller under a CheckoutGroup. Everything happens in one
@@ -102,7 +102,7 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
     orders = []
     for g in groups:
         key = idempotency_key if not marketplace else uuid.uuid5(uuid.UUID(str(idempotency_key)), str(g.store.id))
-        orders.append(_create_order(customer, g, address, key, customer_note, payment_method, checkout))
+        orders.append(_create_order(customer, g, address, key, customer_note, payment_method, checkout, gift_card_id))
     if online:  # one provider intent for the whole checkout; orders wait for its verified confirmation
         start_for_orders(orders, payment_method)
     clear_cart(cart)
@@ -150,7 +150,7 @@ def _claim_deals(items) -> None:
                                 code="deal_ended", details={"items": [deal.product.name]})
 
 
-def _create_order(customer, g, address, key, customer_note, payment_method, checkout) -> Order:
+def _create_order(customer, g, address, key, customer_note, payment_method, checkout, gift_card_id=None) -> Order:
     store = g.store
     retail = store.store_type == StoreType.RETAIL
     est_from = est_to = None
@@ -190,7 +190,7 @@ def _create_order(customer, g, address, key, customer_note, payment_method, chec
     OrderItem.objects.bulk_create(lines)
     OrderStatusEvent.objects.create(order=order, to_status=order.status, actor=customer.user)
     if not online:  # online orders are paid (and announced) by payments.gateway once the provider confirms
-        start_payment(order, payment_method)
+        start_payment(order, payment_method, gift_card_id)
         notify(customer, NotificationCategory.ORDERS, f"Order placed with {store.name}",
                f"{order.number} · we'll update you as it progresses.", f"/orders/{order.id}")
     record(customer, "order.placed", {"total": str(order.total), "store": store.slug}, obj=order)

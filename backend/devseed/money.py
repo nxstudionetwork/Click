@@ -27,6 +27,18 @@ MISSIONS = [  # code, title, description, metric, target, points, service, days 
 ]
 
 
+GIFT_DESIGNS = [  # title, category, occasion, tagline, colours, presets, services
+    ("Click. Gift Card", "click", "", "Spend it on Food, Groceries or Shop.", ["#0f172a", "#334155", "#f5d38a"], [500, 1000, 2000, 5000], ["food", "groceries", "shop"]),
+    ("Happy Birthday", "occasion", "Birthday", "A treat on their day.", ["#4c1d95", "#db2777", "#fbbf24"], [500, 1000, 2000], ["food", "groceries", "shop"]),
+    ("Thank You", "occasion", "Thank you", "Say it with something they’ll use.", ["#064e3b", "#10b981", "#ecfdf5"], [250, 500, 1000], ["food", "groceries", "shop"]),
+    ("Congratulations", "occasion", "Celebration", "For the big wins.", ["#1e1b4b", "#6366f1", "#fde68a"], [1000, 2000, 5000], ["food", "groceries", "shop"]),
+    ("Dinner's on me", "food", "", "Their favourite restaurants, delivered.", ["#7c2d12", "#ea580c", "#fed7aa"], [300, 500, 1000], ["food"]),
+    ("Fresh & Fast", "groceries", "", "Daily essentials from local stores.", ["#14532d", "#22c55e", "#dcfce7"], [500, 1000, 2000], ["groceries"]),
+    ("Shop Anything", "shopping", "", "Electronics, fashion, home and more.", ["#172554", "#2563eb", "#bfdbfe"], [1000, 2000, 5000], ["shop"]),
+    ("Festive Cheer", "occasion", "Festival", "Light up their festive season.", ["#78350f", "#d97706", "#fef3c7"], [500, 1000, 2500], ["food", "groceries", "shop"]),
+]
+
+
 def seed_money(profile, log) -> None:
     from apps.rewards.models import RewardCampaign, RewardCatalogItem, RewardMission
     from apps.wallet.models import CashbackOffer, WalletTransaction as T
@@ -51,4 +63,12 @@ def seed_money(profile, log) -> None:
         CashbackOffer.objects.update_or_create(title=title, defaults=dict(
             service=service, percent=pct, max_cashback=D(cap), min_amount=D(minimum), wallet_payment_only=True, credit_valid_days=60,
             starts_at=now - timedelta(days=2), ends_at=now + timedelta(days=45), is_active=True))
+    from apps.giftcards.models import GiftCardDesign
+
+    for i, (title, cat, occ, tag, colors, presets, services) in enumerate(GIFT_DESIGNS):
+        GiftCardDesign.objects.update_or_create(title=title, defaults=dict(
+            category=cat, occasion=occ, tagline=tag, colors=colors, presets=presets, services=services, position=i, is_active=True,
+            min_amount=D("100"), max_amount=D("10000"), validity_days=365,
+            terms="Valid for 12 months from purchase. Usable on the Click. services shown, for the whole order amount. Not exchangeable for cash, "
+                  "not reloadable and can’t be added to Click. Wallet. Refunds of orders paid with it go back to the card."))
     log(f"money: {len(CATALOG)} reward catalog items, {len(MISSIONS)} missions, 1 points campaign, 2 cashback offers")

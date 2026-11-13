@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     "apps.search",
     "apps.reviews",
     "apps.invoices",
+    "apps.giftcards",
 ]
 
 MIDDLEWARE = [
@@ -287,6 +288,8 @@ CLICK_PAYMENT_SANDBOX = os.environ.get("CLICK_PAYMENT_SANDBOX", "1" if DEBUG els
 CLICK_PAYMENT_WEBHOOK_SECRET = os.environ.get("CLICK_PAYMENT_WEBHOOK_SECRET", "")
 
 # Official Click. support contacts (shown in Help & Support).
+# Emergency services number shown in Safety Center (India: 112, the national emergency number).
+CLICK_EMERGENCY_NUMBER = os.environ.get("CLICK_EMERGENCY_NUMBER", "112")
 CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
 CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
 CLICK_SUPPORT_HOURS = os.environ.get("CLICK_SUPPORT_HOURS", "")

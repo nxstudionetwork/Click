@@ -64,6 +64,9 @@ class SupportTicket(BaseModel):
     show_booking = models.ForeignKey("bookings.Booking", on_delete=models.SET_NULL, null=True, blank=True, related_name="support_tickets")
     payment = models.ForeignKey("payments.Payment", on_delete=models.SET_NULL, null=True, blank=True, related_name="support_tickets")
     wallet_transaction = models.ForeignKey("wallet.WalletTransaction", on_delete=models.SET_NULL, null=True, blank=True, related_name="support_tickets")
+    # Safety Center reports are ordinary support requests, flagged so they're triaged first and listed in Safety Center.
+    is_safety = models.BooleanField(default=False)
+    contact_preference = models.CharField(max_length=8, blank=True, choices=[("call", "Call me"), ("message", "Message in the app"), ("email", "Email")])
     category = models.CharField(max_length=20, choices=Category.choices)
     issue_type = models.CharField(max_length=40, blank=True)
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.NORMAL,

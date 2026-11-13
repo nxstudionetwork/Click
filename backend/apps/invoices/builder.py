@@ -57,6 +57,8 @@ def _seller(p: Payment, t: str) -> dict:
     if t == "experience_booking":
         a = p.experience_booking.attraction
         return {"name": a.name, "address": ", ".join(x for x in [getattr(a, "area", ""), a.city] if x)}
+    if t == "gift_card":
+        return {"name": "Click.", "address": ""}
     if t == "booking":
         v = p.booking.show.venue
         return {"name": v.name, "address": ", ".join(x for x in [v.address, v.city] if x)}
@@ -76,8 +78,8 @@ def _buyer(p: Payment, t: str) -> dict:
 
 
 def p_customer(p: Payment):
-    t = target_field(p)
-    return getattr(p, t).customer
+    obj = getattr(p, target_field(p))
+    return getattr(obj, "customer", None) or obj.buyer
 
 
 def _lines(p: Payment, t: str) -> tuple[list[dict], dict]:
@@ -90,6 +92,10 @@ def _lines(p: Payment, t: str) -> tuple[list[dict], dict]:
                   "total": _m(o.total), "offer": o.offer_title or ""}
         return lines, totals
     d = describe(p)
+    if t == "gift_card":
+        g = p.gift_card
+        line = {"description": f"{g.design.title} for {g.recipient_name}", "quantity": 1, "unit_price": _m(g.amount), "discount": "0.00", "tax": None, "total": _m(g.amount)}
+        return [line], {"subtotal": _m(g.amount), "discount": "0.00", "delivery_fee": "0.00", "fees": "0.00", "tax": "0.00", "total": _m(g.amount), "offer": ""}
     when = ""
     for f in ("check_in", "visit_date", "departs_at", "event_date", "scheduled_start", "scheduled_for"):
         v = getattr(obj, f, None)

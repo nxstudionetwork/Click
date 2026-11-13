@@ -20,9 +20,10 @@ class PaymentMethod(models.TextChoices):
     UPI = "upi", "UPI"
     CARD = "card", "Card"
     NETBANKING = "netbanking", "Net banking"
+    GIFT_CARD = "gift_card", "Click. Gift Card"
 
 
-PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking", "hotel_booking", "travel_booking", "experience_booking", "wallet_topup")
+PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking", "hotel_booking", "travel_booking", "experience_booking", "wallet_topup", "gift_card")
 
 
 def _exactly_one(fields) -> Q:
@@ -56,6 +57,8 @@ class Payment(BaseModel):
     travel_booking = models.ForeignKey("travel.TravelBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     experience_booking = models.ForeignKey("experiences.ExperienceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     wallet_topup = models.ForeignKey("wallet.WalletTopUp", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    gift_card = models.ForeignKey("giftcards.GiftCard", on_delete=models.PROTECT, null=True, blank=True, related_name="payments",
+                                  help_text="Buying a gift card (not paying with one).")
     method = models.CharField(max_length=30, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -70,7 +73,7 @@ class Payment(BaseModel):
             models.CheckConstraint(condition=Q(amount__gte=0), name="payments_amount_non_negative"),
             # Exactly one target (PAYMENT_TARGETS): an order, a show booking, a ride, a parcel, a service / event / hotel / travel booking
             # or an attraction / temple / experience booking.
-            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v8"),
+            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v9"),
         ]
 
 
