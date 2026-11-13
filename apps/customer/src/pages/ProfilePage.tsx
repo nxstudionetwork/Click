@@ -7,6 +7,7 @@ import { Button, Icon, Sheet, type IconName } from '../components/ui';
 import type { Theme } from '../config/services';
 import { ProfileBadges } from '../features/profile/ProfileBadges';
 import { ProfileIdentity } from '../features/profile/ProfileIdentity';
+import { DeleteAccount } from '../features/profile/DeleteAccount';
 import { api } from '../lib/api';
 
 interface Row { to: string; title: string; hint: string; icon: IconName; theme: Theme; badge?: number }
@@ -127,11 +128,12 @@ function SecuritySheet({ open, onClose, onLogout }: { open: boolean; onClose: ()
           {user?.phone && <div><dt>Verified phone</dt><dd>{maskPhone(user.phone.replace(/[^\d+]/g, ''))}{user.phoneVerified ? ' · verified' : ''}</dd></div>}
           <div><dt>This device</dt><dd>Signed in until you log out. Your session renews securely in the background.</dd></div>
         </dl>
-        <p className="small muted">Changing your phone number needs a fresh verification and isn’t available in the app yet. Contact Help & Support if you’ve lost access to your number.</p>
+        <p className="small muted">Changing your phone number needs a fresh verification and isn’t available in the app yet. Contact Help & Support if you’ve lost access to your number. To end other sign-ins, use <Link to="/safety" onClick={onClose}>Safety Center</Link>.</p>
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <Link to="/help/new?category=account" className="btn btn--outline" onClick={onClose}>Contact support</Link>
           <Button variant="ghost" onClick={onLogout}>Log out</Button>
         </div>
+        <div className="row" style={{ justifyContent: 'flex-end', marginTop: 12 }}><DeleteAccount onDone={onClose} /></div>
       </div>
     </Sheet>
   );

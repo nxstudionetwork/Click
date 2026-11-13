@@ -49,6 +49,12 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/wallet      Click. Wallet: cash + promo-credit ledger, verified top-ups (provider abstraction, sandbox test mode), cashback, expiry, limits
   apps/offers      Click. Offers: one hub over every service's offers, save / claim codes, savings from real discounts
   apps/activity    Activity timeline across every service (cursor paging) and the activity event log
+  apps/search      Click. Global Search: one engine over every service, suggestions, private recent searches, ID lookup
+  apps/reviews     shared Reviews & Ratings layer over each service's reviews (eligibility, history, reports)
+  apps/invoices    Invoice Center: invoices built from payments and their orders / bookings, refund documents
+  apps/giftcards   Click. Gift Cards: designs, purchase, delivery, redemption, balance ledger, pay at checkout
+  apps/discover    Discover: organic discovery sections + sponsored placement auction, budgets, tracking
+  apps/pharma      Pharma: pharmacies, medicines, prescription upload and pharmacist review, refill reminders
   apps/bookings    Showtime: titles, cinemas, screens and seat layouts, showtimes, seat holds, food & drinks, offers, tickets, reviews
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores

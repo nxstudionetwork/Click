@@ -56,6 +56,11 @@ class ClickBasicBuddy:
             return cart
         from . import money_buddy
 
+        from . import more_buddy
+
+        # Safety, Pharma (no medical advice), invoices, gift cards, Discover.
+        if more_buddy.wants(text) and (more := more_buddy.reply(text, customer)) is not None:
+            return more
         # Wallet, payments, refunds, points, offers, notifications, activity, support: answered from the ledgers.
         if money_buddy.wants_money(text) and (money := money_buddy.reply(text, customer)) is not None:
             return money

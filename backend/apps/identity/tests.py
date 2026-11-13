@@ -166,3 +166,25 @@ def test_avatar_upload_reencodes_and_strips_metadata(auth_api, tmp_path, setting
     bad = BytesIO(b"not an image")
     bad.name = "x.png"
     assert auth_api.post("/api/v1/me/avatar", {"image": bad}, format="multipart").json()["error"]["code"] == "image_invalid"
+
+
+def test_account_deletion_needs_fresh_otp_and_no_blockers(api):
+    from decimal import Decimal
+
+    from apps.wallet.models import WalletTransaction
+
+    u = User.objects.create_user("del@example.com", None, phone=PHONE, phone_verified=True, full_name="Del Me")
+    c = CustomerProfile.objects.create(user=u)
+    api.force_authenticate(u)
+    WalletTransaction.objects.create(customer=c, kind="adjustment", amount=Decimal("10"), description="Opening balance")
+    assert api.get("/api/v1/me/delete").json()["blockers"][0]["code"] == "wallet_balance"
+    assert api.post("/api/v1/me/delete", {"token": "x.123456"}).status_code == 401  # no fresh code, no deletion
+    other = otp_credential(api, "+919000099999")
+    assert api.post("/api/v1/me/delete", {"token": other}).json()["error"]["code"] == "invalid_code"  # someone else's phone
+    r = api.post("/api/v1/me/delete", {"token": otp_credential(api, PHONE)})
+    assert r.json()["error"]["code"] == "deletion_blocked"
+    WalletTransaction.objects.create(customer=c, kind="adjustment", amount=Decimal("-10"), description="Spent")
+    assert api.post("/api/v1/me/delete", {"token": otp_credential(api, PHONE), "reason": "Not using it"}).json()["deleted"] is True
+    u.refresh_from_db()
+    assert not u.is_active and u.email is None and u.phone == "" and u.full_name == "Deleted customer"
+    assert CustomerProfile.objects.filter(pk=c.pk).exists()  # records are kept, anonymised

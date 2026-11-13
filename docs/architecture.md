@@ -613,3 +613,33 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
   online/open toggle (online time is derived from it). `PartnerNotification` is created by signals on orders, bookings,
   ride offers/cancellations and verification decisions. "Today" is the business day in `Asia/Kolkata`
   (`CLICK_BUSINESS_TIME_ZONE`). Ride matching only offers trips to categories whose workspace is `rides`.
+
+
+## Final customer-app additions
+
+- **Sign-in:** Click-owned phone OTP (`apps/identity/otp.py`, `sms.py`); see `docs/authentication.md`. Account deletion
+  (`apps/identity/deletion.py`) needs a fresh OTP and no open orders, bookings or balances; it anonymises the account
+  and keeps orders, payments and invoices as legal records.
+- **Online checkout payments:** `apps/payments/gateway.py`. Orders paid by UPI / card / net banking wait in
+  `awaiting_payment` (hidden from the store) until a signed provider event confirms; failures and timeouts cancel and
+  restock. Same provider layer as wallet top-ups and gift-card purchases. Sandbox test mode in development only.
+- **Global Search** (`apps/search`): providers per domain, relevance ranking and grouping, suggestions, private recent
+  searches, trending only from real searches by 3+ customers, ID lookup of the customer's own records only.
+- **Cart:** price changes must be accepted (`price_seen`), Save for later uses the Wishlist, per-order quantity limits,
+  minimum orders block checkout.
+- **Reviews** (`apps/reviews`): one layer over the existing per-service review tables; eligibility from completed
+  transactions; submissions go through each service's own review function; reports auto-hide after 3.
+- **Invoices** (`apps/invoices`): one per payment where money was taken; "Invoice" (not "Tax invoice") because sellers'
+  GSTINs aren't on file; refund documents; server-rendered download.
+- **Gift Cards** (`apps/giftcards`): a separate stored-value instrument (not Wallet money); `Payment.gift_card` target
+  for purchases; payment method `gift_card` for whole Food / Groceries / Shop orders; refunds return to the card.
+- **Safety Center** (`apps/support/safety.py`): emergency number from `CLICK_EMERGENCY_NUMBER` (112); safety reports
+  are support requests with `is_safety`, urgency and contact preference; "sign out other devices" revokes refresh tokens.
+- **Discover** (`apps/discover`): organic sections from real activity; sponsored auction (bid x relevance x quality x
+  engagement with thresholds), budgets, frequency caps, signed viewer-bound serve tokens, CPC / CPM / CPA / flat.
+  Campaigns are approved in Django admin until Business OS has advertiser screens.
+- **Pharma** (`apps/pharma`): pharmacies are stores, medicines are products (prescription flag, composition, limits);
+  prescriptions are private uploads reviewed by that pharmacy (`/partner/pharma/prescriptions/<id>/review`); checkout
+  refuses prescription items without a verified, valid prescription, which is then marked used.
+- **Scheduled jobs to run in production:** `payments.gateway.expire_unpaid`, `giftcards.services.run_due`,
+  `pharma.views.run_due`, plus the wallet / rewards sweeps listed above.

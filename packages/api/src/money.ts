@@ -259,6 +259,10 @@ export interface PrescriptionView {
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  account: {
+    deletion: () => http.request<{ blockers: { code: string; message: string; link: string }[]; phone: string; keeps: string }>('/me/delete'),
+    delete: (token: string, reason: string) => http.request<{ deleted: boolean }>('/me/delete', { method: 'POST', body: { token, reason } }),
+  },
   pharma: {
     home: () => http.request<PharmaHome>('/pharma/home'),
     products: (q: { category?: string; q?: string; pharmacy?: string; rx?: string } = {}) =>

@@ -66,6 +66,9 @@ being texted; production stays unavailable until an SMS provider is configured. 
 | Test customer: support tickets | 20 (all statuses) |
 | Wallet & rewards rules (`devseed/money.py`) | 5 reward catalog items, 7 missions, 1 points campaign, 2 cashback offers; opening balance + 2 promo credits (one expiring in 5 days) |
 | Help articles | about 28, loaded by the `support` data migration (not seed data) |
+| Gift card designs | 8 (`devseed/money.py`) |
+| Discover campaigns | sponsored campaigns for real partner listings (`devseed/discover.py`) |
+| Pharma | 3 fictional pharmacies, 72 products incl. prescription-only (`devseed/pharma.py`) |
 | Test customer: cart | 2 items |
 
 Stores and the test customer's addresses have coordinates near real Bengaluru locality centres (stable per record,
@@ -173,3 +176,8 @@ Wallet top-ups run against the **sandbox test provider** while `CLICK_PAYMENT_SA
 Add money → choose amount and method → review → the test-mode step offers *Approve* / *Decline*. The server signs and
 verifies the provider event exactly as it would a real webhook, so the wallet is credited only on a verified approval.
 No real money moves. With the sandbox off and no provider configured, the app shows adding money as unavailable.
+
+## Approving a prescription in development
+
+Pharmacists review prescriptions through `POST /api/v1/partner/pharma/prescriptions/<id>/review` (a member of the
+pharmacy's partner) or in Django admin → Pharma → Prescriptions. Nothing approves them automatically.

@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.identity.deletion import DeleteAccountView
 from apps.identity.views import IdentityExchangeView, OtpRequestView, IdentityPartnerSignupView, IdentitySignupView
 
 from . import views
@@ -15,5 +16,6 @@ urlpatterns = [
     path("auth/logout", views.LogoutView.as_view(), name="auth-logout"),
     path("auth/dev-login", views.DevLoginView.as_view(), name="auth-dev-login"),  # 404 unless DEBUG
     path("me", views.MeView.as_view(), name="me"),
+    path("me/delete", DeleteAccountView.as_view(), name="me-delete"),
     path("me/avatar", views.AvatarView.as_view(), name="me-avatar"),
 ]
