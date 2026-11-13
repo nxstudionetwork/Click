@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { onboarding } from '../auth/onboarding';
@@ -22,7 +22,6 @@ export function LoginPage() {
   const [number, setNumber] = useState(prefill.phone ?? '');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
-  const captchaRef = useRef<HTMLDivElement>(null);
   const country = COUNTRIES.find((c) => c.iso === iso)!;
 
   if (status === 'authenticated') return <Navigate to={next} replace />;
@@ -33,7 +32,7 @@ export function LoginPage() {
     if (!country.pattern.test(digits)) { setError(`Enter a valid ${country.name} mobile number, e.g. ${country.example}.`); return; }
     setError(''); setSending(true);
     try {
-      const pending = await phoneAuth.start(toE164(country, digits), captchaRef.current!);
+      const pending = await phoneAuth.start(toE164(country, digits));
       onboarding.setPending(pending);
       navigate(`/login/verify${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`, { state: { iso, phone: digits } });
     } catch (err) {
@@ -65,13 +64,12 @@ export function LoginPage() {
             : <span id="phone-help" className="small muted">We’ll text you a 6-digit code to verify it’s you.</span>}
         </div>
         <Button type="submit" block loading={sending} className="btn--lg">{sending ? 'Sending code…' : 'Continue'}</Button>
-        <div ref={captchaRef} />
         <p className="small muted" style={{ textAlign: 'center' }}>New or returning, it’s the same: verify your number and you’re in. By continuing you agree to Click’s Terms and Privacy Policy.</p>
       </form>
       {import.meta.env.DEV && (
         <>
           <DevLoginPanel next={next} />
-          <p className="small muted dev-note">Firebase testing: add <code>+1 650-555-0101</code> as a test phone number in Firebase Console → Authentication → Phone, then sign in with it to reach the seeded test customer.</p>
+          <p className="small muted dev-note">Development: the 6-digit code is printed in the API terminal instead of being texted.</p>
         </>
       )}
       <Link to="/?guest=1" className="auth-skip">Explore Click first</Link>

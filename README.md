@@ -28,7 +28,7 @@ apps/
 packages/
   api/             @click/api: shared typed API contract, HTTP client and session client for all apps
   ui/              @click/ui: shared UI primitives and the Click logo (each app supplies its own tokens)
-  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Firebase adapter) for every app
+  phone-auth/      @click/phone-auth: provider-neutral phone OTP sign-in (Click backend OTP) for every app
 backend/           Django + DRF shared API (PostgreSQL)
 docs/              Architecture notes (see docs/architecture.md)
 infrastructure/    Local dev infrastructure (Postgres via docker compose)
@@ -41,14 +41,32 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/catalog     menu categories, products
   apps/carts       server-side single-store cart
   apps/orders      transactional, idempotent order placement; status state machine + audit trail
-  apps/payments    payment records (cash on delivery today; gateways plug in later)
+  apps/payments    payment records for every order and booking, refunds, default method, failed/pending handling, signed provider webhooks
   apps/wishlists   saved stores/products per customer
-  apps/notifications in-app notification centre (order, rewards, support events)
-  apps/rewards     append-only points ledger (earned on delivered orders)
-  apps/support     customer support tickets
-  apps/wallet      Click Wallet (append-only ledger; pay + refunds)
-  apps/bookings    movies & live events: venues, shows, seat-safe bookings
+  apps/notifications in-app inbox: grouped categories, read state, per-category preferences (essential ones can't be muted)
+  apps/rewards     points ledger with expiry, tiers, campaigns, missions, achievements, reversals, atomic redemption to Wallet credit
+  apps/support     Help & Support: knowledge-base articles with feedback, requests with related item, conversation and attachments
+  apps/wallet      Click. Wallet: cash + promo-credit ledger, verified top-ups (provider abstraction, sandbox test mode), cashback, expiry, limits
+  apps/offers      Click. Offers: one hub over every service's offers, save / claim codes, savings from real discounts
+  apps/activity    Activity timeline across every service (cursor paging) and the activity event log
+  apps/search      Click. Global Search: one engine over every service, suggestions, private recent searches, ID lookup
+  apps/reviews     shared Reviews & Ratings layer over each service's reviews (eligibility, history, reports)
+  apps/invoices    Invoice Center: invoices built from payments and their orders / bookings, refund documents
+  apps/giftcards   Click. Gift Cards: designs, purchase, delivery, redemption, balance ledger, pay at checkout
+  apps/discover    Discover: organic discovery sections + sponsored placement auction, budgets, tracking
+  apps/pharma      Pharma: pharmacies, medicines, prescription upload and pharmacist review, refill reminders
+  apps/bookings    Showtime: titles, cinemas, screens and seat layouts, showtimes, seat holds, food & drinks, offers, tickets, reviews
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
+  apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
+  apps/rides       rides: ride types, upfront pricing, driver matching, trip lifecycle, safety, ratings
+  apps/shop        Shopping marketplace: campaigns, discovery, search interpretation, reviews, delivery estimates
+  apps/groceries   Groceries: category registry, canonical items, vendor delivery settings and hours, slots, buy again, lists, vendor listings API
+  apps/parcels     Parcel: services, vehicles, coverage, quotes, bookings, partner matching, PIN-verified lifecycle, tracking, sharing
+  apps/professionals  Services: local professionals, jobs and pricing models, availability, estimates, quotes, booking lifecycle, reviews
+  apps/hotels      Hotels: destinations, properties, rooms, rates, inventory, offers, bookings, cancellation, verified reviews
+  apps/travel      Travel: bus / train / flight timetables, search, seats & berths (RAC / waitlist), tickets, cancellation, fare alerts
+  apps/experiences Bookings: temples, attractions, experiences (tickets, slots, darshan), entry codes, and the list of every booking
+  apps/eventhub    Events: plan events, event teams/specialists/venues, packages, quotes, bookings, milestones, checklist, reviews
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
@@ -76,19 +94,18 @@ python manage.py runserver
 # Frontend (http://localhost:5173, proxies /api to Django)
 npm install
 npm run dev:customer
-npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md for Firebase setup)
+npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md)
 ```
 
 ## Customer sign-in
 
-Phone OTP via Firebase Phone Auth, verified by the Click backend, which issues Click's own session.
-Setup and provider swapping: [docs/authentication.md](docs/authentication.md). Put the Firebase web config in
-`apps/customer/.env.local` (see `apps/customer/.env.example`).
+Phone OTP run by the Click backend (code generated, texted through `CLICK_SMS_PROVIDER`, verified, then Click's own
+session). In development the code is printed in the API terminal. Adding the SMS provider: [docs/authentication.md](docs/authentication.md).
 
 ## Development test login
 
 After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
-with the Firebase test number `+1 650 555 0101` (see docs). Details: [docs/development-data.md](docs/development-data.md).
+with `+1 650 555 0101` and the code printed in the API terminal. Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

@@ -10,14 +10,6 @@ export default defineConfig({
     proxy: { '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false } },
   },
   preview: { port: 4174 },
-  build: {
-    rollupOptions: {
-      output: {
-        // Firebase is only needed on the sign-in path; keep it out of the startup bundle.
-        manualChunks: (id) => (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase') ? 'firebase' : undefined),
-      },
-    },
-  },
   test: {
     environment: 'jsdom',
     globals: true,

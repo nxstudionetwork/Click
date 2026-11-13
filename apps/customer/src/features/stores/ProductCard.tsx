@@ -16,9 +16,10 @@ export function ProductCard({ product, currency, quantity = 0, canOrder, busy, o
 }) {
   const store = 'store' in product ? product.store : null;
   const orderable = canOrder && product.isAvailable && onAdd;
+  const href = product.storeType === 'pharmacy' ? `/pharma/p/${product.id}` : `/products/${product.id}`;
   return (
     <article className={`product-card ${product.isAvailable ? '' : 'product-card--off'}`}>
-      <Link to={`/products/${product.id}`} className="product-card__link" aria-label={product.name}>
+      <Link to={href} className="product-card__link" aria-label={product.name}>
         <SmartImage src={product.imageUrl} alt={product.name} className="product-card__media">
           {product.discountPercent ? <span className="product-card__deal badge">{product.discountPercent}% off</span> : null}
         </SmartImage>
@@ -26,7 +27,8 @@ export function ProductCard({ product, currency, quantity = 0, canOrder, busy, o
       <WishlistButton target={{ productId: product.id }} name={product.name} className="product-card__wish" />
       <div className="product-card__body">
         {product.brand && <span className="muted small">{product.brand}</span>}
-        <Link to={`/products/${product.id}`} className="product-card__name">{product.name}</Link>
+        <Link to={href} className="product-card__name">{product.name}</Link>
+        {product.requiresPrescription && <span className="ph-rx">Rx · Prescription required</span>}
         {product.unitLabel && <span className="muted small">{product.unitLabel}</span>}
         {showStore && store && <span className="muted small">from {store.name}</span>}
         <div className="spread" style={{ marginTop: 'auto', paddingTop: 6 }}>

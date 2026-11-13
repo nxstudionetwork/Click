@@ -1,10 +1,13 @@
+import type { Wallet } from './money';
 import type { HttpClient } from './http';
 import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
-  Address, AddressInput, AssistantMessage, Booking, BuddyReply, ClickEvent, EventDetail, ShowSeatMap, WalletSummary, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
-  OrderSummary, Paginated, PartnerLocationInput, PartnerProfileInput, PartnerState, PartnerType, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
-  Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
+  Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
+  OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
+  CheckoutResult, ReturnRequestInput, CreateBookingInput,
+  Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
+import type { ShowtimeSeatMap } from './showtime';
 
 /** Auth is shared across every Click app. */
 export const authApi = (http: HttpClient) => ({
@@ -15,7 +18,7 @@ export const authApi = (http: HttpClient) => ({
   refresh: () => http.request<Session>('/auth/refresh', { method: 'POST', auth: false }),
   logout: () => http.request<void>('/auth/logout', { method: 'POST', auth: false }),
   me: () => http.request<User>('/me'),
-  /** Exchange a phone-OTP provider credential (e.g. Firebase ID token) for a Click session or a signup token. */
+  /** Exchange a verified phone credential (Click OTP: "<challenge>.<code>") for a Click session or a signup token. */
   exchangeIdentity: (input: { provider: string; token: string }) =>
     http.request<IdentityExchangeResult>('/auth/identity/exchange', { method: 'POST', body: input, auth: false }),
   /** Click Partner: create the phone-only Click account for a newly verified phone (token from exchangeIdentity). */
@@ -28,6 +31,7 @@ export const authApi = (http: HttpClient) => ({
     form.append('image', file, 'avatar');
     return http.request<User>('/me/avatar', { method: 'POST', body: form });
   },
+  removeAvatar: () => http.request<User>('/me/avatar', { method: 'DELETE' }),
   /** DEVELOPMENT ONLY: 404 unless the backend runs with DEBUG. */
   devLoginInfo: () => http.request<DevLoginInfo>('/auth/dev-login', { auth: false }),
   devLogin: () => http.request<Session>('/auth/dev-login', { method: 'POST', auth: false }),
@@ -40,6 +44,8 @@ export const catalogApi = (http: HttpClient) => ({
   search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
+  /** Click. Buzz: actionable instants from real offers, shows and stores. */
+  buzz: (limit = 12) => http.request<{ results: BuzzItem[] }>('/buzz', { query: { limit }, auth: false }),
 });
 
 /** Movies & live events (public discovery). */
@@ -47,7 +53,7 @@ export const eventsApi = (http: HttpClient) => ({
   list: (q: { kind?: 'movie' | 'event'; status?: 'now_showing' | 'coming_soon'; city?: string; search?: string } = {}) =>
     http.request<Paginated<ClickEvent>>('/events', { query: q, auth: false }),
   get: (slug: string, city?: string) => http.request<EventDetail>(`/events/${encodeURIComponent(slug)}`, { query: { city }, auth: false }),
-  seatMap: (showId: string) => http.request<ShowSeatMap>(`/shows/${showId}`, { auth: false }),
+  seatMap: (showId: string) => http.request<ShowtimeSeatMap>(`/shows/${showId}`),
 });
 
 /** Public discovery. The customer app may swap this for a mock source (same interface). */
@@ -59,8 +65,11 @@ export interface StoresSource {
 }
 
 export const storesApi = (http: HttpClient): StoresSource => ({
-  list: (query) =>
-    http.request('/stores', { query: { ...query, open: query.open ? 'true' : undefined }, auth: false }),
+  list: ({ open, veg, offers, minRating, maxPrice, ...query }) =>
+    http.request('/stores', {
+      query: { ...query, open: open ? 'true' : undefined, veg: veg ? 'true' : undefined, offers: offers ? 'true' : undefined, min_rating: minRating, max_price: maxPrice },
+      auth: false,
+    }),
   get: (slug) => http.request(`/stores/${encodeURIComponent(slug)}`, { auth: false }),
   menu: (slug) => http.request(`/stores/${encodeURIComponent(slug)}/menu`, { auth: false }),
   categories: (type) => http.request('/store-categories', { query: { type }, auth: false }),
@@ -75,11 +84,15 @@ export const customerApi = (http: HttpClient) => ({
     remove: (id: string) => http.request<void>(`/customer/addresses/${id}`, { method: 'DELETE' }),
   },
   cart: {
-    get: () => http.request<Cart>('/customer/cart'),
+    /** `addressId` (the customer's own address) adds per-seller delivery estimates to Shopping carts. */
+    get: (addressId?: string | null) => http.request<Cart>('/customer/cart', { query: { address: addressId ?? undefined } }),
     clear: () => http.request<Cart>('/customer/cart', { method: 'DELETE' }),
-    addItem: (input: { productId: string; quantity: number; note?: string }) =>
+    addItem: (input: { productId: string; quantity: number; note?: string; optionIds?: string[]; variantId?: string | null }) =>
       http.request<Cart>('/customer/cart/items', { method: 'POST', body: input }),
-    updateItem: (id: string, input: { quantity: number; note?: string }) =>
+    /** Apply an offer (validated server-side) / remove it. */
+    applyOffer: (offerId: string) => http.request<Cart>('/customer/cart/offer', { method: 'POST', body: { offerId } }),
+    removeOffer: () => http.request<Cart>('/customer/cart/offer', { method: 'DELETE' }),
+    updateItem: (id: string, input: { quantity?: number; note?: string; acknowledgePrice?: boolean }) =>
       http.request<Cart>(`/customer/cart/items/${id}`, { method: 'PATCH', body: input }),
     removeItem: (id: string) => http.request<Cart>(`/customer/cart/items/${id}`, { method: 'DELETE' }),
   },
@@ -89,12 +102,19 @@ export const customerApi = (http: HttpClient) => ({
     reorder: (id: string) => http.request<ReorderResult>(`/customer/orders/${id}/reorder`, { method: 'POST' }),
     get: (id: string) => http.request<OrderDetail>(`/customer/orders/${id}`),
     place: (input: PlaceOrderInput) => http.request<OrderDetail>('/customer/orders', { method: 'POST', body: input }),
+    /** Place the whole cart: a Shopping cart becomes one order per seller under one checkout. */
+    checkout: (input: PlaceOrderInput) => http.request<CheckoutResult>('/customer/checkout', { method: 'POST', body: input }),
+    getCheckout: (id: string) => http.request<CheckoutResult>(`/customer/checkouts/${id}`),
+    requestReturn: (orderId: string, itemId: string, input: ReturnRequestInput) =>
+      http.request<OrderDetail>(`/customer/orders/${orderId}/items/${itemId}/return`, { method: 'POST', body: input }),
     cancel: (id: string, reason = '') =>
       http.request<OrderDetail>(`/customer/orders/${id}/cancel`, { method: 'POST', body: { reason } }),
+    review: (id: string, input: { rating: number; comment?: string }) =>
+      http.request<OrderDetail>(`/customer/orders/${id}/review`, { method: 'POST', body: input }),
   },
   wishlist: {
     list: () => http.request<WishlistItem[]>('/customer/wishlist'),
-    add: (target: { storeId: string } | { productId: string }) =>
+    add: (target: { storeId: string } | { productId: string } | { providerId: string } | { eventProviderId: string } | { eventPackageId: string } | { hotelId: string } | { attractionId: string }) =>
       http.request<WishlistItem>('/customer/wishlist', { method: 'POST', body: target }),
     remove: (id: string) => http.request<void>(`/customer/wishlist/${id}`, { method: 'DELETE' }),
   },
@@ -108,22 +128,47 @@ export const customerApi = (http: HttpClient) => ({
     markAllRead: () => http.request<{ updated: number }>('/customer/notifications/read-all', { method: 'POST' }),
   },
   rewards: () => http.request<RewardsSummary>('/customer/rewards'),
+  /** Rule-based store picks for the signed-in customer, each with its reason. */
+  recommendedStores: (q: { type?: StoreType; lat?: number; lng?: number; radius?: number } = {}) =>
+    http.request<{ results: StoreRecommendation[] }>('/customer/recommendations/stores', { query: q }),
+  /** Counts for the Profile page (no full lists). */
+  profileSummary: () => http.request<ProfileSummary>('/customer/profile/summary'),
   support: {
     list: () => http.request<Paginated<SupportTicket>>('/customer/support/tickets'),
     get: (id: string) => http.request<SupportTicket>(`/customer/support/tickets/${id}`),
-    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null }) =>
+    create: (input: { category: SupportCategory; subject: string; message: string; orderId?: string | null; parcelId?: string | null; serviceBookingId?: string | null; eventBookingId?: string | null; hotelBookingId?: string | null; travelBookingId?: string | null; experienceBookingId?: string | null }) =>
       http.request<SupportTicket>('/customer/support/tickets', { method: 'POST', body: input }),
   },
   assistant: {
     send: (messages: AssistantMessage[]) =>
       http.request<BuddyReply>('/customer/assistant/messages', { method: 'POST', body: { messages } }),
+    capabilities: () => http.request<AssistantCapabilities>('/customer/assistant/capabilities'),
+    /** Speech to text (503 `speech_unavailable` until a provider is configured). */
+    transcribe: (audio: Blob, language = 'en-IN') => {
+      const form = new FormData();
+      form.append('audio', audio, 'speech');
+      form.append('language', language);
+      return http.request<{ text: string }>('/customer/assistant/transcribe', { method: 'POST', body: form });
+    },
   },
-  wallet: () => http.request<WalletSummary>('/customer/wallet'),
+  wallet: () => http.request<Wallet>('/customer/wallet'),
+  rides: {
+    places: (q: string) => http.request<{ results: RidePlaceResult[] }>('/customer/rides/places', { query: { q } }),
+    quote: (input: RideTripInput) => http.request<RideQuote>('/customer/rides/quote', { method: 'POST', body: input }),
+    request: (input: RideRequestInput) => http.request<Ride>('/customer/rides', { method: 'POST', body: input }),
+    list: (page?: number) => http.request<Paginated<RideSummary>>('/customer/rides', { query: { page } }),
+    get: (id: string) => http.request<Ride>(`/customer/rides/${id}`),
+    cancel: (id: string, reason = '') => http.request<Ride>(`/customer/rides/${id}/cancel`, { method: 'POST', body: { reason } }),
+    rate: (id: string, input: { stars: number; comment?: string; compliment?: string }) =>
+      http.request<Ride>(`/customer/rides/${id}/rating`, { method: 'POST', body: input }),
+    safety: (id: string, kind: 'sos' | 'share' | 'report', note = '') =>
+      http.request<{ recorded: boolean }>(`/customer/rides/${id}/safety`, { method: 'POST', body: { kind, note } }),
+  },
   bookings: {
-    list: (when?: 'upcoming' | 'past') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
+    list: (when?: 'upcoming' | 'past' | 'completed' | 'cancelled') => http.request<Paginated<Booking>>('/customer/bookings', { query: { when } }),
     get: (id: string) => http.request<Booking>(`/customer/bookings/${id}`),
-    create: (input: { showId: string; seats: string[]; paymentMethod: 'pay_at_venue' | 'wallet'; idempotencyKey: string }) =>
-      http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
+    /** Book from a seat hold (Showtime) or, for older callers, from a show and seats. Everything is re-priced by the server. */
+    create: (input: CreateBookingInput) => http.request<Booking>('/customer/bookings', { method: 'POST', body: input }),
     cancel: (id: string) => http.request<Booking>(`/customer/bookings/${id}/cancel`, { method: 'POST' }),
   },
 });
@@ -139,4 +184,20 @@ export const partnerApi = (http: HttpClient) => ({
   saveLocation: (input: PartnerLocationInput) =>
     http.request<PartnerState>('/partner/onboarding/location', { method: 'PATCH', body: input }),
   submit: () => http.request<PartnerState>('/partner/onboarding/submit', { method: 'POST' }),
+  // Partner Home / operations
+  home: () => http.request<PartnerHome>('/partner/home'),
+  setAvailability: (available: boolean) =>
+    http.request<PartnerState & { availability: PartnerAvailability }>('/partner/availability', { method: 'POST', body: { available } }),
+  work: (view?: string) => http.request<PartnerWork>('/partner/work', { query: { view } }),
+  act: (item: { kind: string; id: string }, action: string, body?: { reason?: string }) =>
+    http.request<{ ok: true; item: WorkItem | null }>(`/partner/work/${item.kind}/${item.id}/${action}`, { method: 'POST', body: body ?? {} }),
+  earnings: (days: 7 | 30) => http.request<PartnerEarnings>('/partner/earnings', { query: { days } }),
+  notifications: () => http.request<{ unread: number; results: PartnerNotification[] }>('/partner/notifications'),
+  readNotification: (id: string) => http.request<{ unread: number }>(`/partner/notifications/${id}/read`, { method: 'POST' }),
+  readAllNotifications: () => http.request<{ unread: number }>('/partner/notifications/read-all', { method: 'POST' }),
+  reportDriverLocation: (lat: number, lng: number) =>
+    http.request<{ ok: boolean }>('/partner/driver/location', { method: 'POST', body: { lat, lng } }),
+  devLoginInfo: () =>
+    http.request<{ enabled: boolean; partners: { code: string; name: string; category: string }[] }>('/partner/dev-login', { auth: false }),
+  devLogin: (code: string) => http.request<Session>('/partner/dev-login', { method: 'POST', body: { code }, auth: false }),
 });

@@ -30,7 +30,7 @@ def test_cart_add_merges_quantities_and_computes_totals(auth_api, products):
     assert r.status_code == 201
     cart = r.json()
     assert cart["itemCount"] == 3
-    assert cart["totals"] == {"subtotal": "360.00", "deliveryFee": "30.00", "tax": "18.00", "total": "408.00"}
+    assert cart["totals"] == {"subtotal": "360.00", "deliveryFee": "30.00", "tax": "18.00", "discount": "0.00", "total": "408.00"}
 
 
 def test_cart_rejects_unavailable_product_and_invalid_quantity(auth_api, products):

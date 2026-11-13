@@ -16,7 +16,7 @@ class UserManager(BaseUserManager):
     use_in_migrations = True
 
     def create_phone_user(self, phone: str, **extra):
-        """A user who signs in with a verified phone number only (e.g. Click Partner via Firebase)."""
+        """A user who signs in with a verified phone number only (e.g. Click Partner via phone OTP)."""
         user = self.model(email=None, phone=phone, phone_verified=True, **extra)
         user.set_unusable_password()
         user.save(using=self._db)
@@ -45,7 +45,7 @@ class UserManager(BaseUserManager):
 
 class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     # Stored lowercased; CI constraint below. Null for phone-only identities
-    # (Click Partner signs in with a Firebase-verified phone number).
+    # (Click Partner signs in with an OTP-verified phone number).
     email = models.EmailField(max_length=254, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=20, blank=True)

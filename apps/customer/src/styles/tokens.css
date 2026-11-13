@@ -1,29 +1,56 @@
-/* Click design tokens. Components consume these variables only. */
-:root {
-  /* Brand */
-  --c-brand: #5b3df5;
-  --c-brand-strong: #4527d9;
-  --c-brand-soft: #efebff;
-  --c-accent: #14c8a0;
-  --c-accent-soft: #e3f8f2;
+/* Click. design tokens. Components consume these variables only.
+   Brand (assets/Click Brand Style Guide Board.png): blue #2F3CFF / #4F6BFF, amber #FBBF24, navy #0B1F44, white #F8FAFC.
+   Appearance: White (default) or Dark navy, set by data-appearance on <html> (see src/appearance.ts). */
 
-  /* Neutrals */
-  --c-ink: #14121f;
-  --c-ink-2: #4a4760;
-  --c-ink-3: #7d7a92;
-  --c-line: #e7e5ef;
+/* ---- White (default) ---- */
+:root {
+  color-scheme: light;
+
+  /* Brand: glossy blue tile, white C, amber dot, navy wordmark */
+  --c-brand: #2f3cff;
+  --c-brand-solid: #2f3cff;
+  --c-brand-strong: #1f29b8;
+  --c-brand-soft: rgb(47 60 255 / 9%);
+  --c-brand-glow: 0 10px 28px -10px rgb(47 60 255 / 55%);
+  --c-accent: #fbbf24;
+  --c-accent-ink: #9a6400;
+  --c-accent-soft: rgb(251 191 36 / 16%);
+
+  /* Surfaces */
+  --c-bg: #f8fafc;
   --c-surface: #ffffff;
-  --c-surface-2: #f6f5fb;
-  --c-bg: #fbfbfe;
+  --c-surface-2: #f2f5fc;
+  --c-surface-3: #e8edf9;
+  --c-line: #e4e9f5;
+  --c-line-strong: #d3dbee;
+  --c-glass: rgb(255 255 255 / 70%);
+  --c-header-bg: rgb(255 255 255 / 86%);
+  --c-backdrop: rgb(11 31 68 / 42%);
+  --c-scrim: rgb(255 255 255 / 62%);
+  --c-float-bg: rgb(255 255 255 / 92%);
+  --c-skeleton-hi: #e9eef9;
+  --c-page-bg:
+    radial-gradient(900px 480px at 88% -160px, rgb(47 60 255 / 8%), transparent 70%),
+    radial-gradient(520px 320px at 100% 30%, rgb(251 191 36 / 6%), transparent 70%),
+    #f8fafc;
+
+  /* Text: the navy wordmark colour */
+  --c-ink: #0b1f44;
+  --c-ink-2: #3f4d6d;
+  --c-ink-3: #6f7b98;
+  --c-on-color: #ffffff;
 
   /* Semantic */
   --c-danger: #d93a4a;
   --c-danger-soft: #fdecee;
-  --c-warning: #b7791f;
-  --c-warning-soft: #fdf4e3;
-  --c-success: #0f9f7f;
+  --c-warning: #a86400;
+  --c-warning-soft: #fff6e0;
+  --c-success: #0f9f6e;
   --c-veg: #1e9e5a;
   --c-nonveg: #c2412d;
+
+  --c-toast-bg: #0b1f44;
+  --c-toast-ink: #ffffff;
 
   /* Type */
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -47,51 +74,137 @@
   --s-8: 32px;
   --s-10: 40px;
 
-  /* Shape & depth */
+  /* Shape & depth (navy-tinted shadows) */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 22px;
   --r-pill: 999px;
-  --shadow-1: 0 1px 2px rgb(20 18 31 / 6%), 0 1px 1px rgb(20 18 31 / 4%);
-  --shadow-2: 0 6px 24px rgb(20 18 31 / 10%);
-  --shadow-3: 0 18px 48px rgb(20 18 31 / 18%);
+  --shadow-1: 0 1px 2px rgb(11 31 68 / 6%), 0 1px 1px rgb(11 31 68 / 4%);
+  --shadow-2: 0 10px 28px rgb(11 31 68 / 10%);
+  --shadow-3: 0 22px 54px rgb(11 31 68 / 18%);
 
   /* Layout */
   --header-h: 60px;
-  --bottom-nav-h: 64px;
+  --bottom-nav-h: 68px;
   --content-max: 1120px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ---- Service themes ----
-   Every theme shares Click's typography, spacing, components and motion.
-   Only the accent colours and hero gradient change, giving each service its own personality. */
-:root, [data-theme='default'] {
-  --c-theme: var(--c-brand);
-  --c-theme-strong: var(--c-brand-strong);
-  --c-theme-soft: var(--c-brand-soft);
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #8a72ff 0%, var(--c-brand) 45%, #2d1a9e 100%);
+/* ---- Dark navy ---- */
+:root[data-appearance='dark'] {
+  color-scheme: dark;
+  --c-brand: #5b74ff;
+  --c-brand-solid: #2f3cff;
+  --c-brand-strong: #b8c4ff;
+  --c-brand-soft: rgb(79 107 255 / 15%);
+  --c-brand-glow: 0 10px 30px -8px rgb(47 60 255 / 60%);
+  --c-accent-ink: #fbbf24;
+  --c-accent-soft: rgb(251 191 36 / 14%);
+
+  --c-bg: #060b1a;
+  --c-surface: #0c1530;
+  --c-surface-2: #121d3d;
+  --c-surface-3: #1a274c;
+  --c-line: rgb(148 170 255 / 10%);
+  --c-line-strong: rgb(148 170 255 / 18%);
+  --c-glass: rgb(255 255 255 / 5%);
+  --c-header-bg: rgb(6 11 26 / 82%);
+  --c-backdrop: rgb(2 5 14 / 70%);
+  --c-scrim: rgb(6 11 26 / 62%);
+  --c-float-bg: rgb(6 11 26 / 66%);
+  --c-skeleton-hi: #1c2a52;
+  --c-page-bg:
+    radial-gradient(900px 520px at 85% -120px, rgb(47 60 255 / 22%), transparent 70%),
+    radial-gradient(600px 400px at -10% 10%, rgb(79 107 255 / 10%), transparent 70%),
+    radial-gradient(500px 300px at 100% 40%, rgb(251 191 36 / 4%), transparent 70%),
+    #060b1a;
+
+  --c-ink: #f8fafc;
+  --c-ink-2: #bcc6de;
+  --c-ink-3: #8090b4;
+
+  --c-danger: #ff6b7a;
+  --c-danger-soft: rgb(255 107 122 / 14%);
+  --c-warning: #fbbf24;
+  --c-warning-soft: rgb(251 191 36 / 14%);
+  --c-success: #34d399;
+  --c-veg: #22c55e;
+  --c-nonveg: #ef4444;
+
+  --c-toast-bg: #f8fafc;
+  --c-toast-ink: #0b1f44;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-2: 0 12px 32px rgb(0 0 0 / 45%);
+  --shadow-3: 0 24px 64px rgb(0 0 0 / 60%);
 }
-[data-theme='food'] { --c-theme: #e8590c; --c-theme-strong: #c2410c; --c-theme-soft: #fff1e6;
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #ffb366 0%, #f76707 45%, #b8400a 100%); }
-[data-theme='grocery'] { --c-theme: #2f9e44; --c-theme-strong: #237a35; --c-theme-soft: #e9f7ec;
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #8ce99a 0%, #37b24d 45%, #1f6f30 100%); }
-[data-theme='shopping'] { --c-theme: #3b3bd1; --c-theme-strong: #2b2ba8; --c-theme-soft: #eceefe;
-  --hero-bg: linear-gradient(135deg, #14121f 0%, #2b2b6e 55%, #4c4ce0 100%); }
-[data-theme='ride'] { --c-theme: #0c8599; --c-theme-strong: #0b6b7a; --c-theme-soft: #e3f6f8;
-  --hero-bg: linear-gradient(135deg, #0b1f26 0%, #0c5f6e 55%, #15aabf 100%); }
-[data-theme='parcel'] { --c-theme: #e67700; --c-theme-strong: #b35c00; --c-theme-soft: #fff4e0;
-  --hero-bg: linear-gradient(135deg, #3d2a10 0%, #b35c00 60%, #fab005 100%); }
-[data-theme='movies'] { --c-theme: #e03158; --c-theme-strong: #b4203f; --c-theme-soft: #fde8ed;
-  --hero-bg: radial-gradient(120% 140% at 100% 0%, #6b1b2f 0%, #2a0d16 55%, #0e0a10 100%); }
-[data-theme='services'] { --c-theme: #1c7ed6; --c-theme-strong: #1864ab; --c-theme-soft: #e7f2fd;
-  --hero-bg: linear-gradient(135deg, #0d2a4a 0%, #1864ab 60%, #4dabf7 100%); }
-[data-theme='rewards'] { --c-theme: #0f9f7f; --c-theme-strong: #0b7d66; --c-theme-soft: #e3f8f2;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2bd8b0 0%, #14c8a0 35%, #0b7d66 100%); }
-[data-theme='wallet'] { --c-theme: #1f2a44; --c-theme-strong: #11182b; --c-theme-soft: #eef1f7;
-  --hero-bg: linear-gradient(135deg, #11182b 0%, #23315a 60%, #3d5a99 100%); }
-[data-theme='buzz'] { --c-theme: #d6336c; --c-theme-strong: #a61e4d; --c-theme-soft: #fdeaf1;
-  --hero-bg: linear-gradient(135deg, #5f3dc4 0%, #d6336c 60%, #f76707 100%); }
-[data-theme='buddy'] { --c-theme: var(--c-brand); --c-theme-strong: var(--c-brand-strong); --c-theme-soft: var(--c-brand-soft);
-  --hero-bg: linear-gradient(135deg, var(--c-brand) 0%, #14c8a0 100%); }
+
+/* ---- Service themes ----
+   Every Click. service shares type, spacing, components and motion; only its accent changes.
+   --c-theme        accent (icons, active states, borders, glow)
+   --c-theme-solid  deeper fill behind white text (buttons, selected chips)
+   --c-theme-soft   translucent tint for backgrounds (works on white and on navy)
+   --c-theme-strong accent-coloured text on --c-theme-soft: the deep tone on white, the light tint on navy
+   --hero-bg        vivid gradient used behind white text (same in both appearances)
+   Applied with data-theme on any element, so a card can carry its own service identity. */
+:root, [data-theme='default'] {
+  --c-theme: var(--c-brand); --c-theme-solid: #2f3cff; --c-theme-soft: rgb(47 60 255 / 10%);
+  --c-theme-deep: #1f29b8; --c-theme-tint: #b8c4ff; --c-theme-rgb: 47 60 255;
+  /* The logo tile: bright brand blue deepening into navy, with the amber dot as a warm glint. */
+  --hero-bg: radial-gradient(55% 75% at 92% 15%, rgb(251 191 36 / 22%) 0%, transparent 60%), radial-gradient(120% 120% at 100% 0%, #4f6bff 0%, #2f3cff 38%, transparent 75%), linear-gradient(150deg, #2f3cff 0%, #1a2a9c 45%, #0b1f44 100%);
+}
+[data-theme='food'] { --c-theme: #f76b1c; --c-theme-solid: #e2540f; --c-theme-soft: rgb(247 107 28 / 12%); --c-theme-deep: #b23f05; --c-theme-tint: #ffbf9f; --c-theme-rgb: 247 107 28;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #ffb366 0%, #f76707 45%, #9a3507 100%); }
+/* Groceries: fresh green / lime on deep charcoal (the page canvas is set in styles/groceries.css). */
+[data-theme='grocery'] { --c-theme: #2fbf68; --c-theme-solid: #1f9d53; --c-theme-soft: rgb(47 191 104 / 12%); --c-theme-deep: #116a33; --c-theme-tint: #b6ef5a; --c-theme-rgb: 47 191 104;
+  --hero-bg: radial-gradient(70% 90% at 100% 0%, rgb(182 239 90 / 40%) 0%, transparent 60%), linear-gradient(155deg, #1d2a22 0%, #131a16 60%, #0f1211 100%); }
+/* Shopping: electric violet on graphite, with a restrained magenta for deals. */
+[data-theme='shopping'] { --c-theme: #7047ff; --c-theme-solid: #5b30ea; --c-theme-soft: rgb(112 71 255 / 11%); --c-theme-deep: #3d1ca8; --c-theme-tint: #d8ccff; --c-theme-rgb: 112 71 255;
+  --shop-deal: #e3337f; --shop-deal-soft: rgb(227 51 127 / 12%); --shop-ink: #15131f; --shop-ink-2: #221d33; --shop-line: rgb(255 255 255 / 9%);
+  --hero-bg: radial-gradient(60% 80% at 92% 10%, rgb(227 51 127 / 34%) 0%, transparent 62%), radial-gradient(90% 120% at 100% 0%, #7047ff 0%, transparent 70%), linear-gradient(155deg, #2a2145 0%, #191527 55%, #100e18 100%); }
+/* Pharma: calm clinical teal on graphite, with a soft mint. */
+[data-theme='pharma'] { --c-theme: #14b8a6; --c-theme-solid: #0d9488; --c-theme-soft: rgb(20 184 166 / 12%); --c-theme-deep: #115e59; --c-theme-tint: #99f6e4; --c-theme-rgb: 20 184 166;
+  --hero-bg: radial-gradient(80% 100% at 100% 0%, rgb(153 246 228 / 35%) 0%, transparent 60%), linear-gradient(155deg, #12302d 0%, #0d1f1d 60%, #0b1413 100%); }
+[data-theme='ride'] { --c-theme: #0ea5e9; --c-theme-solid: #0378b5; --c-theme-soft: rgb(14 165 233 / 12%); --c-theme-deep: #075d8c; --c-theme-tint: #b0e6ff; --c-theme-rgb: 14 165 233;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #67e8f9 0%, #0ea5e9 42%, #0b3d6e 100%); }
+[data-theme='parcel'] { --c-theme: #22b8f0; --c-theme-solid: #0b93cc; --c-theme-soft: rgb(34 184 240 / 12%); --c-theme-deep: #075e86; --c-theme-tint: #a5e9ff; --c-theme-rgb: 34 184 240;
+  --pc-violet: #8b5cf6; --hero-bg: radial-gradient(60% 80% at 90% 0%, rgb(139 92 246 / 35%) 0%, transparent 60%), radial-gradient(80% 100% at 0% 100%, rgb(34 184 240 / 28%) 0%, transparent 65%), linear-gradient(160deg, #141a26 0%, #0d111a 70%); }
+/* Showtime: cinematic near-black with crimson / wine accents and a restrained glow. */
+[data-theme='movies'] { --c-theme: #e5294b; --c-theme-solid: #c81e3f; --c-theme-soft: rgb(229 41 75 / 11%); --c-theme-deep: #8a1230; --c-theme-tint: #ffc1cc; --c-theme-rgb: 229 41 75;
+  --st-ink: #0b0a0f; --st-ink-2: #15121b; --st-ink-3: #201a27; --st-line: rgb(255 255 255 / 8%); --st-wine: #5b0f24; --st-violet: #3b1d5c;
+  --hero-bg: radial-gradient(70% 90% at 90% 0%, rgb(229 41 75 / 38%) 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(91 33 182 / 28%) 0%, transparent 65%), linear-gradient(160deg, #1a0f18 0%, #0f0b12 55%, #08070b 100%); }
+[data-theme='hotels'] { --c-theme: #d9bf8c; --c-theme-solid: #b8955a; --c-theme-soft: rgb(217 191 140 / 13%); --c-theme-deep: #7a5e2e; --c-theme-tint: #f3e6c8; --c-theme-rgb: 217 191 140;
+  --hero-bg: radial-gradient(60% 80% at 85% 0%, rgb(217 191 140 / 18%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(52 211 153 / 14%) 0%, transparent 65%), linear-gradient(160deg, #161a1d 0%, #0e1113 70%); }
+[data-theme='travel'] { --c-theme: #38bdf8; --c-theme-solid: #0284c7; --c-theme-soft: rgb(56 189 248 / 13%); --c-theme-deep: #075985; --c-theme-tint: #bae6fd; --c-theme-rgb: 56 189 248;
+  --hero-bg: radial-gradient(60% 80% at 88% 0%, rgb(45 212 191 / 20%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(99 102 241 / 22%) 0%, transparent 65%), linear-gradient(160deg, #111827 0%, #0b1120 70%); }
+[data-theme='bookings'] { --c-theme: #e9c46a; --c-theme-solid: #b8860b; --c-theme-soft: rgb(233 196 106 / 13%); --c-theme-deep: #7c5a10; --c-theme-tint: #f6e7bf; --c-theme-rgb: 233 196 106;
+  --hero-bg: radial-gradient(60% 80% at 88% 0%, rgb(233 196 106 / 20%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(139 92 246 / 20%) 0%, transparent 65%), linear-gradient(160deg, #1a1714 0%, #100e0c 70%); }
+[data-theme='events'] { --c-theme: #c084fc; --c-theme-solid: #9333ea; --c-theme-soft: rgb(192 132 252 / 13%); --c-theme-deep: #6b21a8; --c-theme-tint: #f0abfc; --c-theme-rgb: 192 132 252;
+  --hero-bg: radial-gradient(55% 80% at 88% 0%, rgb(251 191 36 / 18%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(217 70 239 / 24%) 0%, transparent 65%), linear-gradient(160deg, #1a1322 0%, #0f0b14 70%); }
+[data-theme='services'] { --c-theme: #2dd4bf; --c-theme-solid: #0f9f8e; --c-theme-soft: rgb(45 212 191 / 12%); --c-theme-deep: #0b6b60; --c-theme-tint: #99f6e4; --c-theme-rgb: 45 212 191;
+  --hero-bg: radial-gradient(60% 80% at 90% 0%, rgb(251 191 136 / 22%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(45 212 191 / 22%) 0%, transparent 65%), linear-gradient(160deg, #1c1a18 0%, #121110 70%); }
+[data-theme='rewards'] { --c-theme: #f5a400; --c-theme-solid: #b97800; --c-theme-soft: rgb(251 191 36 / 16%); --c-theme-deep: #8a5a00; --c-theme-tint: #fde68a; --c-theme-rgb: 251 191 36;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #fde68a 0%, #f59e0b 42%, #7a4a00 100%); }
+[data-theme='wallet'] { --c-theme: #1d4ed8; --c-theme-solid: #1d4ed8; --c-theme-soft: rgb(29 78 216 / 10%); --c-theme-deep: #173ea8; --c-theme-tint: #c3dcff; --c-theme-rgb: 29 78 216;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #60a5fa 0%, #1d4ed8 42%, #0b1f44 100%); }
+[data-theme='buzz'] { --c-theme: #e11d8f; --c-theme-solid: #c0177a; --c-theme-soft: rgb(225 29 143 / 11%); --c-theme-deep: #9d1263; --c-theme-tint: #fbcfe8; --c-theme-rgb: 225 29 143;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #f9a8d4 0%, #e11d8f 40%, #6d28d9 100%); }
+[data-theme='buddy'] { --c-theme: #4f46e5; --c-theme-solid: #4f46e5; --c-theme-soft: rgb(79 70 229 / 10%); --c-theme-deep: #3730a3; --c-theme-tint: #cdd6ff; --c-theme-rgb: 79 70 229;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #22d3ee 0%, #4f6bff 42%, #4f46e5 70%, #1e1b6b 100%); }
+/* Explore: Click.'s multi-service discovery identity. */
+[data-theme='explore'] { --c-theme: #9333ea; --c-theme-solid: #7e22ce; --c-theme-soft: rgb(147 51 234 / 10%); --c-theme-deep: #6b21a8; --c-theme-tint: #e9d5ff; --c-theme-rgb: 147 51 234;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #f472b6 0%, #9333ea 40%, #2f3cff 100%); }
+/* Activity: calm cyan. Offers: warm orange-pink. */
+[data-theme='activity'] { --c-theme: #0891b2; --c-theme-solid: #0e7490; --c-theme-soft: rgb(8 145 178 / 11%); --c-theme-deep: #0b5f75; --c-theme-tint: #a5f3fc; --c-theme-rgb: 8 145 178;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #67e8f9 0%, #0891b2 45%, #0b3a52 100%); }
+[data-theme='offers'] { --c-theme: #f43f5e; --c-theme-solid: #e11d48; --c-theme-soft: rgb(244 63 94 / 11%); --c-theme-deep: #b4123a; --c-theme-tint: #fecdd3; --c-theme-rgb: 244 63 94;
+  --hero-bg: radial-gradient(120% 140% at 100% 0%, #fdba74 0%, #f97316 35%, #e11d48 75%, #7a0f2e 100%); }
+/* Profile: the navy of the wordmark. */
+[data-theme='profile'] { --c-theme: #2f3cff; --c-theme-solid: #0b1f44; --c-theme-soft: rgb(11 31 68 / 8%); --c-theme-deep: #0b1f44; --c-theme-tint: #dfe4ff; --c-theme-rgb: 47 60 255;
+  --hero-bg: linear-gradient(150deg, #1a2a6c 0%, #0b1f44 100%); }
+
+/* Resolve the text tone on every themed element (custom properties resolve where declared). */
+:root, [data-theme] { --c-theme-strong: var(--c-theme-deep); }
+:root[data-appearance='dark'], :root[data-appearance='dark'] [data-theme] { --c-theme-strong: var(--c-theme-tint); }
+:root[data-appearance='dark'][data-theme='profile'], :root[data-appearance='dark'] [data-theme='profile'] { --c-theme-solid: #4f5bd5; --c-theme-soft: rgb(165 180 252 / 14%); }

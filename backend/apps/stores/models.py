@@ -18,6 +18,7 @@ class StoreType(models.TextChoices):
     RESTAURANT = "restaurant", "Restaurant"
     GROCERY = "grocery", "Grocery"
     RETAIL = "retail", "Retail"
+    PHARMACY = "pharmacy", "Pharmacy"
 
 
 class StoreCategory(BaseModel):
@@ -67,6 +68,14 @@ class Store(BaseModel):
     min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     currency = models.CharField(max_length=3, default=settings.CLICK_DEFAULT_CURRENCY)
 
+    # Marketplace seller settings (retail). Shipping is per seller: one parcel and one fee per seller per checkout.
+    verified_at = models.DateTimeField(null=True, blank=True, help_text="Set by Click staff after verifying the seller's business.")
+    free_delivery_above = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                              help_text="Order value from this seller above which delivery is free.")
+    dispatch_days = models.PositiveSmallIntegerField(default=1, help_text="Working days to pack and hand over an order.")
+    cod_enabled = models.BooleanField(default=True, help_text="Seller accepts cash on delivery.")
+    return_policy = models.CharField(max_length=300, blank=True, help_text="Seller's return terms shown to customers.")
+
     class Meta:
         ordering = ["-rating_average", "name"]
         indexes = [
@@ -89,7 +98,16 @@ class Store(BaseModel):
 
 
 class StoreOffer(BaseModel):
-    """Display-only promotion. Not yet applied to pricing (offers engine comes with Phase 3)."""
+    """
+    A store promotion. With a `discount_type` it can be applied at checkout (the server computes the discount);
+    without one it is display-only (e.g. "Buy 3 books, get 1 free" until that rule type exists).
+    """
+
+    class DiscountType(models.TextChoices):
+        NONE = "", "Display only"
+        PERCENT = "percent", "Percent off"
+        FLAT = "flat", "Flat amount off"
+        FREE_DELIVERY = "free_delivery", "Free delivery"
 
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="offers")
     title = models.CharField(max_length=80)
@@ -97,6 +115,14 @@ class StoreOffer(BaseModel):
     is_active = models.BooleanField(default=True)
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
+    discount_type = models.CharField(max_length=16, choices=DiscountType.choices, blank=True, default="")
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Percent (0–100) or amount.")
+    max_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Cap for percent offers.")
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    @property
+    def is_redeemable(self) -> bool:
+        return bool(self.discount_type)
 
     class Meta:
         ordering = ["created_at"]

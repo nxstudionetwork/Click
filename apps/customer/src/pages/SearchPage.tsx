@@ -1,135 +1,130 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { SearchScope } from '@click/api';
-import { EmptyState, ErrorState, Icon, Skeleton } from '../components/ui';
-import { SERVICES } from '../config/services';
-import { ProductCard } from '../features/stores/ProductCard';
-import { StoreCard } from '../features/stores/StoreCard';
-import { EventCard } from '../features/bookings/EventCard';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SearchHit } from '@click/api';
+import { useAuth } from '../auth/AuthProvider';
+import { EmptyState, ErrorState, Icon, Skeleton, SmartImage } from '../components/ui';
+import { THEME, iconFor } from '../features/money/parts';
 import { api } from '../lib/api';
+import { DiscoverTile } from './DiscoverPage';
+import { formatMoney } from '../lib/format';
 
-const SCOPES: { id: SearchScope; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'restaurant', label: 'Food' },
-  { id: 'grocery', label: 'Groceries' },
-  { id: 'retail', label: 'Shopping' },
-  { id: 'products', label: 'Products & dishes' },
-  { id: 'events', label: 'Movies & events' },
-];
-const RECENT_KEY = 'click.recentSearches';
+const ICON: Record<string, Parameters<typeof Icon>[0]['name']> = {
+  store: 'store', dish: 'food', product: 'shop', destination: 'pin', hotel: 'hotel', attraction: 'temple', collection: 'compass', show: 'film',
+  event_type: 'gift', event_provider: 'team', service_category: 'wrench', service_job: 'wrench', professional: 'user', offer: 'tag', article: 'book',
+  gift_card: 'gift', order: 'bag', payment: 'card', parcel: 'parcel', ride: 'ride', invoice: 'receipt', support: 'help',
+};
 
-function readRecent(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]'); } catch { return []; }
-}
-function saveRecent(list: string[]) {
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch { /* ignore */ }
-}
-
+/** Click. Global Search: one search across every service, your own records by ID, suggestions as you type, your
+ *  recent searches (kept on your account, clearable) and trending searches only when real people searched them. */
 export function SearchPage() {
+  const { status } = useAuth();
+  const nav = useNavigate();
+  const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
-  const scope = (SCOPES.find((s) => s.id === params.get('scope'))?.id ?? 'all') as SearchScope;
+  const group = params.get('group') ?? '';
   const [draft, setDraft] = useState(q);
-  const [recent, setRecent] = useState<string[]>(readRecent);
+  const [typed, setTyped] = useState('');
+  const [focused, setFocused] = useState(!q);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { setDraft(q); }, [q]);
+  useEffect(() => { const t = setTimeout(() => setTyped(draft.trim()), 200); return () => clearTimeout(t); }, [draft]);
 
-  const set = (next: { q?: string; scope?: string }) =>
-    setParams((p) => {
-      const n = new URLSearchParams(p);
-      for (const [k, v] of Object.entries(next)) (v ? n.set(k, v) : n.delete(k));
-      return n;
-    }, { replace: true });
+  const results = useQuery({ queryKey: ['search', 'global', q, group], queryFn: () => api.money.search.global(q, group), enabled: q.trim().length >= 2, placeholderData: keepPreviousData });
+  const suggest = useQuery({ queryKey: ['search', 'suggest', typed, status], queryFn: () => api.money.search.suggest(typed), enabled: focused && status !== 'loading', placeholderData: keepPreviousData });
+  const clear = useMutation({ mutationFn: (id?: string) => api.money.search.clearRecent(id), onSuccess: () => qc.invalidateQueries({ queryKey: ['search', 'suggest'] }) });
 
-  // Sync the input only when the URL query changes externally (back/forward), never on mount,
-  // so text typed immediately after navigating here is not wiped.
-  const lastQ = useRef(q);
-  useEffect(() => {
-    if (lastQ.current === q) return;
-    lastQ.current = q;
-    setDraft((d) => (d.trim() === q ? d : q));
-  }, [q]);
-  useEffect(() => {
-    if (draft.trim() === q) return;
-    const t = setTimeout(() => set({ q: draft.trim() }), 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, q]);
-
-  const active = q.length >= 2;
-  const results = useQuery({
-    queryKey: ['search', q, scope],
-    queryFn: ({ signal }) => api.catalog.search(q, scope, signal),
-    enabled: active,
-    placeholderData: keepPreviousData,
-  });
-
-  useEffect(() => {
-    if (results.isSuccess && active && (results.data.stores.length || results.data.products.length || results.data.events.length)) {
-      setRecent((r) => {
-        const next = [q, ...r.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 8);
-        saveRecent(next);
-        return next;
-      });
-    }
-  }, [results.isSuccess, results.data, q, active]);
+  const go = (text: string, g = '') => { const t = text.trim(); if (t.length < 2) return; setFocused(false); inputRef.current?.blur(); setParams(g ? { q: t, group: g } : { q: t }); };
+  const s = suggest.data;
+  const r = results.data;
+  const showPanel = focused && (draft.trim().length >= 2 ? (s?.suggestions.length || s?.mine?.length) : (s?.recent.length || s?.trending?.length));
 
   return (
-    <div className="stack">
-      <div className="search search-big" role="search">
-        <Icon name="search" />
-        <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Search restaurants, dishes, groceries, products, movies…" aria-label="Search Click" />
-        {draft && <button className="icon-btn" onClick={() => setDraft('')} aria-label="Clear search"><Icon name="close" size={18} /></button>}
-      </div>
-      <div className="tabs" role="tablist" aria-label="Search category">
-        {SCOPES.map((s) => (
-          <button key={s.id} role="tab" aria-selected={scope === s.id} onClick={() => set({ scope: s.id === 'all' ? '' : s.id })}>{s.label}</button>
-        ))}
-      </div>
+    <div className="gs-page">
+      <form className="gs-bar" role="search" onSubmit={(e) => { e.preventDefault(); go(draft); }}>
+        <Icon name="search" size={20} />
+        <input ref={inputRef} type="search" value={draft} autoFocus={!q} placeholder="Search Click." aria-label="Search Click."
+          onChange={(e) => { setDraft(e.target.value); setFocused(true); }} onFocus={() => setFocused(true)} />
+        {draft && <button type="button" className="gs-clear" aria-label="Clear" onClick={() => { setDraft(''); inputRef.current?.focus(); }}><Icon name="close" size={16} /></button>}
+      </form>
 
-      {!active ? (
-        <div className="stack">
-          {recent.length > 0 && (
-            <section className="stack" style={{ gap: 'var(--s-2)' }}>
-              <div className="spread"><h3>Recent searches</h3><button className="btn btn--ghost btn--sm" onClick={() => { setRecent([]); saveRecent([]); }}>Clear</button></div>
-              <div className="chips" style={{ flexWrap: 'wrap' }}>{recent.map((r) => <button key={r} className="chip" onClick={() => setDraft(r)}>{r}</button>)}</div>
-            </section>
+      {showPanel ? (
+        <div className="gs-panel" role="listbox" aria-label="Suggestions">
+          {draft.trim().length >= 2 ? (
+            <>
+              {s?.mine?.map((h) => <SuggestRow key={h.link} h={h} onPick={() => nav(h.link)} />)}
+              {s?.suggestions.map((h) => <SuggestRow key={h.link} h={h} onPick={() => nav(h.link)} />)}
+              <button type="button" className="gs-row" onClick={() => go(draft)}><span className="gs-row__icon"><Icon name="search" size={16} /></span><span>Search for “{draft.trim()}”</span></button>
+            </>
+          ) : (
+            <>
+              {!!s?.recent.length && (
+                <div className="gs-sec"><div className="gs-sec__head"><h2>Recent searches</h2><button type="button" className="mn-link small" onClick={() => clear.mutate(undefined)}>Clear all</button></div>
+                  {s.recent.map((x) => (
+                    <div key={x.id} className="gs-recent">
+                      <button type="button" className="gs-row" onClick={() => go(x.query)}><span className="gs-row__icon"><Icon name="history" size={16} /></span><span className="truncate">{x.query}</span></button>
+                      <button type="button" className="gs-x" aria-label={`Remove ${x.query}`} onClick={() => clear.mutate(x.id)}><Icon name="close" size={14} /></button>
+                    </div>
+                  ))}</div>
+              )}
+              {!!s?.trending?.length && (
+                <div className="gs-sec"><h2>Trending on Click.</h2><div className="mn-chips mn-chips--wrap">{s.trending.map((t) => <button key={t} type="button" className="mn-chip" onClick={() => go(t)}>{t}</button>)}</div></div>
+              )}
+            </>
           )}
-          <section className="stack" style={{ gap: 'var(--s-2)' }}>
-            <h3>Browse</h3>
-            <div className="chips" style={{ flexWrap: 'wrap' }}>
-              {SERVICES.filter((s) => s.status === 'live').map((s) => <Link key={s.id} to={s.path} className="chip" style={{ display: 'inline-flex', alignItems: 'center' }}>{s.name}</Link>)}
+        </div>
+      ) : null}
+
+      {q.trim().length < 2 ? (
+        !showPanel && <EmptyState icon="search" title="What are you looking for?" message="Restaurants, dishes, groceries, products, hotels, places, shows, services, offers — or an order or booking ID." />
+      ) : results.isError ? <ErrorState error={results.error} onRetry={() => results.refetch()} /> : !r ? <Skeleton height={300} /> : (
+        <>
+          {r.groups.length > 1 && (
+            <div className="mn-chips" role="tablist" aria-label="Result type">
+              <button type="button" role="tab" className="mn-chip" aria-pressed={!group} aria-selected={!group} onClick={() => go(q)}>All · {r.count + r.mine.length}</button>
+              {(group ? r.groups : r.groups).map((g) => <button key={g.code} type="button" role="tab" className="mn-chip" aria-pressed={group === g.code} aria-selected={group === g.code}
+                onClick={() => go(q, g.code)}>{g.label} · {g.count}</button>)}
             </div>
-          </section>
-          {q.length === 1 && <p className="muted small">Type at least 2 characters to search.</p>}
-        </div>
-      ) : results.isError ? (
-        <ErrorState error={results.error} onRetry={() => results.refetch()} />
-      ) : results.isPending ? (
-        <div className="stack">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={80} radius={16} />)}</div>
-      ) : results.data.stores.length + results.data.products.length + results.data.events.length === 0 ? (
-        <EmptyState title={`No results for “${q}”`} message="Check the spelling or try a broader term." />
-      ) : (
-        <div className="stack" style={{ opacity: results.isPlaceholderData ? 0.6 : 1 }}>
-          {results.data.stores.length > 0 && (
-            <section className="stack">
-              <h2>Stores <span className="muted small">({results.data.stores.length})</span></h2>
-              <div className="store-grid">{results.data.stores.map((s) => <StoreCard key={s.id} store={s} />)}</div>
-            </section>
           )}
-          {results.data.events.length > 0 && (
-            <section className="stack" data-theme="movies">
-              <h2>Movies & events <span className="muted small">({results.data.events.length})</span></h2>
-              <div className="event-grid">{results.data.events.map((e) => <EventCard key={e.id} event={e} />)}</div>
-            </section>
+          {r.mine.length > 0 && <Group title="Your records" rows={r.mine} />}
+          {r.sponsored?.map((ad) => <div key={ad.campaign} className="gs-ad"><DiscoverTile c={ad} /></div>)}
+          {!group && r.top.length > 0 && <Group title="Top results" rows={r.top} />}
+          {r.groups.map((g) => <Group key={g.code} title={g.label} rows={g.results} more={!group && g.count > g.results.length ? () => go(q, g.code) : undefined} total={g.count} />)}
+          {r.count === 0 && r.mine.length === 0 && (
+            <EmptyState icon="search" title={`Nothing found for “${q}”`} message="Try another word, a shorter search, or ask Buddy."
+              action={<Link to={`/buddy?q=${encodeURIComponent(q)}`} className="btn btn--outline">Ask Buddy</Link>} />
           )}
-          {results.data.products.length > 0 && (
-            <section className="stack">
-              <h2>Products & dishes <span className="muted small">({results.data.products.length})</span></h2>
-              <div className="product-grid">{results.data.products.map((p) => <ProductCard key={p.id} product={p} currency={p.store.currency} showStore />)}</div>
-            </section>
-          )}
-        </div>
+        </>
       )}
     </div>
+  );
+}
+
+function SuggestRow({ h, onPick }: { h: SearchHit; onPick: () => void }) {
+  return (
+    <button type="button" role="option" className="gs-row" onClick={onPick}>
+      <span className="gs-row__icon"><Icon name={ICON[h.type] ?? iconFor(h.service)} size={16} /></span>
+      <span className="gs-row__text"><strong className="truncate">{h.title}</strong><span className="small mn-muted truncate">{h.subtitle}</span></span>
+    </button>
+  );
+}
+
+function Group({ title, rows, more, total }: { title: string; rows: SearchHit[]; more?: () => void; total?: number }) {
+  return (
+    <section className="gs-group">
+      <div className="mn-sec__head"><h2>{title}</h2>{more && <button type="button" className="mn-link small" onClick={more}>See all {total}</button>}</div>
+      <ul className="mn-list">{rows.map((h) => (
+        <li key={`${h.type}:${h.id}:${h.link}`}><Link to={h.link} className="mn-row" data-theme={THEME[h.service]}>
+          {h.image ? <SmartImage src={h.image} alt="" className="gs-thumb" /> : <span className="mn-row__icon mn-row__icon--theme"><Icon name={ICON[h.type] ?? iconFor(h.service)} size={18} /></span>}
+          <span className="mn-row__text"><strong className="truncate">{h.title}</strong><span className="small mn-muted truncate">{h.subtitle}</span></span>
+          <span className="mn-row__end">
+            {h.price && <strong>{formatMoney(h.price)}</strong>}
+            {h.rating && <span className="small"><Icon name="star" size={12} /> {h.rating}</span>}
+            {h.badge && <span className="mn-tag">{h.badge}</span>}
+          </span>
+        </Link></li>
+      ))}</ul>
+    </section>
   );
 }

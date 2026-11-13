@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -25,7 +25,6 @@ export function VerifyPage() {
   const [error, setError] = useState('');
   const [wait, setWait] = useState(RESEND_AFTER);
   const [resending, setResending] = useState(false);
-  const captchaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -47,7 +46,7 @@ export function VerifyPage() {
       setError(err instanceof PhoneAuthError ? err.message : 'That code isn’t correct. Please try again.');
       return;
     }
-    setPhase('linking');
+    setPhase('linking'); // the backend verifies the code here
     try {
       const result = await api.auth.exchangeIdentity(credential);
       setPhase('success');
@@ -63,15 +62,17 @@ export function VerifyPage() {
       }
     } catch (err) {
       setPhase('enter'); setCode('');
-      setError(err instanceof ApiError && err.code === 'network_error' ? 'Your number is verified, but we couldn’t reach Click. Check your connection and enter a new code.'
-        : 'Your number is verified, but we couldn’t sign you in. Please request a new code and try again.');
+      // The code is checked by the Click backend during this step, so its answer (wrong / expired code) is shown as is.
+      setError(err instanceof ApiError && ['invalid_code', 'code_expired', 'too_many_attempts'].includes(err.code) ? err.message
+        : err instanceof ApiError && err.code === 'network_error' ? 'We couldn’t reach Click. Check your connection and try again.'
+          : 'We couldn’t sign you in. Please request a new code and try again.');
     }
   }
 
   async function resend() {
     setResending(true); setError('');
     try {
-      const p = await phoneAuth.start(phone, captchaRef.current!);
+      const p = await phoneAuth.start(phone);
       onboarding.setPending(p); setPending(p); setCode(''); setWait(RESEND_AFTER);
     } catch (err) {
       setError(err instanceof PhoneAuthError ? err.message : 'Couldn’t resend the code. Please try again.');
@@ -101,7 +102,6 @@ export function VerifyPage() {
             {wait > 0 ? <span className="muted" aria-live="polite">Resend code in 0:{String(wait).padStart(2, '0')}</span>
               : <button type="button" className="link-btn" onClick={resend} disabled={resending || busy}>{resending ? 'Sending…' : 'Resend code'}</button>}
           </div>
-          <div ref={captchaRef} />
         </div>
       )}
     </AuthLayout>

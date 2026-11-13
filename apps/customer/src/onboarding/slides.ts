@@ -9,7 +9,7 @@ export const SLIDES: Slide[] = [
   { key: 'shopping', title: 'Shopping', caption: 'Everything for you and your home', icon: 'shop', tile: 'shopping', alt: 'Shopper carrying shopping bags', tint: '#2b2ba8' },
   { key: 'rides', title: 'Rides', caption: 'Get around the city', icon: 'ride', tile: 'ride', alt: 'Driver at the wheel at sunset', tint: '#0b6b7a' },
   { key: 'parcels', title: 'Parcels', caption: 'Send and receive across town', icon: 'parcel', tile: 'parcel', alt: 'A parcel being handed over at the door', tint: '#b35c00' },
-  { key: 'entertainment', title: 'Movies & Events', caption: 'Your seat is waiting', icon: 'ticket', tile: 'movies', alt: 'Audience watching a film in a cinema', tint: '#b4203f' },
+  { key: 'entertainment', title: 'Showtime', caption: 'Your seat is waiting', icon: 'ticket', tile: 'movies', alt: 'Audience watching a film in a cinema', tint: '#b4203f' },
   { key: 'services', title: 'Services', caption: 'Trusted help at home', icon: 'wrench', tile: 'services', alt: 'Professional cleaning a window', tint: '#1864ab' },
   { key: 'market', title: 'Local markets', caption: 'Support the shops around you', icon: 'pin', tile: 'grocery', alt: 'A colourful local fruit and vegetable market', tint: '#5f3dc4' },
 ];

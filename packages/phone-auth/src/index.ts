@@ -1,14 +1,12 @@
-import { firebasePhoneAuth } from './firebase';
+import { clickOtpAuth } from './click-otp';
 import type { PhoneAuthProvider } from './types';
 
-const PROVIDERS: Record<string, PhoneAuthProvider> = { firebase: firebasePhoneAuth };
+/** Phone sign-in: Click's own OTP (the backend texts and verifies the code). */
+export const phoneAuth: PhoneAuthProvider = clickOtpAuth;
 
-/** The configured phone-OTP provider (VITE_PHONE_AUTH_PROVIDER, default "firebase"). */
-export const phoneAuth: PhoneAuthProvider = PROVIDERS[import.meta.env.VITE_PHONE_AUTH_PROVIDER ?? 'firebase'] ?? firebasePhoneAuth;
-
-/** True when the app has the Firebase web configuration it needs for phone sign-in. */
-export const isPhoneAuthConfigured = () => Boolean(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
+/** The app needs no client-side configuration; whether codes can be sent is decided by the backend. */
+export const isPhoneAuthConfigured = () => true;
 
 export * from './types';
 export * from './countries';
-export { toPhoneAuthError } from './firebase';
+export { toPhoneAuthError } from './click-otp';

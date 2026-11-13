@@ -12,7 +12,7 @@ class StoreCategorySerializer(serializers.ModelSerializer):
 class StoreOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoreOffer
-        fields = ["id", "title", "description", "ends_at"]
+        fields = ["id", "title", "description", "ends_at", "discount_type", "discount_value", "max_discount", "min_order_amount", "is_redeemable"]
 
 
 class OfferStoreSerializer(serializers.ModelSerializer):
@@ -36,14 +36,20 @@ class StoreSerializer(serializers.ModelSerializer):
     categories = StoreCategorySerializer(many=True, read_only=True)
     offers = serializers.SerializerMethodField()
     is_open = serializers.BooleanField(read_only=True)
+    # Present only for location queries (`lat`/`lng`); null otherwise. Never guessed.
+    distance_km = serializers.SerializerMethodField()
 
     class Meta:
         model = Store
         fields = [
             "id", "slug", "name", "store_type", "description", "image_url", "categories", "city", "locality",
             "rating_average", "rating_count", "price_level", "delivery_time_min", "delivery_time_max",
-            "delivery_fee", "min_order_amount", "currency", "is_open", "offers",
+            "delivery_fee", "min_order_amount", "currency", "is_open", "offers", "distance_km",
         ]
+
+    def get_distance_km(self, store):
+        d = getattr(store, "distance_km", None)
+        return None if d is None else round(d, 1)
 
     def get_offers(self, store):
         # Uses the prefetched, already-filtered `active_offers` when available.

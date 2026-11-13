@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, Navigate } from 'react-router-dom';
 import type { Product } from '@click/api';
 import { ApiError } from '@click/api';
 import { EmptyState, ErrorState, Icon, Rating, Skeleton, SmartImage, useToast } from '../components/ui';
@@ -45,9 +45,14 @@ export function StorePage() {
   if (store.isPending) return <div className="stack"><Skeleton height={200} radius={22} /><Skeleton height={28} width="60%" /><Skeleton height={60} /></div>;
 
   const s = store.data;
+  if (s.storeType === 'grocery') return <Navigate to={`/groceries/store/${s.slug}`} replace />;
   const service = serviceForStoreType(s.storeType);
   const isRestaurant = s.storeType === 'restaurant';
-  const qtyFor = (productId: string) => cart?.items.find((i) => i.product.id === productId);
+  // Customisable dishes can sit on several cart lines (one per choice combination); the row shows their total.
+  const qtyFor = (productId: string) => {
+    const lines = cart?.items.filter((i) => i.product.id === productId) ?? [];
+    return lines.length ? { ...lines[0]!, quantity: lines.reduce((n, i) => n + i.quantity, 0) } : undefined;
+  };
   const busy = isAdding || update.isPending || remove.isPending;
 
   const changeQty = (productId: string, next: number) => {
@@ -146,7 +151,7 @@ export function StorePage() {
         canOrder={s.isOpen}
         busy={isAdding}
         onClose={() => setSelected(null)}
-        onAdd={async (p, qty, note) => { if (await addToCart(p, qty, note)) setSelected(null); }}
+        onAdd={async (p, qty, note, optionIds) => { if (await addToCart(p, qty, note, optionIds)) setSelected(null); }}
       />
       <CartBar storeId={s.id} />
     </>

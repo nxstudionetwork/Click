@@ -1,76 +1,50 @@
 # Click authentication (phone OTP)
 
-Customer and Partner apps share this identity layer and the `@click/phone-auth` package. The customer flow is
-shown below; the partner flow differs only after the exchange (see *Click Partner* at the end).
+Customer and Partner apps share this identity layer and the `@click/phone-auth` package. Click runs the OTP itself:
+no third-party auth SDK is loaded in any app.
 
 ```
-Customer App ──(phone)──► Phone-OTP provider (Firebase Phone Auth today)
-      │                         │ OTP verified → provider ID token
-      └──── POST /api/v1/auth/identity/exchange {provider, token} ────► Click API :4000 (Django)
-                                                                            │ verify token server-side
-                                                                            │ ExternalIdentity(provider, subject) → User
-                                          existing customer ◄───────────────┤→ Click session (access token + httpOnly refresh cookie)
-                                          new customer      ◄───────────────┘→ signed signupToken (20 min)
-      └──── POST /api/v1/auth/identity/signup {signupToken, fullName, email, addresses[1..5]} → Click session
+App ──POST /api/v1/auth/otp/request {phone}──► Click API (Django)
+                                                 │ create OtpChallenge (hash of a 6-digit code, 5-minute expiry)
+                                                 │ text the code through CLICK_SMS_PROVIDER
+    ◄── {challengeId, expiresIn, resendIn} ──────┘
+App ──POST /api/v1/auth/identity/exchange {provider: "phone_otp", token: "<challengeId>.<code>"}
+                                                 │ PhoneOtpVerifier: code matches, not expired, not used, attempts left
+                                                 │ ExternalIdentity(phone_otp, <E.164 phone>) → User
+        existing customer ◄──────────────────────┤→ Click session (access token + httpOnly refresh cookie)
+        new customer      ◄──────────────────────┘→ signed signupToken (20 min)
+App ──POST /api/v1/auth/identity/signup {signupToken, fullName, email, addresses[1..5]} → Click session
 ```
 
-- **Firebase proves phone ownership, nothing more.** Click's PostgreSQL holds the customer, profile, addresses and
-  all activity. Right after OTP the app signs out of Firebase and uses only Click's own session.
+- **The OTP:** `apps/identity/otp.py`.
+  - Codes are 6 random digits; only an HMAC of the code is stored (`OtpChallenge.code_hash`).
+  - A code expires after `CLICK_OTP_TTL_SECONDS` (300), allows `CLICK_OTP_MAX_ATTEMPTS` (5) wrong tries, is used
+    once, and requesting a new code invalidates the previous one.
+  - Requests are limited per phone (`CLICK_OTP_MAX_PER_HOUR`, 5), per IP (`CLICK_OTP_MAX_PER_IP_HOUR`, 30) and by a
+    resend cooldown (`CLICK_OTP_RESEND_SECONDS`, 30), on top of the `auth` API throttle.
+  - Errors the customer sees: wrong code, expired code, too many attempts, wait before resending, sign-in unavailable.
+- **Sending the code:** `apps/identity/sms.py`. `CLICK_SMS_PROVIDER` is
+  - `""` in production until you configure a provider: requesting a code returns "Phone sign-in is temporarily
+    unavailable" (nothing is faked);
+  - `console` in development: the code is printed in the API terminal (`[development SMS] to +1650…: 123456 is your
+    Click. verification code…`); it is forced off when `DEBUG` is off;
+  - a dotted path to your SMS sender class with `send(phone_e164, text)`. Its credentials go in `backend/.env`.
 - **Identity model:**
   - `users.User` has an internal UUID primary key.
   - `customers.CustomerProfile.customer_code` is the permanent, customer-facing Click ID (`CLK-CS-XXXXXX`, random,
-    non-sequential, so it doesn't reveal how many customers Click has).
-  - `identity.ExternalIdentity(provider, subject)` stores the Firebase UID, unique per provider. The same UID always
-    maps to the same customer.
-  - A verified phone already on an account links back to it instead of creating a duplicate.
-- **Token verification:** `apps/identity/firebase.py` follows Firebase's documented third-party-JWT procedure:
-  - RS256 signature against Google's public `securetoken` certificates (cached)
-  - `aud` = project ID and `iss` = `https://securetoken.google.com/<project>`
-  - `exp`, `iat` and `auth_time` checked
-  - non-empty `sub`
-  - sign-in must be by `phone`, with a valid `phone_number`
+    non-sequential).
+  - `identity.ExternalIdentity(provider, subject)` links a user to the identity that proved their phone
+    (`phone_otp`, subject = E.164 phone).
+  - A verified phone already on an account links back to it instead of creating a duplicate, so customers who signed
+    in with the earlier provider sign straight in with their existing account.
 
-  **No service account or private key is used anywhere.** Nothing to leak.
+## Adding your SMS provider
 
-## Firebase Console setup (project `clickstartup26`)
+1. Write a class in the backend with `send(self, phone: str, text: str) -> None` that calls your provider's API and
+   raises on failure (a failed send never leaves a usable code behind).
+2. Set `CLICK_SMS_PROVIDER=<dotted.path.ToYourSender>` and the provider's credentials in `backend/.env`.
 
-1. **Authentication → Sign-in method → Phone:** enable.
-2. **Authentication → Settings → Authorized domains:** keep `localhost`, and add your production domain when you
-   deploy.
-3. **Test number (optional, for development):** under Authentication → Sign-in method → Phone → *Phone numbers for
-   testing*, add `+1 650-555-0101` with a 6-digit code of your choice. Signing in with that number reaches the seeded
-   test customer (`CLK-CS-TEST001`). No SMS is sent, and the code only works for that test number. The code is
-   stored in Firebase Console, never in Click's code.
-4. **Optional:** App Check, and SMS region policy (Authentication → Settings) to limit SMS to the countries you serve.
-
-**Frontend config** goes in `apps/customer/.env.local` (Git-ignored); see `apps/customer/.env.example`. Firebase *web*
-config values are public client identifiers, not secrets. Only Firebase Auth is loaded: no Analytics or other
-Google services.
-
-**Backend:** `FIREBASE_PROJECT_ID` (default `clickstartup26`).
-
-## Local end-to-end testing without SMS (Firebase Auth Emulator)
-
-```bash
-npx firebase-tools emulators:start --only auth --project demo-click     # in a scratch folder
-# backend
-DJANGO_DEBUG=true FIREBASE_PROJECT_ID=demo-click FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 python manage.py runserver
-# frontend
-VITE_FIREBASE_PROJECT_ID=demo-click VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run dev:customer
-```
-
-The emulator shows OTP codes at `http://127.0.0.1:9099/emulator/v1/projects/demo-click/verificationCodes`. The backend
-accepts emulator tokens only when `DEBUG` is on and the emulator host is set.
-
-## Changing the auth provider later
-
-1. **Backend:** add a verifier class next to `apps/identity/firebase.py` that returns
-   `VerifiedIdentity(provider, subject, phone_number)`, then register it in `settings.CLICK_IDENTITY_PROVIDERS`.
-2. **Frontend:** add an adapter implementing `PhoneAuthProvider` in `apps/customer/src/auth/phone/` and set
-   `VITE_PHONE_AUTH_PROVIDER`.
-
-No screen, session, customer or data model changes. Existing customers re-link automatically on their first sign-in
-with the new provider, because their phone number is already verified.
+No app, screen, session or data-model change is needed.
 
 ## Development-only sign-in
 
@@ -79,7 +53,7 @@ with the new provider, because their phone number is already verified.
 
 ## Click Partner
 
-The Partner App uses the same exchange. For a new phone, instead of the customer profile signup it calls
+The Partner App uses the same OTP request and exchange. For a new phone, instead of the customer profile signup it calls
 `POST /api/v1/auth/identity/partner-signup {signupToken}`, which creates a **phone-only** Click user (no email, no
 password) linked by `ExternalIdentity`. Business details are collected during partner onboarding and stored on the
 `Partner` (`apps/partners`). A phone already verified on a customer account resolves to that same user, so one

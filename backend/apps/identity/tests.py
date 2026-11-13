@@ -1,99 +1,70 @@
-import time
-from unittest import mock
-
-import jwt
 import pytest
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
 from django.test import override_settings
+from django.utils import timezone
 
 from apps.customers.models import CustomerProfile
-from apps.identity.firebase import FirebaseIdTokenVerifier
-from apps.identity.models import ExternalIdentity
-from apps.identity.providers import IdentityError
+from apps.identity.models import ExternalIdentity, OtpChallenge
 from apps.users.models import User
+from conftest import SMS_OUTBOX, otp_credential
 
 pytestmark = pytest.mark.django_db
-PROJECT = "clickstartup26"
 ADDR = {"label": "home", "recipientName": "Meera", "phone": "+91 90000 11111", "line1": "1 Lake View", "city": "Bengaluru", "postalCode": "560001"}
+PHONE = "+919000011111"
 
 
-def _keypair():
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test")])
-    import datetime
+# --- Click phone OTP ----------------------------------------------------------------------------------------------
 
-    cert = (x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key())
-            .serial_number(1).not_valid_before(datetime.datetime(2020, 1, 1)).not_valid_after(datetime.datetime(2040, 1, 1))
-            .sign(key, hashes.SHA256()))
-    return key, cert.public_bytes(serialization.Encoding.PEM).decode()
-
-
-KEY, CERT = _keypair()
-OTHER_KEY, _ = _keypair()
-
-
-def token(uid="uid-1", phone="+919000011111", provider="phone", key=KEY, kid="k1", **over):
-    now = int(time.time())
-    claims = {"iss": f"https://securetoken.google.com/{PROJECT}", "aud": PROJECT, "sub": uid, "iat": now, "exp": now + 3600,
-              "auth_time": now, "phone_number": phone, "firebase": {"sign_in_provider": provider}}
-    claims.update(over)
-    return jwt.encode(claims, key, algorithm="RS256", headers={"kid": kid})
+def test_code_is_sent_hashed_single_use_and_expires(api, settings):
+    r = api.post("/api/v1/auth/otp/request", {"phone": PHONE})
+    assert r.status_code == 201 and r.json()["expiresIn"] == settings.CLICK_OTP_TTL_SECONDS
+    phone, text = SMS_OUTBOX[-1]
+    code = text[:6]
+    ch = OtpChallenge.objects.get()
+    assert phone == PHONE and code.isdigit() and code not in ch.code_hash  # only a hash is stored
+    cred = f"{r.json()['challengeId']}.{code}"
+    assert exchange(api, cred).json()["status"] == "profile_required"
+    assert exchange(api, cred).json()["error"]["code"] == "code_expired"  # used once
+    late = otp_credential(api, "+919000022222")
+    OtpChallenge.objects.filter(phone="+919000022222").update(expires_at=timezone.now())
+    assert exchange(api, late).json()["error"]["code"] == "code_expired"
 
 
-@pytest.fixture(autouse=True)
-def certs():
-    with mock.patch("apps.identity.firebase.fetch_certificates", return_value={"k1": CERT}):
-        yield
+def test_wrong_codes_are_limited_and_requests_rate_limited(api, settings):
+    settings.CLICK_OTP_MAX_ATTEMPTS, settings.CLICK_OTP_RESEND_SECONDS = 3, 30
+    cred = otp_credential(api, PHONE, wrong=True)
+    assert exchange(api, cred).json()["error"]["code"] == "invalid_code"
+    assert exchange(api, cred).json()["error"]["code"] == "invalid_code"
+    assert exchange(api, cred).json()["error"]["code"] == "too_many_attempts"
+    right = cred.split(".")[0] + "." + SMS_OUTBOX[-1][1][:6]
+    assert exchange(api, right).json()["error"]["code"] == "code_expired"  # burnt after the limit
+    again = api.post("/api/v1/auth/otp/request", {"phone": PHONE})
+    assert again.status_code == 429 and again.json()["error"]["code"] == "otp_cooldown"
+    settings.CLICK_OTP_RESEND_SECONDS = 0
+    settings.CLICK_OTP_MAX_PER_HOUR = 2
+    assert api.post("/api/v1/auth/otp/request", {"phone": PHONE}).status_code == 201
+    assert api.post("/api/v1/auth/otp/request", {"phone": PHONE}).json()["error"]["code"] == "too_many_requests"
+    assert api.post("/api/v1/auth/otp/request", {"phone": "12345"}).json()["error"]["code"] == "invalid_phone"
 
 
-def verify(t):
-    return FirebaseIdTokenVerifier().verify(t)
-
-
-# --- verifier: Firebase's documented checks ---------------------------------------
-
-def test_valid_firebase_phone_token():
-    v = verify(token())
-    assert (v.provider, v.subject, v.phone_number) == ("firebase", "uid-1", "+919000011111")
-
-
-@pytest.mark.parametrize("bad", [
-    dict(key=OTHER_KEY),                                   # wrong signature
-    dict(kid="unknown"),                                   # unknown key id
-    dict(aud="someone-else"),                              # wrong project
-    dict(iss="https://securetoken.google.com/other"),      # wrong issuer
-    dict(exp=int(time.time()) - 3600),                     # expired
-    dict(auth_time=int(time.time()) + 3600),               # auth in the future
-    dict(provider="password"),                             # not a phone sign-in
-    dict(phone=""),                                        # no verified phone
-    dict(uid=""),                                          # empty subject
-])
-def test_invalid_tokens_are_rejected(bad):
-    with pytest.raises(IdentityError):
-        verify(token(**bad))
-
-
-def test_unsigned_tokens_rejected_outside_emulator():
-    t = jwt.encode({"sub": "x"}, None, algorithm="none")
-    with pytest.raises(IdentityError):
-        verify(t)
-
-
-@override_settings(DEBUG=True, FIREBASE_AUTH_EMULATOR_HOST="127.0.0.1:9099")
-def test_emulator_tokens_only_in_debug_with_emulator_host():
-    now = int(time.time())
-    t = jwt.encode({"iss": f"https://securetoken.google.com/{PROJECT}", "aud": PROJECT, "sub": "emu", "iat": now, "exp": now + 60,
-                    "auth_time": now, "phone_number": "+16505550199", "firebase": {"sign_in_provider": "phone"}}, None, algorithm="none")
-    assert verify(t).subject == "emu"
+def test_newest_code_replaces_older_ones_and_no_sender_means_unavailable(api, settings):
+    settings.CLICK_OTP_RESEND_SECONDS = 0
+    first = otp_credential(api, PHONE)
+    second = otp_credential(api, PHONE)
+    assert exchange(api, first).json()["error"]["code"] == "code_expired"
+    assert exchange(api, second).json()["status"] == "profile_required"
+    settings.CLICK_SMS_PROVIDER = ""
+    r = api.post("/api/v1/auth/otp/request", {"phone": "+919000033333"})
+    assert r.status_code == 503 and r.json()["error"]["code"] == "otp_unavailable"
 
 
 # --- exchange + signup -------------------------------------------------------------
 
 def exchange(api, t):
-    return api.post("/api/v1/auth/identity/exchange", {"provider": "firebase", "token": t})
+    return api.post("/api/v1/auth/identity/exchange", {"provider": "phone_otp", "token": t})
+
+
+def token(api, phone=PHONE):
+    return otp_credential(api, phone)
 
 
 def signup(api, signup_token, email="meera@example.com", addresses=None, name="Meera Rao"):
@@ -101,7 +72,7 @@ def signup(api, signup_token, email="meera@example.com", addresses=None, name="M
 
 
 def test_new_customer_flow_creates_one_customer_with_click_id_and_identity(api):
-    r = exchange(api, token())
+    r = exchange(api, token(api))
     assert r.status_code == 200 and r.json()["status"] == "profile_required"
     st = r.json()["signupToken"]
     assert r.json()["phoneNumber"] == "+919000011111" and "access" not in r.json()
@@ -113,18 +84,18 @@ def test_new_customer_flow_creates_one_customer_with_click_id_and_identity(api):
     assert r.cookies["click_refresh"]["httponly"]
     u = User.objects.get(email="meera@example.com")
     link = ExternalIdentity.objects.get(user=u)
-    assert (link.provider, link.subject) == ("firebase", "uid-1")
+    assert (link.provider, link.subject) == ("phone_otp", "+919000011111")
     assert u.customer_profile.addresses.count() == 2 and u.customer_profile.addresses.filter(is_default=True).count() == 1
     assert u.customer_profile.activities.filter(verb="account.signup").exists()
 
-    # Returning customer: same Firebase UID -> same Click customer, straight to a session.
-    r2 = exchange(api, token())
+    # Returning customer: same verified phone -> same Click customer, straight to a session.
+    r2 = exchange(api, token(api))
     assert r2.json()["status"] == "authenticated" and r2.json()["user"]["customerCode"] == user["customerCode"]
     assert CustomerProfile.objects.count() == 1
 
 
 def test_signup_is_idempotent_no_duplicates(api):
-    st = exchange(api, token()).json()["signupToken"]
+    st = exchange(api, token(api)).json()["signupToken"]
     a = signup(api, st)
     b = signup(api, st)
     assert a.status_code == 201 and b.status_code == 200
@@ -134,19 +105,19 @@ def test_signup_is_idempotent_no_duplicates(api):
 def test_verified_phone_on_existing_account_links_instead_of_duplicating(api):
     u = User.objects.create_user("old@example.com", None, phone="+919000011111", phone_verified=True)
     CustomerProfile.objects.create(user=u)
-    r = exchange(api, token(uid="new-uid"))
+    r = exchange(api, token(api))
     assert r.json()["status"] == "authenticated" and r.json()["user"]["id"] == str(u.id)
-    assert ExternalIdentity.objects.get(subject="new-uid").user == u
+    assert ExternalIdentity.objects.get(provider="phone_otp").user == u
 
 
 def test_unverified_phone_match_does_not_hijack_account(api):
     u = User.objects.create_user("someone@example.com", None, phone="+919000011111", phone_verified=False)
     CustomerProfile.objects.create(user=u)
-    assert exchange(api, token()).json()["status"] == "profile_required"
+    assert exchange(api, token(api)).json()["status"] == "profile_required"
 
 
 def test_signup_validation(api):
-    st = exchange(api, token()).json()["signupToken"]
+    st = exchange(api, token(api)).json()["signupToken"]
     User.objects.create_user("taken@example.com", None)
     assert signup(api, st, email="taken@example.com").json()["error"]["code"] == "email_taken"
     assert signup(api, st, addresses=[ADDR] * 6).status_code == 400
@@ -156,10 +127,10 @@ def test_signup_validation(api):
     assert signup(api, "forged-token").json()["error"]["code"] == "signup_invalid"
 
 
-def test_invalid_provider_token_and_unknown_provider(api):
-    assert exchange(api, token(key=OTHER_KEY)).json()["error"]["code"] == "identity_invalid"
-    r = api.post("/api/v1/auth/identity/exchange", {"provider": "magic", "token": token()})
-    assert r.status_code == 401
+def test_invalid_credential_and_unknown_provider(api):
+    assert exchange(api, "not-a-challenge.123456").json()["error"]["code"] == "code_expired"
+    r = api.post("/api/v1/auth/identity/exchange", {"provider": "firebase", "token": token(api)})
+    assert r.status_code == 401 and r.json()["error"]["code"] == "identity_invalid"  # Firebase is no longer accepted
 
 
 def test_address_limit_of_five(auth_api):
@@ -195,3 +166,25 @@ def test_avatar_upload_reencodes_and_strips_metadata(auth_api, tmp_path, setting
     bad = BytesIO(b"not an image")
     bad.name = "x.png"
     assert auth_api.post("/api/v1/me/avatar", {"image": bad}, format="multipart").json()["error"]["code"] == "image_invalid"
+
+
+def test_account_deletion_needs_fresh_otp_and_no_blockers(api):
+    from decimal import Decimal
+
+    from apps.wallet.models import WalletTransaction
+
+    u = User.objects.create_user("del@example.com", None, phone=PHONE, phone_verified=True, full_name="Del Me")
+    c = CustomerProfile.objects.create(user=u)
+    api.force_authenticate(u)
+    WalletTransaction.objects.create(customer=c, kind="adjustment", amount=Decimal("10"), description="Opening balance")
+    assert api.get("/api/v1/me/delete").json()["blockers"][0]["code"] == "wallet_balance"
+    assert api.post("/api/v1/me/delete", {"token": "x.123456"}).status_code == 401  # no fresh code, no deletion
+    other = otp_credential(api, "+919000099999")
+    assert api.post("/api/v1/me/delete", {"token": other}).json()["error"]["code"] == "invalid_code"  # someone else's phone
+    r = api.post("/api/v1/me/delete", {"token": otp_credential(api, PHONE)})
+    assert r.json()["error"]["code"] == "deletion_blocked"
+    WalletTransaction.objects.create(customer=c, kind="adjustment", amount=Decimal("-10"), description="Spent")
+    assert api.post("/api/v1/me/delete", {"token": otp_credential(api, PHONE), "reason": "Not using it"}).json()["deleted"] is True
+    u.refresh_from_db()
+    assert not u.is_active and u.email is None and u.phone == "" and u.full_name == "Deleted customer"
+    assert CustomerProfile.objects.filter(pk=c.pk).exists()  # records are kept, anonymised

@@ -1,61 +1,70 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
-import { Button, Icon, Sheet } from '../components/ui';
-import { AddressForm } from '../features/addresses/AddressForm';
+import { Icon, Sheet } from '../components/ui';
 import { useDeliveryLocation } from './LocationProvider';
 
 export const formatAddressLine = (a: { line1: string; line2?: string; city: string }) =>
   [a.line1, a.line2, a.city].filter(Boolean).join(', ');
 
+/** Short "area, city" line for the header (the full address is in the selector). */
+export const formatArea = (a: { line2?: string; city: string; state?: string }) =>
+  [a.line2 || a.city, a.line2 ? a.city : a.state].filter(Boolean).join(', ');
+
+/**
+ * Home's location selector: choose the active app location from the addresses already saved in
+ * Profile → Addresses. It never creates or edits addresses; that happens on the Addresses page.
+ */
 export function LocationSelector({ compact = false }: { compact?: boolean }) {
-  const { status, user } = useAuth();
+  const { status } = useAuth();
   const { addresses, selected, select, isLoading } = useDeliveryLocation();
   const [open, setOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
   const navigate = useNavigate();
 
-  const label = status !== 'authenticated' ? 'Set location' : isLoading ? 'Loading…' : selected ? selected.label : 'Add address';
-  const detail = selected ? formatAddressLine(selected) : status === 'authenticated' ? 'No saved address yet' : 'Sign in to save addresses';
+  const label = status !== 'authenticated' ? 'Set location' : isLoading ? 'Locating…' : selected ? selected.label : 'Choose a location';
+  const detail = selected ? formatArea(selected) : status === 'authenticated' ? 'Pick a saved address' : 'Sign in to use your addresses';
 
   return (
     <>
       <button
-        type="button"
-        className={`location ${compact ? 'location--compact' : ''}`}
+        type="button" className={`location ${compact ? 'location--compact' : ''}`}
         onClick={() => (status === 'authenticated' ? setOpen(true) : navigate('/login'))}
-        aria-label={`Delivery location: ${selected ? formatAddressLine(selected) : label}. Change`}
+        aria-label={`Delivering to ${selected ? `${selected.label}, ${formatAddressLine(selected)}` : label}. Change location`}
       >
-        <Icon name="pin" size={20} className="location__pin" />
+        <span className="location__pin"><Icon name="pin" size={18} /></span>
         <span className="location__text">
-          <span className="location__label">{label} <Icon name="chevron" size={14} /></span>
-          {!compact && <span className="location__detail">{detail}</span>}
+          <span className="location__eyebrow">Delivering to</span>
+          <span className="location__label"><span className="location__name">{label}</span><span className="location__detail"> · {detail}</span></span>
         </span>
+        <Icon name="chevron" size={16} className="location__chev" />
       </button>
-      <Sheet open={open} onClose={() => { setOpen(false); setAdding(false); }} label="Choose delivery location">
-        <div className="stack" style={{ padding: 'var(--s-5)' }}>
-          <div className="spread"><h2>Deliver to</h2><button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button></div>
-          {adding ? (
-            <AddressForm defaultName={user?.fullName} onSaved={(a) => { select(a.id); setAdding(false); setOpen(false); }} onCancel={() => setAdding(false)} />
+
+      <Sheet open={open} onClose={() => setOpen(false)} label="Choose your location">
+        <div className="stack loc-sheet">
+          <div className="spread">
+            <h2>Choose location</h2>
+            <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button>
+          </div>
+          {addresses.length === 0 ? (
+            <div className="hstate">
+              <span className="hstate__icon"><Icon name="pin" size={18} /></span>
+              <div><strong>No saved addresses yet</strong><span>Add your addresses in Profile → Addresses, then choose one here.</span></div>
+              <Link to="/account/addresses" className="btn btn--primary btn--sm" onClick={() => setOpen(false)}>Go to Addresses</Link>
+            </div>
           ) : (
-            <>
-              <div className="stack" style={{ gap: 'var(--s-2)' }} role="radiogroup" aria-label="Saved addresses">
-                {addresses.length === 0 && <p className="muted">You haven’t saved any addresses yet.</p>}
-                {addresses.map((a) => (
-                  <label key={a.id} className="option">
-                    <input type="radio" name="loc" checked={selected?.id === a.id} onChange={() => { select(a.id); setOpen(false); }} />
-                    <div>
-                      <strong style={{ textTransform: 'capitalize' }}>{a.label}</strong> {a.isDefault && <span className="badge">Default</span>}
-                      <div className="muted small">{formatAddressLine(a)}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              <div className="row">
-                <Button onClick={() => setAdding(true)}>+ Add address</Button>
-                <Link to="/account/addresses" className="btn btn--ghost" onClick={() => setOpen(false)}>Manage addresses</Link>
-              </div>
-            </>
+            <div className="stack" style={{ gap: 'var(--s-2)' }} role="radiogroup" aria-label="Saved addresses">
+              {addresses.map((a) => (
+                <label key={a.id} className={`loc-option ${selected?.id === a.id ? 'loc-option--on' : ''}`}>
+                  <input type="radio" name="loc" className="visually-hidden" checked={selected?.id === a.id} onChange={() => { select(a.id); setOpen(false); }} />
+                  <span className="loc-option__icon"><Icon name={a.label === 'work' ? 'briefcase' : a.label === 'home' ? 'home' : 'pin'} size={18} /></span>
+                  <span className="loc-option__text">
+                    <strong>{a.label}{a.isDefault && <span className="badge" style={{ marginLeft: 6 }}>Default</span>}</strong>
+                    <span className="small muted">{formatAddressLine(a)}</span>
+                  </span>
+                  {selected?.id === a.id && <Icon name="check" size={18} className="loc-option__check" />}
+                </label>
+              ))}
+            </div>
           )}
         </div>
       </Sheet>

@@ -20,7 +20,7 @@
 .auth-panel__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-5); min-height: 36px; }
 .auth-panel__body { display: flex; flex-direction: column; gap: var(--s-5); }
 .auth-shell--plain { grid-template-rows: 1fr; }
-.auth-shell--plain .auth-shell__panel { margin-top: 0; align-items: center; padding: var(--s-4); background: radial-gradient(120% 80% at 50% 0%, #efebff 0%, var(--c-bg) 60%); }
+.auth-shell--plain .auth-shell__panel { margin-top: 0; align-items: center; padding: var(--s-4); background: radial-gradient(120% 80% at 50% 0%, rgb(79 107 255 / 18%) 0%, var(--c-bg) 60%); }
 .auth-shell--plain .auth-panel { border-radius: 28px; min-height: 0; box-shadow: var(--shadow-2); }
 .auth-intro { display: flex; flex-direction: column; gap: 6px; }
 .auth-intro h1 { font-size: clamp(1.6rem, 6vw, 2rem); }

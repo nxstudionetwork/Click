@@ -5,19 +5,22 @@ import { useAddresses } from '../features/addresses/useAddresses';
 
 /**
  * The customer's selected delivery location, chosen from saved addresses.
- * The selection is a per-device preference (localStorage); addresses
- * themselves live on the server. No GPS/live location is used yet.
+ * The selection is a per-device preference (localStorage); addresses live on the server (PostgreSQL).
+ * `point` is the selected address's saved coordinates: Home's "Near you" uses it only when it exists,
+ * so proximity is never guessed. Device location is used only when the customer taps "Use current location".
  */
 const KEY = 'click.selectedAddressId';
 
 interface LocationValue {
   addresses: Address[];
   selected: Address | null;
+  /** Coordinates of the selected address, when known. */
+  point: { lat: number; lng: number } | null;
   isLoading: boolean;
   select: (id: string) => void;
 }
 
-const LocationContext = createContext<LocationValue>({ addresses: [], selected: null, isLoading: false, select: () => {} });
+const LocationContext = createContext<LocationValue>({ addresses: [], selected: null, point: null, isLoading: false, select: () => {} });
 
 function readStored(): string | null {
   try {
@@ -42,6 +45,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LocationValue>(() => ({
     addresses,
     selected,
+    point: selected?.latitude && selected?.longitude ? { lat: Number(selected.latitude), lng: Number(selected.longitude) } : null,
     isLoading: status === 'loading' || (status === 'authenticated' && query.isPending),
     select: (id) => {
       setSelectedId(id);

@@ -1,101 +1,139 @@
-import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Icon, Logo } from '@click/ui';
-import type { PartnerStatus } from '@click/api';
-import { cardData, PartnerCard } from '../components/PartnerCard';
-import { StatusBadge } from '../components/StatusBadge';
-import { iconFor } from '../config/visuals';
-import { greeting } from '../lib/format';
+import { Button, Icon, Skeleton } from '@click/ui';
+import type { PartnerHome, PartnerStatus } from '@click/api';
+import { AppShell } from '../components/AppShell';
+import { Photo } from '../components/Photo';
+import { visualFor } from '../config/visuals';
+import { LocationShare } from '../features/home/LocationShare';
+import { useHome } from '../features/home/queries';
+import {
+  Activity, AvailabilityCard, EarningsCard, Empty, listSkeleton, Module, Overview, Performance, QuickActions, SectionBody, WorkList,
+} from '../features/home/sections';
+import { apiMessage, greeting } from '../lib/format';
 import { usePartnerSession } from '../session/PartnerSession';
 
 const STATUS_COPY: Partial<Record<PartnerStatus, string>> = {
   verification_pending: 'Click is reviewing your profile. You can start receiving work once you’re verified.',
-  verified: 'You’re verified. Activation is the next step.',
-  active: 'Your Partner account is active.',
-  rejected: 'Your verification wasn’t approved. Contact Click Partner support to resolve it.',
-  suspended: 'Your Partner account is suspended. Contact Click Partner support.',
+  rejected: 'Your verification wasn’t approved. Contact Click Partner support with your Partner ID to resolve it.',
+  suspended: 'Your Partner account is suspended. Contact Click Partner support with your Partner ID.',
   inactive: 'Your Partner account is inactive.',
 };
 
-/**
- * Minimal Partner Home for this phase: confirms who is signed in and which
- * category they belong to. Category-specific modules come from the server
- * configuration and show honest empty states; no activity is invented.
- */
+const NOUN_EMPTY: Record<string, { title: string; message: string }> = {
+  ride: { title: 'You’re all caught up.', message: 'No ride requests right now.' },
+  order: { title: 'You’re all caught up.', message: 'No new orders right now.' },
+  booking: { title: 'You’re all caught up.', message: 'No shows starting in the next two hours.' },
+};
+
+const ACTIVE_TITLE: Record<string, string> = { ride: 'Active trip', order: 'In progress', booking: 'Now showing' };
+
+function Hero({ home, loading }: { home?: PartnerHome; loading: boolean }) {
+  const { partner: s } = usePartnerSession();
+  const partner = s.state!.partner!;
+  const scene = visualFor(partner.partnerType.slug).scenes[0]!;
+  return (
+    <section className="hero" aria-labelledby="hello">
+      <div className="hero__media" aria-hidden="true">
+        <Photo photo={scene.photo} alt="" sizes="(min-width: 960px) 760px, 100vw" eager />
+      </div>
+      <div className="hero__content">
+        <p className="hero__eyebrow">{partner.category.name} workspace</p>
+        <h1 id="hello">{greeting()}{home ? `, ${home.greetingName}` : ''}</h1>
+        {loading ? <Skeleton width="70%" height={18} /> : <p className="hero__context">{home?.context}</p>}
+      </div>
+    </section>
+  );
+}
+
 export function HomePage() {
-  const { partner: partnerState, logout } = usePartnerSession();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const partner = partnerState.state?.partner;
+  const { partner: state } = usePartnerSession();
+  const partner = state.state?.partner;
+  const home = useHome();
   if (!partner?.partnerCode) return <Navigate to="/" replace />;
-  const home = partner.category.configuration.home;
-  const firstName = (partner.profile.contactName || partner.businessName).split(' ')[0];
-  const canGoOnline = partner.status === 'active';
-  const data = cardData(partner)!;
+  const data = home.data;
+  const loading = home.isPending;
+  const noun = data?.workspace.workNoun ?? 'work';
+  const hasActive = data?.active.status === 'ok' && data.active.data.length > 0;
+  const incoming = data?.incoming.status === 'ok' ? data.incoming.data : [];
+  const live = data?.workspace.state === 'live';
 
   return (
-    <div className="home">
-      <header className="home__bar">
-        <Logo product="Partner" size={26} />
-        <div className="menu">
-          <button type="button" className="avatar-btn" aria-haspopup="menu" aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)} aria-label="Account menu">
-            {partner.businessName.slice(0, 1).toUpperCase()}
-          </button>
-          {menuOpen && (
-            <div className="menu__list" role="menu">
-              <Link role="menuitem" to="/card" className="menu__item"><Icon name="card" size={18} /> Partner card</Link>
-              <button role="menuitem" type="button" className="menu__item" onClick={() => void logout()}><Icon name="logout" size={18} /> Sign out</button>
-            </div>
-          )}
-        </div>
-      </header>
-      <main id="main" className="home__main">
-        <section className="home__hero" aria-labelledby="hello">
-          <div>
-            <p className="muted">{greeting()},</p>
-            <h1 id="hello">{firstName}</h1>
-            <p className="home__biz">{partner.businessName}</p>
+    <AppShell>
+      <div className="dash">
+        {home.isError && !data ? (
+          <div className="dash__error" role="alert">
+            <Icon name="alert" size={28} />
+            <h2>Couldn’t load your dashboard</h2>
+            <p className="muted">{apiMessage(home.error)}</p>
+            <Button onClick={() => void home.refetch()}>Try again</Button>
           </div>
-          <StatusBadge status={partner.status} label={partner.statusLabel} />
-        </section>
-
-        {STATUS_COPY[partner.status] && (
-          <div className={`notice ${partner.isVerified ? 'notice--info' : 'notice--warning'}`} role="status">
-            <Icon name={partner.isVerified ? 'shield' : 'clock'} size={18} /><span>{STATUS_COPY[partner.status]}</span>
-          </div>
-        )}
-
-        <div className="home__grid">
-          <section className="home__identity" aria-label="Your Partner identity">
-            <PartnerCard data={data} compact />
-            <dl className="id-list">
-              <div><dt>Partner ID</dt><dd className="mono">{partner.partnerCode}</dd></div>
-              <div><dt>Partner category</dt><dd><Icon name={iconFor(partner.category.icon)} size={16} /> {partner.category.name}</dd></div>
-              <div><dt>Partner type</dt><dd>{partner.partnerType.name}</dd></div>
-            </dl>
-          </section>
-
-          <section className="home__activity" aria-labelledby="today-h">
-            <div className="spread">
-              <h2 id="today-h">Today’s activity</h2>
-              {home.availabilityLabel && (
-                <span className="availability" title={canGoOnline ? undefined : 'Available once your account is active'}>
-                  <span className="availability__label">{home.availabilityLabel}</span>
-                  <span className="availability__state"><Icon name="clock" size={14} /> {canGoOnline ? (partner.isAvailable ? 'On' : 'Off') : 'After verification'}</span>
-                </span>
+        ) : (
+          <>
+            <div className="dash__main">
+              <Hero home={data} loading={loading} />
+              {STATUS_COPY[partner.status] && (
+                <div className="notice notice--warning" role="status"><Icon name="clock" size={18} /><span>{STATUS_COPY[partner.status]}</span></div>
               )}
+              {home.isError && data && (
+                <div className="notice notice--warning" role="status"><Icon name="alert" size={18} /><span>Can’t refresh right now. Showing what Click last sent ({new Date(data.generatedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}).</span></div>
+              )}
+              {loading ? <Skeleton height={92} radius={20} /> : data && <AvailabilityCard home={data} />}
+              {data && <LocationShare home={data} />}
+
+              {!loading && data && !live && (
+                <section className="upcoming" aria-labelledby="up-h">
+                  <span className="upcoming__icon" aria-hidden="true"><Icon name={data.workspace.state === 'upcoming' ? 'sparkle' : 'store'} size={24} /></span>
+                  <div>
+                    <h2 id="up-h">{data.workspace.state === 'upcoming' ? 'Coming to Click' : 'Almost ready'}</h2>
+                    <p>{data.workspace.message}</p>
+                    <Link to="/card" className="text-btn">View your Partner card <Icon name="right" size={14} /></Link>
+                  </div>
+                </section>
+              )}
+
+              {(loading || hasActive) && (
+                <Module id="active-h" title={ACTIVE_TITLE[noun] ?? 'Active work'} icon="clock" className="mod--active">
+                  <SectionBody section={data?.active} loading={loading} skeleton={listSkeleton}>
+                    {(items) => <WorkList items={items} emphasis />}
+                  </SectionBody>
+                </Module>
+              )}
+
+              {(loading || live) && (
+                <Module id="action-h" title="Action required" icon="bell" className="mod--action"
+                  action={live ? <Link to="/work" className="text-btn">View all <Icon name="right" size={14} /></Link> : undefined}>
+                  <SectionBody section={data?.actionRequired} loading={loading} skeleton={listSkeleton}
+                    empty={(items) => (items.length ? null : (
+                      <Empty icon="check" title={NOUN_EMPTY[noun]?.title ?? 'You’re all caught up.'}
+                        message={data?.availability.isOn || !data?.availability.canChange ? NOUN_EMPTY[noun]?.message ?? 'Nothing needs your attention.'
+                          : `${NOUN_EMPTY[noun]?.message ?? ''} ${data.availability.turnOn} to start receiving work.`.trim()} />
+                    ))}>
+                    {(items) => <WorkList items={items} />}
+                  </SectionBody>
+                </Module>
+              )}
+
+              {data && <QuickActions home={data} />}
+
+              {incoming.length > 0 && (
+                <Module id="incoming-h" title="Later today" icon="history">
+                  <WorkList items={incoming} />
+                </Module>
+              )}
+
+              {(loading || live) && <Overview home={data} loading={loading} />}
             </div>
-            <ul className="modules">
-              {home.modules.map((m) => (
-                <li key={m.key} className="module">
-                  <span className="module__label">{m.label}</span>
-                  <span className="module__empty">{m.empty}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </main>
-    </div>
+
+            {(loading || live) && (
+              <aside className="dash__side" aria-label="Earnings and performance">
+                <EarningsCard home={data} loading={loading} />
+                <Performance home={data} loading={loading} />
+                <Activity home={data} loading={loading} />
+              </aside>
+            )}
+          </>
+        )}
+      </div>
+    </AppShell>
   );
 }

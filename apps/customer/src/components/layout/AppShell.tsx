@@ -1,24 +1,28 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { themeForPath, type Theme } from '../../config/services';
-import { usingMockData } from '../../data/stores-source';
 import { useCart } from '../../features/cart/useCart';
+import { ExploreSheet } from '../../features/explore/ExploreSheet';
 import { useUnreadCount } from '../../features/notifications/hooks';
 import { LocationSelector } from '../../location/LocationSelector';
-import { BuddyLauncher } from '../shell/BuddyLauncher';
+import { BuddySelector } from '../shell/BuddySelector';
+import { BuzzEntry } from '../shell/BuzzEntry';
 import { GlobalSearch } from '../shell/GlobalSearch';
-import { MenuHub } from '../shell/MenuHub';
-import { ProfileMenu } from '../shell/ProfileMenu';
+import { ProfileButton } from '../shell/ProfileButton';
 import { Icon, type IconName } from '../ui';
 import { Logo } from './Logo';
 
-/** Primary navigation: the most frequent destinations, plus Menu for everything else. */
-const PRIMARY: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: '/', label: 'Home', icon: 'home', end: true },
-  { to: '/rides', label: 'Ride', icon: 'ride' },
-  { to: '/food', label: 'Food', icon: 'food' },
-  { to: '/services', label: 'Services', icon: 'wrench' },
+/**
+ * Primary navigation. Each destination carries its own service colour (inactive: subtle, active: strong).
+ * Explore opens as a bottom sheet over the current page (`sheet`); the others are routes.
+ */
+export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme; end?: boolean; sheet?: boolean }[] = [
+  { to: '/', label: 'Home', icon: 'home', theme: 'default', end: true },
+  { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
+  { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
+  { to: '/shopping', label: 'Shop', icon: 'shop', theme: 'shopping' },
+  { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
 ];
 
 const ThemeOverride = createContext<(t: Theme | null) => void>(() => {});
@@ -33,11 +37,19 @@ export function AppShell() {
   const { pathname } = useLocation();
   const { data: cart } = useCart();
   const { data: unread = 0 } = useUnreadCount();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [override, setOverride] = useState<Theme | null>(null);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const navigate = useNavigate();
+  const closeExplore = useCallback(() => setExploreOpen(false), []);
+  // Explore is for signed-in customers; others are sent to sign in first.
+  const openExplore = () => (status === 'authenticated' ? setExploreOpen(true) : navigate('/login?next=/explore'));
   const count = cart?.itemCount ?? 0;
   const theme = override ?? themeForPath(pathname);
-  const focused = pathname === '/buddy' || pathname === '/checkout';
+  // The global search belongs to Home (and its results page) only; service pages have their own search,
+  // and other pages have none. The header itself stays fixed on every page.
+  const showSearch = pathname === '/' || pathname === '/search';
+  // The active location is app-wide state (LocationProvider); only Home shows and changes it in the header.
+  const showLocation = pathname === '/';
   const headerRef = useRef<HTMLElement>(null);
 
   // Sticky page elements sit below the real header height, which varies by breakpoint and page.
@@ -49,40 +61,41 @@ export function AppShell() {
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => { window.scrollTo?.(0, 0); }, [pathname]);
 
   return (
     <ThemeOverride.Provider value={setOverride}>
       <div className="shell" data-theme={theme}>
         <a href="#main" className="skip-link">Skip to content</a>
-        {usingMockData && <div className="mock-banner">Showing TEMPORARY MOCK DATA for discovery — not real stores</div>}
-        {import.meta.env.DEV && !usingMockData && <div className="mock-banner">Development build · records shown are DEVELOPMENT MOCK DATA, not real stores or customers</div>}
         <header className="header" ref={headerRef}>
           <div className="header__bar">
-            <Link to="/" aria-label="Click home" className="header__logo"><Logo /></Link>
-            <div className="header__location"><LocationSelector /></div>
-            {!focused && <div className="header__search"><GlobalSearch /></div>}
+            <Link to="/" aria-label="Click. home" className="header__logo"><Logo /></Link>
+            {showLocation && <div className="header__location"><LocationSelector /></div>}
+            {showSearch ? <div className="header__search"><GlobalSearch /></div> : <div className="header__spacer" />}
             <div className="header__actions">
-              <BuddyLauncher />
-              {status === 'authenticated' && (
-                <Link to="/notifications" className="icon-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
-                  <Icon name="bell" />
-                  {unread > 0 && <span className="icon-btn__count">{unread > 9 ? '9+' : unread}</span>}
+              <BuddySelector />
+              <Link to="/notifications" className="icon-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
+                <Icon name="bell" />
+                {status === 'authenticated' && unread > 0 && <span className="icon-btn__count">{unread > 99 ? '99+' : unread}</span>}
+              </Link>
+              {count > 0 && (
+                <Link to="/cart" className="icon-btn" aria-label={`Cart, ${count} items`}>
+                  <Icon name="bag" />
+                  <span key={count} className="icon-btn__count icon-btn__count--pop">{count}</span>
                 </Link>
               )}
-              <Link to="/cart" className="icon-btn" aria-label={`Cart, ${count} items`}>
-                <Icon name="bag" />
-                {count > 0 && <span key={count} className="icon-btn__count icon-btn__count--pop">{count}</span>}
-              </Link>
-              {status === 'authenticated' ? <ProfileMenu /> : status === 'anonymous' ? <Link to="/login" className="btn btn--secondary btn--sm">Sign in</Link> : null}
+              <ProfileButton />
             </div>
           </div>
-          <div className="header__mobile-location"><LocationSelector compact /></div>
-          {!focused && <div className="header__mobile-search"><GlobalSearch compact /></div>}
+          {showLocation && <div className="header__mobile-location"><LocationSelector compact /></div>}
+          {showSearch && <div className="header__mobile-search"><GlobalSearch compact /></div>}
           <nav className="header__nav" aria-label="Primary">
-            {PRIMARY.map((n) => <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} size={18} />{n.label}</NavLink>)}
-            <button type="button" className={menuOpen ? 'active' : ''} onClick={() => setMenuOpen(true)} aria-haspopup="dialog"><Icon name="menu" size={18} />Menu</button>
+            {PRIMARY.map((n) => n.sheet ? (
+              <button key={n.to} type="button" data-theme={n.theme} className={exploreOpen || pathname === n.to ? 'active' : ''}
+                aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}><Icon name={n.icon} size={18} />{n.label}</button>
+            ) : (
+              <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => (isActive && !exploreOpen ? 'active' : '')}><Icon name={n.icon} size={18} />{n.label}</NavLink>
+            ))}
           </nav>
         </header>
 
@@ -92,13 +105,22 @@ export function AppShell() {
           </div>
         </main>
 
+        <BuzzEntry />
         <nav className="bottom-nav" aria-label="Primary">
-          {PRIMARY.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} />{n.label}</NavLink>
+          {PRIMARY.map((n) => n.sheet ? (
+            <button key={n.to} type="button" data-theme={n.theme} className={`bottom-nav__item ${exploreOpen || pathname === n.to ? 'active' : ''}`}
+              aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}>
+              <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
+              <span className="bottom-nav__label">{n.label}</span>
+            </button>
+          ) : (
+            <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => `bottom-nav__item ${isActive && !exploreOpen ? 'active' : ''}`}>
+              <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
+              <span className="bottom-nav__label">{n.label}</span>
+            </NavLink>
           ))}
-          <button type="button" className={menuOpen ? 'active' : ''} onClick={() => setMenuOpen(true)} aria-haspopup="dialog"><Icon name="menu" />Menu</button>
         </nav>
-        <MenuHub open={menuOpen} onClose={() => setMenuOpen(false)} />
+        <ExploreSheet open={exploreOpen} onClose={closeExplore} />
       </div>
     </ThemeOverride.Provider>
   );

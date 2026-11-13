@@ -4,7 +4,7 @@ import { Rating, SmartImage } from '../../components/ui';
 
 export function EventCard({ event }: { event: ClickEvent }) {
   return (
-    <Link to={`/movies/${event.slug}`} className="event-card">
+    <Link to={`/showtime/${event.slug}`} className="event-card">
       <SmartImage src={event.posterUrl} alt={event.title} className="event-card__poster">
         {event.certification && <span className="event-card__cert">{event.certification}</span>}
         {event.kind === 'event' && <span className="event-card__kind">Live</span>}

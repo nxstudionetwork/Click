@@ -1,6 +1,6 @@
 /**
- * Provider-neutral phone sign-in. The app talks only to this interface; Firebase is one adapter.
- * To switch providers later (e.g. an SMS gateway), add an adapter here + a backend verifier in
+ * Provider-neutral phone sign-in. The app talks only to this interface; Click OTP is the adapter today.
+ * The SMS provider is chosen on the backend (CLICK_SMS_PROVIDER); a different identity provider would add an adapter here + a backend verifier in
  * apps/identity and change VITE_PHONE_AUTH_PROVIDER. No screen needs to change.
  */
 export interface PhoneVerification {
@@ -12,8 +12,8 @@ export interface PhoneVerification {
 
 export interface PhoneAuthProvider {
   id: string;
-  /** Sends an OTP. `verifierContainer` hosts any bot-protection widget (e.g. invisible reCAPTCHA). */
-  start(phoneE164: string, verifierContainer: HTMLElement): Promise<PhoneVerification>;
+  /** Sends an OTP. `verifierContainer` can host a bot-protection widget if a future provider needs one. */
+  start(phoneE164: string, verifierContainer?: HTMLElement): Promise<PhoneVerification>;
   /** Releases widgets/sessions held by the provider. */
   reset(): Promise<void>;
 }

@@ -15,6 +15,27 @@ class PaymentMethod(models.TextChoices):
     CASH_ON_DELIVERY = "cash_on_delivery", "Cash on delivery"
     PAY_AT_VENUE = "pay_at_venue", "Pay at venue"
     WALLET = "wallet", "Click Wallet"
+    CASH = "cash", "Cash to driver / delivery partner"
+    # Collected by the online payment provider (wallet top-ups today; checkout once a gateway is connected).
+    UPI = "upi", "UPI"
+    CARD = "card", "Card"
+    NETBANKING = "netbanking", "Net banking"
+    GIFT_CARD = "gift_card", "Click. Gift Card"
+
+
+PAYMENT_TARGETS = ("order", "booking", "ride", "parcel", "service_booking", "event_booking", "hotel_booking", "travel_booking", "experience_booking", "wallet_topup", "gift_card")
+
+
+def _exactly_one(fields) -> Q:
+    """Exactly one of `fields` is set (new payable entities add a column and a name here, and bump the constraint)."""
+    out = Q()
+    for f in fields:
+        q = Q(**{f"{f}__isnull": False})
+        for o in fields:
+            if o != f:
+                q &= Q(**{f"{o}__isnull": True})
+        out |= q
+    return out
 
 
 class Payment(BaseModel):
@@ -28,6 +49,16 @@ class Payment(BaseModel):
 
     order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
     booking = models.ForeignKey("bookings.Booking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    ride = models.ForeignKey("rides.Ride", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    parcel = models.ForeignKey("parcels.ParcelOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    service_booking = models.ForeignKey("professionals.ServiceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    event_booking = models.ForeignKey("eventhub.EventBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    hotel_booking = models.ForeignKey("hotels.HotelBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    travel_booking = models.ForeignKey("travel.TravelBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    experience_booking = models.ForeignKey("experiences.ExperienceBooking", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    wallet_topup = models.ForeignKey("wallet.WalletTopUp", on_delete=models.PROTECT, null=True, blank=True, related_name="payments")
+    gift_card = models.ForeignKey("giftcards.GiftCard", on_delete=models.PROTECT, null=True, blank=True, related_name="payments",
+                                  help_text="Buying a gift card (not paying with one).")
     method = models.CharField(max_length=30, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -40,8 +71,14 @@ class Payment(BaseModel):
         indexes = [models.Index(fields=["provider", "provider_reference"], name="payments_provider_ref_idx")]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gte=0), name="payments_amount_non_negative"),
-            models.CheckConstraint(
-                condition=(Q(order__isnull=False) & Q(booking__isnull=True)) | (Q(order__isnull=True) & Q(booking__isnull=False)),
-                name="payments_exactly_one_target",
-            ),
+            # Exactly one target (PAYMENT_TARGETS): an order, a show booking, a ride, a parcel, a service / event / hotel / travel booking
+            # or an attraction / temple / experience booking.
+            models.CheckConstraint(condition=_exactly_one(PAYMENT_TARGETS), name="payments_exactly_one_target_v9"),
         ]
+
+
+class PaymentPreference(BaseModel):
+    """The customer's default payment method — only methods Click. can actually take (see apps.payments.records.METHODS)."""
+
+    customer = models.OneToOneField("customers.CustomerProfile", on_delete=models.CASCADE, related_name="payment_preference")
+    default_method = models.CharField(max_length=30, choices=PaymentMethod.choices, default=PaymentMethod.WALLET)

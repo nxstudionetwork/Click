@@ -9,7 +9,7 @@ from django.test import override_settings
 from apps.identity import services as identity_services
 from apps.identity.models import ExternalIdentity
 from apps.identity.providers import VerifiedIdentity
-from apps.identity.tests import CERT, OTHER_KEY, PROJECT, token
+from conftest import otp_credential
 from apps.partners import services
 from apps.partners.models import Partner, PartnerCategory, PartnerMembership, PartnerStatusEvent, PartnerVerification
 from apps.users.models import User
@@ -29,16 +29,16 @@ def partner_catalog(db):
 
 
 @pytest.fixture(autouse=True)
-def firebase_keys(settings):
-    """Real RS256 verification (shared identity layer) against a test certificate instead of Google's."""
-    settings.FIREBASE_PROJECT_ID = PROJECT
-    with mock.patch("apps.identity.firebase.fetch_certificates", return_value={"k1": CERT}):
-        yield
+def _otp(settings):
+    settings.CLICK_OTP_RESEND_SECONDS = 0
+    settings.CLICK_OTP_MAX_PER_HOUR = 100
+    settings.CLICK_OTP_MAX_PER_IP_HOUR = 1000
 
 
-def sign_in(api, uid="fb-uid-1", phone="+919876543210", **kw):
-    """The Partner App's sign-in: shared identity exchange, then partner sign-up for a new phone."""
-    r = api.post("/api/v1/auth/identity/exchange", {"provider": "firebase", "token": token(uid=uid, phone=phone, **kw)}, **CLIENT)
+def sign_in(api, uid=None, phone="+919876543210", forged=False):
+    """The Partner App's sign-in: Click OTP, shared identity exchange, then partner sign-up for a new phone."""
+    cred = otp_credential(api, phone, wrong=forged, **CLIENT)
+    r = api.post("/api/v1/auth/identity/exchange", {"provider": "phone_otp", "token": cred}, **CLIENT)
     if r.status_code == 200 and r.json()["status"] == "profile_required":
         r = api.post("/api/v1/auth/identity/partner-signup", {"signupToken": r.json()["signupToken"]}, **CLIENT)
     return r
@@ -53,14 +53,14 @@ def authed(api, **kw):
 
 # --- Partner sign-in on the shared identity layer ---------------------------------
 
-def test_new_phone_becomes_phone_only_user_linked_to_firebase_uid(api):
+def test_new_phone_becomes_phone_only_user_linked_to_verified_phone(api):
     r = sign_in(api)
     assert r.status_code == 201
     user = r.json()["user"]
     assert user["phone"] == "+919876543210" and user["email"] is None and user["roles"] == []
     assert r.cookies["click_refresh"]["httponly"]
     link = ExternalIdentity.objects.get()
-    assert (link.provider, link.subject) == ("firebase", "fb-uid-1")
+    assert (link.provider, link.subject) == ("phone_otp", "+919876543210")
     assert link.user.phone_verified and not link.user.has_usable_password()
 
 
@@ -79,7 +79,7 @@ def test_existing_customer_with_verified_phone_is_the_same_person(api):
 
 
 def test_forged_token_is_rejected(api):
-    r = sign_in(api, key=OTHER_KEY)
+    r = sign_in(api, forged=True)
     assert r.status_code == 401 and User.objects.count() == 0
 
 
@@ -89,7 +89,7 @@ def test_tampered_signup_token_is_rejected(api):
 
 
 def test_partner_signup_is_idempotent_and_race_safe():
-    identity = VerifiedIdentity(provider="firebase", subject="race-uid", phone_number="+919111122222")
+    identity = VerifiedIdentity(provider="phone_otp", subject="+919111122222", phone_number="+919111122222")
     a, created_a = identity_services.complete_partner_signup(identity)
     b, created_b = identity_services.complete_partner_signup(identity)
     assert a == b and created_a and not created_b
@@ -377,6 +377,6 @@ def test_user_roles_include_partner_after_onboarding(api):
 
 @override_settings(DEBUG=False)
 def test_error_responses_do_not_leak_internals(api):
-    r = sign_in(api, key=OTHER_KEY)
+    r = sign_in(api, forged=True)
     body = r.json()["error"]
     assert "Signature" not in body["message"] and "Traceback" not in str(body)

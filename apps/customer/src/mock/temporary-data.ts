@@ -68,7 +68,8 @@ export const MOCK_STORES: Store[] = SEEDS.map(([slug, name, cats, rating, count,
   minOrderAmount: `${min}.00`,
   currency: 'INR',
   isOpen: open,
-  offers: offer ? [{ id: `mock-offer-${i + 1}`, title: offer, description: '', endsAt: null }] : [],
+  offers: offer ? [{ id: `mock-offer-${i + 1}`, title: offer, description: '', endsAt: null, discountType: '', discountValue: '0.00', maxDiscount: null, minOrderAmount: '0.00', isRedeemable: false }] : [],
+  distanceKm: null,
 }));
 
 const MENU_ITEMS: Record<string, [string, Product['dietary'], string][]> = {
@@ -105,6 +106,7 @@ export const MOCK_MENUS: Record<string, MenuCategory[]> = Object.fromEntries(
         dietary,
         isAvailable: !(ci === 0 && pi === 2 && store.slug === 'tandoor-republic'),
         isFeatured: pi === 0,
+        optionGroups: [], shopCategoryId: null, hasVariants: false,
       })),
     })),
   ]),

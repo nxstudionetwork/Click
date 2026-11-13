@@ -15,7 +15,7 @@
   flex: none; min-height: 36px; padding: 0 var(--s-4); border-radius: var(--r-pill); border: 1px solid var(--c-line);
   background: var(--c-surface); font-size: var(--fs-sm); font-weight: var(--fw-medium); cursor: pointer;
 }
-.chip[aria-pressed='true'] { background: var(--c-theme); border-color: var(--c-theme); color: #fff; }
+.chip[aria-pressed='true'] { background: var(--c-theme-solid); border-color: var(--c-theme-solid); color: #fff; }
 
 /* ---- Rating ---- */
 .rating { display: inline-flex; align-items: center; gap: 3px; font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
@@ -23,7 +23,7 @@
 
 /* ---- Stepper ---- */
 .stepper {
-  display: inline-flex; align-items: center; border-radius: var(--r-sm); background: var(--c-theme); color: #fff;
+  display: inline-flex; align-items: center; border-radius: var(--r-sm); background: var(--c-theme-solid); color: #fff;
   font-weight: var(--fw-bold); min-height: 34px;
 }
 .stepper button { width: 34px; height: 34px; border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; }
@@ -32,7 +32,7 @@
 
 /* ---- Sheet / dialog ---- */
 .sheet-backdrop {
-  position: fixed; inset: 0; background: rgb(20 18 31 / 45%); z-index: 50; display: flex; align-items: flex-end;
+  position: fixed; inset: 0; background: var(--c-backdrop); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: flex-end;
   justify-content: center; animation: fade 0.15s ease;
 }
 .sheet {

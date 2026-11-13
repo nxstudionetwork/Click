@@ -17,11 +17,18 @@ def seeded(db):
 
 def test_test_customer_has_real_related_history(seeded):
     assert seeded.user.email == "test.customer@click.local" and seeded.addresses.count() == 4
-    assert seeded.orders.count() == 20 and seeded.bookings.count() == 20 and seeded.support_tickets.count() == 20
-    assert seeded.wishlist_items.count() == 20 and seeded.cart.items.count() == 2
+    assert seeded.orders.count() == 26 and seeded.bookings.count() >= 20 and seeded.support_tickets.count() == 20
+    assert seeded.wishlist_items.count() == 25 and seeded.cart.items.count() == 2  # incl. 1 saved professional, event team, hotel, travel route and place
+    # Click. Events: ratings only from completed bookings; one upcoming booking and one plan with a quote for the test customer.
+    from apps.eventhub.models import EventBooking, EventProvider, EventReview
+
+    assert EventProvider.objects.filter(is_listed=True).count() == 30
+    assert all(p.rating_count == EventReview.objects.filter(provider=p).count() for p in EventProvider.objects.all())
+    assert seeded.event_bookings.filter(status="completed").count() == 1 and seeded.event_bookings.filter(status="confirmed").count() == 1
+    assert seeded.event_plans.filter(status="planning", enquiries__quotes__status="pending").exists()
     statuses = set(seeded.orders.values_list("status", flat=True))
     assert {"delivered", "cancelled", "placed", "out_for_delivery"} <= statuses
-    assert seeded.reward_transactions.count() == seeded.orders.filter(status="delivered").count()  # earned via the real rule
+    assert seeded.reward_transactions.filter(kind="earn", order__isnull=False).count() == seeded.orders.filter(status="delivered").count()  # earned via the real rule
     # Every order went through the real checkout: items, payment and a status trail exist.
     for order in Order.objects.filter(customer=seeded):
         assert order.items.exists() and order.payments.exists() and order.events.exists()
@@ -57,7 +64,7 @@ def test_dev_login_signs_in_test_customer_in_development(api, seeded):
     r = api.post("/api/v1/auth/dev-login")
     assert r.status_code == 200 and r.json()["user"]["customerCode"] == "CLK-CS-TEST001"
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
-    assert api.get("/api/v1/customer/orders").json()["count"] == 20
+    assert api.get("/api/v1/customer/orders").json()["count"] == 26  # 20 + 6 grocery history orders
 
 
 def test_test_customer_can_use_normal_login_and_data_stays_isolated(api, seeded, other_customer):

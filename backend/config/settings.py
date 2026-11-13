@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Third party
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
@@ -82,6 +83,23 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.activity",
     "apps.partners",
+    "apps.buzz",
+    "apps.rides",
+    "apps.shop",
+    "apps.groceries",
+    "apps.parcels",
+    "apps.professionals",
+    "apps.eventhub",
+    "apps.hotels",
+    "apps.travel",
+    "apps.experiences",
+    "apps.offers",
+    "apps.search",
+    "apps.reviews",
+    "apps.invoices",
+    "apps.giftcards",
+    "apps.discover",
+    "apps.pharma",
 ]
 
 MIDDLEWARE = [
@@ -169,6 +187,10 @@ REST_FRAMEWORK = {
         "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
+        "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
+        "search": os.environ.get("THROTTLE_SEARCH", "120/min"),
+        "reviews": os.environ.get("THROTTLE_REVIEWS", "20/min"),  # writing / reporting reviews  # Shopping search
+        "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -221,27 +243,66 @@ CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
 CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
 
 # --- Customer identity ------------------------------------------------
-# Phone sign-in is verified by a pluggable identity provider; Click then issues its own session.
-# To change provider later: add a verifier in apps/identity and point this mapping at it.
+# Phone sign-in: Click's own OTP (apps/identity/otp.py) proves the phone; Click then issues its own session.
+# Another identity provider can be added as a verifier here without changing the app's screens.
 CLICK_IDENTITY_PROVIDERS = {
-    "firebase": "apps.identity.firebase.FirebaseIdTokenVerifier",
+    "phone_otp": "apps.identity.otp.PhoneOtpVerifier",
 }
-# Firebase project whose ID tokens are accepted (public identifier, not a secret). No service-account key is needed:
-# tokens are verified against Google's public certificates.
-FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "clickstartup26")
-# Local Firebase Auth Emulator (e.g. "127.0.0.1:9099"). Honoured ONLY when DEBUG is on.
-FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") if DEBUG else ""
+# Who delivers the code: "" = none (sign-in unavailable until the SMS provider is configured), "console" = development
+# only (code printed in the API log), or a dotted path to your SMS sender class (see apps/identity/sms.py).
+CLICK_SMS_PROVIDER = os.environ.get("CLICK_SMS_PROVIDER", "console" if (DEBUG or TESTING) else "")
+# Online checkout payments not confirmed by the provider within this time are cancelled (stock released).
+CLICK_ONLINE_PAYMENT_TTL_MINUTES = int(os.environ.get("CLICK_ONLINE_PAYMENT_TTL_MINUTES", "15"))
+CLICK_OTP_TTL_SECONDS = int(os.environ.get("CLICK_OTP_TTL_SECONDS", "300"))
+CLICK_OTP_RESEND_SECONDS = int(os.environ.get("CLICK_OTP_RESEND_SECONDS", "30"))
+CLICK_OTP_MAX_ATTEMPTS = int(os.environ.get("CLICK_OTP_MAX_ATTEMPTS", "5"))
+CLICK_OTP_MAX_PER_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_HOUR", "5"))
+CLICK_OTP_MAX_PER_IP_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_IP_HOUR", "30"))
 # Legacy email/password endpoints: development/test accounts only. Customers sign in with phone OTP.
 CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# Local time for customer-facing dates (Showtime days, "Tonight"); the server itself stays on UTC.
+CLICK_LOCAL_TIMEZONE = os.environ.get("CLICK_LOCAL_TIMEZONE", "Asia/Kolkata")
+# Shopping price-discovery sections ("Under ₹499" ...), comma-separated rupee thresholds.
+CLICK_SHOP_PRICE_BANDS = [int(x) for x in os.environ.get("CLICK_SHOP_PRICE_BANDS", "499,999,1999").split(",") if x.strip()]
 # GST on platform convenience fees (bookings).
 CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
+CLICK_REWARD_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRING_SOON_DAYS", "30"))
+# Loyalty tiers by points earned in the last 365 days, with the earning multiplier each tier gets (business rules).
+CLICK_REWARD_TIERS = [("bronze", "Bronze", 0, "1.0"), ("silver", "Silver", 2000, "1.1"), ("gold", "Gold", 5000, "1.25"), ("platinum", "Platinum", 12000, "1.5")]
+
+# Click. Wallet business limits (configuration, not regulatory values) and promo-credit rules.
+CLICK_WALLET_MIN_TOPUP = os.environ.get("CLICK_WALLET_MIN_TOPUP", "100")
+CLICK_WALLET_MAX_TOPUP = os.environ.get("CLICK_WALLET_MAX_TOPUP", "10000")
+CLICK_WALLET_DAILY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_DAILY_TOPUP_LIMIT", "20000")
+CLICK_WALLET_MONTHLY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_MONTHLY_TOPUP_LIMIT", "50000")
+CLICK_WALLET_MAX_BALANCE = os.environ.get("CLICK_WALLET_MAX_BALANCE", "100000")
+CLICK_WALLET_PROMO_REFUND_DAYS = int(os.environ.get("CLICK_WALLET_PROMO_REFUND_DAYS", "30"))
+CLICK_WALLET_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_WALLET_EXPIRING_SOON_DAYS", "7"))
+CLICK_WALLET_DEBIT_NOTIFY_FROM = os.environ.get("CLICK_WALLET_DEBIT_NOTIFY_FROM", "1")
+
+# Payment provider for wallet top-ups. "sandbox" (test mode, no real money) is allowed only when CLICK_PAYMENT_SANDBOX is on.
+CLICK_PAYMENT_PROVIDER = os.environ.get("CLICK_PAYMENT_PROVIDER", "")
+CLICK_PAYMENT_SANDBOX = os.environ.get("CLICK_PAYMENT_SANDBOX", "1" if DEBUG else "0") == "1"
+CLICK_PAYMENT_WEBHOOK_SECRET = os.environ.get("CLICK_PAYMENT_WEBHOOK_SECRET", "")
+
+# Official Click. support contacts (shown in Help & Support).
+# Emergency services number shown in Safety Center (India: 112, the national emergency number).
+CLICK_EMERGENCY_NUMBER = os.environ.get("CLICK_EMERGENCY_NUMBER", "112")
+CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
+CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
+CLICK_SUPPORT_HOURS = os.environ.get("CLICK_SUPPORT_HOURS", "")
+CLICK_SUPPORT_TICKETS_PER_HOUR = int(os.environ.get("CLICK_SUPPORT_TICKETS_PER_HOUR", "5"))
 # Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
 # (built-in, answers only from real Click data). Set to empty to disable AI.
 CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")
+# Speech-to-text for Buddy GO / voice search (dotted path to an apps.ai.speech.SpeechProvider). Empty = voice off.
+CLICK_SPEECH_PROVIDER = os.environ.get("CLICK_SPEECH_PROVIDER", "")
+# Image recognition for camera search. Empty = off (QR scanning still works on-device in the app).
+CLICK_VISION_PROVIDER = os.environ.get("CLICK_VISION_PROVIDER", "")
 
 LOGGING = {
     "version": 1,

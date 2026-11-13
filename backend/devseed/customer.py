@@ -29,11 +29,13 @@ from apps.users.models import User
 from apps.wallet.models import WalletTransaction
 from apps.wishlists.models import WishlistItem
 
+from . import locality_point
+
 TEST_CUSTOMER = {
     "email": "test.customer@click.local",  # reserved .local domain: can never be a real inbox
     "full_name": "Click Test User",
-    # US 555-01xx numbers are reserved for fiction. Add this number + a code of your choice as a
-    # *test phone number* in Firebase Console → Authentication → Sign-in method → Phone.
+    # US 555-01xx numbers are reserved for fiction. In development, request a code for this number on the
+    # sign-in screen; the code is printed in the API terminal (CLICK_SMS_PROVIDER=console).
     "phone": "+16505550101",
     "customer_code": "CLK-CS-TEST001",
     "password": "ClickDev@2026",  # development-only password; also usable via the normal login form
@@ -71,6 +73,9 @@ ORDERS = [
     ("brew-ritual-cafe", [("Cold Brew Tonic", 2), ("Almond Croissant", 2)], "cash_on_delivery", "placed", 0, ""),
 ]
 PATH = [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]
+RETAIL_PATH = [OrderStatus.CONFIRMED, OrderStatus.PACKED, OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]
+# Food steps map onto the Shopping steps for retail orders (preparing -> packed, ready -> shipped).
+RETAIL_EQUIVALENT = {"preparing": "packed", "ready": "shipped"}
 
 TICKETS = [
     ("order", "Missing raita with biryani", "The raita wasn’t in the bag.", "resolved"),
@@ -103,6 +108,24 @@ WISHLIST_PRODUCTS = [("volt-electronics", "Wireless Earbuds Pro"), ("volt-electr
                      ("sushi-sakura-bar", "Salmon Nigiri (6)")]
 
 
+def default_options(product) -> list:
+    """The first choice of each required customisation group (what a customer must pick at minimum)."""
+    return [g.options.first().id for g in product.option_groups.filter(min_select__gt=0) if g.options.exists()]
+
+
+def default_variant(product):
+    """The first in-stock variant of a product sold in variants (size, colour), else None."""
+    v = product.variants.filter(is_active=True).exclude(stock_quantity=0).first()
+    return v.id if v else None
+
+
+def status_path(order, final: str) -> list:
+    if order.store.store_type == "retail":
+        final = RETAIL_EQUIVALENT.get(final, final)
+        return RETAIL_PATH[: RETAIL_PATH.index(final) + 1]
+    return PATH[: PATH.index(final) + 1]
+
+
 def _key(label: str) -> uuid.UUID:
     return uuid.uuid5(NS, label)
 
@@ -124,6 +147,9 @@ def ensure_test_customer(log) -> CustomerProfile:
         Address.objects.get_or_create(customer=profile, line1=line1, defaults=dict(
             label=label, recipient_name=name, phone=phone, line2=line2, landmark=landmark, city="Bengaluru",
             state="Karnataka", postal_code=pin, country="IN", is_default=default and not profile.addresses.filter(is_default=True).exists()))
+        # Coordinates (added later): filled only where missing, so customer edits are never overwritten.
+        lat, lng = locality_point(line2, line1)
+        Address.objects.filter(customer=profile, line1=line1, latitude__isnull=True).update(latitude=lat, longitude=lng)
     log(f"test customer: {user.email} ({profile.customer_code}), {profile.addresses.count()} addresses")
     return profile
 
@@ -143,9 +169,29 @@ def _shift(order: Order, days: int) -> None:
 def seed_wallet(profile, log) -> None:
     if WalletTransaction.objects.filter(customer=profile).exists():
         return
-    for amount, desc in [("10000.00", "Development test credit (DEVELOPMENT MOCK DATA)"), ("250.00", "Welcome to Click credit"), ("100.00", "Sorry-for-the-delay credit")]:
-        WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.PROMO, amount=D(amount), description=desc)
-    log("wallet: 3 promotional credits")
+    from django.utils import timezone
+
+    now = timezone.now()
+    WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.ADJUSTMENT, bucket="cash", amount=D("10000.00"),
+                                     description="Opening balance")
+    for amount, desc, days in [("250.00", "Welcome to Click. credit", 60), ("100.00", "Sorry-for-the-delay credit", 5)]:
+        WalletTransaction.objects.create(customer=profile, kind=WalletTransaction.Kind.PROMO, bucket="promo", amount=D(amount), description=desc,
+                                         expires_at=now + timedelta(days=days))
+    log("wallet: opening balance and 2 promotional credits (one expiring soon)")
+
+
+def _grocery_delivery(profile, store, address):
+    """Grocery orders need a real delivery choice: the first address the store delivers to and its first open option."""
+    if store.store_type != "grocery":
+        return address, None
+    from apps.groceries import delivery as dl
+
+    for addr in [address, *profile.addresses.exclude(pk=address.pk)]:
+        for o in dl.options(store, dl.address_point(addr))["_objects"]:
+            if o.available:
+                return addr, {"delivery": {str(store.id): {"mode": o.mode, "slot_start": o.slots[0]["start"] if o.slots else None}},
+                              "substitution": "similar"}
+    return address, None
 
 
 def seed_orders(profile, log) -> None:
@@ -159,13 +205,15 @@ def seed_orders(profile, log) -> None:
         with transaction.atomic():
             cart_services.clear_cart(cart)
             for name, qty in items:
-                cart_services.add_item(profile, Product.objects.get(store=store, name=name).id, qty)
-            order, _ = order_services.place_order(customer=profile, address_id=address.id, payment_method=method,
-                                                  idempotency_key=_key(f"order-{i}"), customer_note=note)
+                product = Product.objects.get(store=store, name=name)
+                cart_services.add_item(profile, product.id, qty, option_ids=default_options(product), variant_id=default_variant(product))
+            addr, grocery = _grocery_delivery(profile, store, address)
+            order, _ = order_services.place_order(customer=profile, address_id=addr.id, payment_method=method,
+                                                  idempotency_key=_key(f"order-{i}"), customer_note=note, grocery=grocery)
             if final == "cancelled":
                 order_services.cancel_by_customer(order, user=profile.user, reason="Changed my mind (seed)")
             elif final != "placed":
-                for step in PATH[: PATH.index(final) + 1]:
+                for step in status_path(order, final):
                     order = order_services.transition_order(order, step)
             order.refresh_from_db()
             _shift(order, days)
@@ -206,7 +254,8 @@ def seed_cart(profile, log) -> None:
         return
     store = Store.objects.get(slug="momo-mantra")
     for name, qty in [("Pan-fried Paneer Momos (8)", 1), ("Chilli Garlic Noodles", 1)]:
-        cart_services.add_item(profile, Product.objects.get(store=store, name=name).id, qty)
+        product = Product.objects.get(store=store, name=name)
+        cart_services.add_item(profile, product.id, qty, option_ids=default_options(product))
     log("cart: 2 items from Momo Mantra")
 
 
@@ -241,8 +290,44 @@ def finalize_notifications(profile, log) -> None:
 def seed_test_customer(log) -> CustomerProfile:
     profile = ensure_test_customer(log)
     seed_wallet(profile, log)
+    from .money import seed_money
+
+    seed_money(profile, log)
+    from .discover import seed_discover
+
+    seed_discover(log)
+    from .pharma import seed_pharma
+
+    seed_pharma(log)
     seed_orders(profile, log)
     seed_bookings(profile, log)
+    from .showtime import seed_showtime_history
+
+    seed_showtime_history(profile, log)
+    from .groceries import seed_grocery_history
+
+    seed_grocery_history(profile, log)
+    from .parcels import seed_parcel_history
+
+    seed_parcel_history(profile, log)
+    from .professionals import seed_service_history
+
+    seed_service_history(profile, log)
+    from .eventhub import seed_event_history
+
+    seed_event_history(profile, log)
+    from .hotels import seed_hotel_history
+
+    seed_hotel_history(profile, log)
+    from .travel import seed_travel_history
+
+    seed_travel_history(profile, log)
+    from .experiences import seed_experience_history
+
+    seed_experience_history(profile, log)
+    from .shop import seed_shop_history
+
+    seed_shop_history(profile, log)  # before the cart: Shopping checkouts use (and empty) the cart
     seed_cart(profile, log)
     seed_wishlist(profile, log)
     seed_support(profile, log)

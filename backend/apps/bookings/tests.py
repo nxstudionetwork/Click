@@ -29,7 +29,7 @@ def test_event_listing_detail_and_seat_map(api, show):
     detail = api.get("/api/v1/events/test-movie").json()
     assert detail["shows"][0]["seatsLeft"] == 40 and detail["genres"] == ["Drama"]
     seatmap = api.get(f"/api/v1/shows/{show.id}").json()
-    assert len(seatmap["layout"]["rows"]) == 5 and seatmap["layout"]["rows"][-1]["tier"] == "premium"
+    assert len(seatmap["rows"]) == 5 and seatmap["rows"][-1]["tier"] == "premium"
     assert api.get("/api/v1/search?q=test movie&scope=events").json()["events"][0]["slug"] == "test-movie"
 
 
@@ -40,8 +40,8 @@ def test_book_seats_prices_and_seat_map_updates(auth_api, show):
     assert [s["label"] for s in b["seats"]] == ["A1", "E2"]
     assert b["subtotal"] == "550.00" and b["convenienceFee"] == "40.00" and b["tax"] == "7.20" and b["total"] == "597.20"
     assert b["payments"][0]["method"] == "pay_at_venue" and b["payments"][0]["status"] == "pending"
-    a1 = auth_api.get(f"/api/v1/shows/{show.id}").json()["layout"]["rows"][0]["seats"][0]
-    assert a1 == {"label": "A1", "available": False}
+    a1 = auth_api.get(f"/api/v1/shows/{show.id}").json()["rows"][0]["seats"][0]
+    assert a1["label"] == "A1" and a1["state"] == "booked"
 
 
 def test_double_booking_is_rejected_and_idempotency_holds(api, customer, other_customer, show):
@@ -67,7 +67,7 @@ def test_wallet_booking_and_cancel_refund_frees_seats(auth_api, customer, show):
     r = auth_api.post(f"/api/v1/customer/bookings/{b['id']}/cancel")
     assert r.json()["status"] == "cancelled"
     assert auth_api.get("/api/v1/customer/wallet").json()["balance"] == "1000.00"
-    assert auth_api.get(f"/api/v1/shows/{show.id}").json()["layout"]["rows"][2]["seats"][0]["available"] is True
+    assert auth_api.get(f"/api/v1/shows/{show.id}").json()["rows"][2]["seats"][0]["state"] == "available"
 
 
 def test_cancellation_cutoff_and_isolation(api, customer, other_customer, show):
