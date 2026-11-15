@@ -11,3 +11,6 @@ __pycache__/
 backend/staticfiles/
 .DS_Store
 backend/media/
+
+# Local tooling (Claude desktop dev-server presets)
+.claude/
