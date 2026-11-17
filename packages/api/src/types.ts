@@ -777,12 +777,24 @@ export interface PartnerHomeModule {
   empty: string;
 }
 
+/** Partner App modes: each decides navigation, the Work label and which business tools appear. */
+export type PartnerMode =
+  | 'driver' | 'restaurant' | 'store' | 'pharmacy' | 'parcel' | 'services' | 'events' | 'cinema' | 'hotel' | 'experiences'
+  | 'travel' | 'upcoming';
+
+export interface PartnerCapabilityOption { key: string; label: string; default: boolean }
+export interface PartnerDocumentRequirement { key: string; label: string; required: boolean; expires: boolean; help: string }
+
 export interface PartnerCategoryConfiguration {
   tagline: string;
   identity: { individual: boolean; businessNameLabel: string; businessNameHelp?: string };
   fields: PartnerField[];
   location: { title?: string; addressLabel?: string; serviceArea: boolean; serviceRadius: boolean };
-  home: { availabilityLabel?: string; modules: PartnerHomeModule[] };
+  /** What this kind of partner can do on Click; Click grants the defaults and can change them. */
+  capabilities: PartnerCapabilityOption[];
+  /** Verification documents this kind of partner provides. */
+  documents: PartnerDocumentRequirement[];
+  home: { availabilityLabel?: string; modules: PartnerHomeModule[]; workspace?: string; mode?: PartnerMode; workNoun?: string };
 }
 
 export interface PartnerCategory {
@@ -836,6 +848,10 @@ export interface Partner {
   address: PartnerAddress | null;
   profileCompletedAt: ISODateTime | null;
   createdAt: ISODateTime;
+  /** Capabilities Click has granted (server-decided; the app only displays them). */
+  capabilities: { key: string; label: string }[];
+  /** Server-derived Partner App mode; never chosen by the client. */
+  mode: PartnerMode;
 }
 
 export interface PartnerState {

@@ -28,7 +28,7 @@ def provider(name):
 
     if not PartnerCategory.objects.exists():
         apply_catalog(PartnerType, PartnerCategory)
-    pc = PartnerCategory.objects.select_related("partner_type").get(slug="ticketing-venue")
+    pc = PartnerCategory.objects.select_related("partner_type").get(slug="attraction")
     user = User.objects.create_user(f"{uuid.uuid4().hex[:8]}@venue.test", "S3cure-pass-123", full_name=name)
     p = Partner.objects.create(partner_type=pc.partner_type, category=pc, business_name=name, status=Partner.Status.ACTIVE, is_available=True,
                                partner_code=f"CLK-PT-{uuid.uuid4().hex[:6]}")
@@ -179,3 +179,29 @@ def test_entry_code_cancel_review_and_ownership(places):
     hub = api.get("/api/v1/customer/reservations", {"group": "all"}).json()
     assert hub["counts"] == {"upcoming": 0, "completed": 1, "cancelled": 1, "all": 2}
     assert {r_["kind"] for r_ in hub["results"]} == {"temple", "attraction"}
+
+
+def test_provider_partner_workspace_verifies_entry_and_closes_bookings(places):
+    """Click Partner (Attractions mode): today's visitors appear, entry is verified once, closing stops new bookings."""
+    papi, o = places["park_api"], places["day"]
+    Attraction.objects.filter(pk=places["park"].pk).update(opening={"days": ALL, "open": "00:00", "close": "23:59"})  # bookable whenever the suite runs
+    home = papi.get("/api/v1/partner/home").json()
+    assert home.get("workspace", {}).get("kind") == "experiences" and home["workspace"]["state"] == "live", home
+    assert places["temple_api"].get("/api/v1/partner/work", {"view": "today"}).json()["items"] == []
+
+    cust = make_customer("visitor@x.com")
+    fund(cust)
+    capi = client(cust)
+    r = book(capi, o, booking.today(), {"adult": 1})
+    assert r.status_code == 201, r.content
+    bid = r.json()["id"]
+    item = next(i for i in papi.get("/api/v1/partner/work", {"view": "today"}).json()["items"] if i["id"] == bid)
+    assert [x["key"] for x in item["actions"]] == ["check_in"]
+    # The temple's operator can't verify the park's ticket.
+    assert places["temple_api"].post(f"/api/v1/partner/work/experience_booking/{bid}/check_in", {}, format="json").status_code == 404
+    assert papi.post(f"/api/v1/partner/work/experience_booking/{bid}/check_in", {}, format="json").status_code == 200
+    assert papi.post(f"/api/v1/partner/work/experience_booking/{bid}/check_in", {}, format="json").status_code == 409  # once only
+
+    assert papi.post("/api/v1/partner/availability", {"available": False}).status_code == 200
+    closed = book(capi, o, booking.today(), {"adult": 1})
+    assert closed.status_code == 409 and closed.json()["error"]["code"] == "provider_closed"

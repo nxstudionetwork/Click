@@ -5,6 +5,7 @@ import { AppShell } from '../components/AppShell';
 import { Photo } from '../components/Photo';
 import { visualFor } from '../config/visuals';
 import { LocationShare } from '../features/home/LocationShare';
+import { OperationsCard } from '../features/restaurant/OperationsCard';
 import { useHome } from '../features/home/queries';
 import {
   Activity, AvailabilityCard, EarningsCard, Empty, listSkeleton, Module, Overview, Performance, QuickActions, SectionBody, WorkList,
@@ -79,6 +80,7 @@ export function HomePage() {
               )}
               {loading ? <Skeleton height={92} radius={20} /> : data && <AvailabilityCard home={data} />}
               {data && <LocationShare home={data} />}
+              {live && partner.mode === 'restaurant' && <OperationsCard />}
 
               {!loading && data && !live && (
                 <section className="upcoming" aria-labelledby="up-h">

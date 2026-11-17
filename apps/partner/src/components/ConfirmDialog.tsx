@@ -6,9 +6,9 @@ import { Button } from '@click/ui';
  * real consequences: going offline/closed, rejecting an order, completing a trip.
  */
 export function ConfirmDialog({ open, title, message, confirmLabel, tone = 'primary', needsReason = false, reasonLabel = 'Reason',
-  pending = false, error, onConfirm, onClose }: {
+  reasonError = 'Enter a short reason the customer will see.', pending = false, error, onConfirm, onClose }: {
   open: boolean; title: string; message: string; confirmLabel: string; tone?: 'primary' | 'danger'; needsReason?: boolean;
-  reasonLabel?: string; pending?: boolean; error?: string | null; onConfirm: (reason?: string) => void; onClose: () => void;
+  reasonLabel?: string; reasonError?: string; pending?: boolean; error?: string | null; onConfirm: (reason?: string) => void; onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [reason, setReason] = useState('');
@@ -44,7 +44,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, tone = 'prim
               <span className="field__label">{reasonLabel}</span>
               <textarea className="field__input dialog__reason" rows={3} maxLength={200} value={reason} autoFocus
                 onChange={(e) => setReason(e.target.value)} aria-invalid={touched && invalid} />
-              {touched && invalid && <span className="field__error" role="alert">Enter a short reason the customer will see.</span>}
+              {touched && invalid && <span className="field__error" role="alert">{reasonError}</span>}
             </label>
           )}
           {error && <p className="notice notice--warning" role="alert"><span>{error}</span></p>}

@@ -60,6 +60,10 @@ def place_checkout(*, customer: CustomerProfile, address_id, payment_method: str
         raise DomainError("Choose a valid delivery address.", code="invalid_address")
 
     marketplace = cart.mode in (Cart.Mode.MARKETPLACE, Cart.Mode.BASKET)
+    if not marketplace and cart.store is not None and cart.store.paused_until:
+        from .restaurant import release_due
+
+        release_due(cart.store)  # a temporary closure that has ended reopens before we check
     if not marketplace and (cart.store is None or not cart.store.is_open):
         raise DomainError("This store isn't accepting orders right now.", code="store_closed")
 

@@ -71,6 +71,9 @@ class OrdersProvider(Provider):
 
     def connection(self):
         if self._store_ids():
+            from .restaurant import release_due
+
+            release_due()  # busy periods / temporary closures that have ended (idempotent)
             return "live", ""
         noun = {"food": "restaurant", "retail": "store"}.get(self.partner.partner_type.slug, "business")
         return "not_connected", (f"Your {noun} isn’t listed on Click yet. Once Click verifies you and connects your "
@@ -80,6 +83,9 @@ class OrdersProvider(Provider):
     def on_availability_changed(self, is_available: bool) -> None:
         # This is what customers see: the storefront stops (or starts) accepting orders right away.
         Store.objects.filter(id__in=self._store_ids()).update(is_accepting_orders=is_available, updated_at=timezone.now())
+        from .restaurant import on_manual_availability
+
+        on_manual_availability(self._store_ids(), is_available)
 
     # --- items ------------------------------------------------------------------------------------
     def _item(self, o: Order) -> WorkItem:

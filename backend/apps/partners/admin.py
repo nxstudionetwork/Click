@@ -84,13 +84,20 @@ class AvailabilityInline(admin.TabularInline):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ["partner_code", "business_name", "category", "status", "is_available", "created_at"]
+    list_display = ["partner_code", "business_name", "partner_type", "category", "status", "granted_capabilities", "is_available",
+                    "created_at"]
     list_filter = ["status", "partner_type", "category"]
     search_fields = ["partner_code", "business_name", "memberships__user__phone"]
     readonly_fields = ["partner_code", "status", "profile_completed_at"]
     inlines = [ProfileInline, AddressInline, MembershipInline, StoreLinkInline, VenueLinkInline, VerificationInline,
                StatusEventInline, AvailabilityInline]
     actions = ["approve_verification", "reject_verification"]
+
+    @admin.display(description="Capabilities")
+    def granted_capabilities(self, partner):
+        """What Click has granted (category defaults unless staff set an explicit list in `capabilities`)."""
+        caps = services.capabilities_of(partner)
+        return ", ".join(c["label"] for c in caps) + ("" if partner.capabilities is not None else " (defaults)") if caps else "None"
 
     def _review(self, request, queryset, approve):
         done = 0

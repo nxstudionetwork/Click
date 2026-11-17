@@ -119,16 +119,23 @@ def test_catalog_is_public_and_carries_resolved_configuration(api):
     r = api.get("/api/v1/partner/categories")
     assert r.status_code == 200
     types = {t["slug"]: t for t in r.data["types"]}
-    assert {"transport", "food", "retail", "logistics", "services", "entertainment", "hospitality", "local"} <= set(types)
+    # Only the partner types behind customer-facing Click services, named as the Customer App names them.
+    assert list(types) == ["transport", "food", "groceries", "retail", "pharmacy", "logistics", "services", "events",
+                           "entertainment", "hospitality", "experiences", "travel"]
+    assert types["food"]["name"] == "Restaurants" and types["transport"]["name"] == "Rides" and types["retail"]["name"] == "Shops"
+    assert "local" not in types  # retired: not a customer-facing service
     auto = next(c for c in types["transport"]["categories"] if c["slug"] == "auto-driver")
     cfg = auto["configuration"]
     assert cfg["identity"]["individual"] is True
     keys = [f["key"] for f in cfg["fields"]]
     assert "vehicleNumber" in keys  # field keys are camelCase like the rest of the API
     assert next(f for f in cfg["fields"] if f["key"] == "vehicleType")["default"] == "auto"
-    assert [m["label"] for m in cfg["home"]["modules"]][:2] == ["Ride requests", "Active ride"]
-    fleet = next(c for c in types["transport"]["categories"] if c["slug"] == "fleet-operator")
-    assert "vehicleNumber" not in [f["key"] for f in fleet["configuration"]["fields"]]
+    assert cfg["home"]["mode"] == "driver" and cfg["home"]["workspace"] == "rides"
+    assert [(c["key"], c["default"]) for c in cfg["capabilities"]] == [("rides", True), ("parcel_delivery", False)]
+    assert "drivingLicence" not in [d["key"] for d in cfg["documents"]] and "driving_licence" in [d["key"] for d in cfg["documents"]]
+    assert "fleet-operator" not in [c["slug"] for c in types["transport"]["categories"]]  # retired, hidden
+    rider = next(c for c in types["transport"]["categories"] if c["slug"] == "delivery-rider")
+    assert [c["key"] for c in rider["configuration"]["capabilities"] if c["default"]] == ["parcel_delivery"]
 
 
 def test_inactive_category_is_hidden_and_cannot_be_chosen(api):
@@ -147,8 +154,19 @@ PROFILES = {
     ("transport", "driver"): {"businessName": "Ravi Kumar", "details": {"vehicleType": "car", "vehicleNumber": "KA01AB1234", "availability": "full_time"}},
     ("food", "restaurant"): {"businessName": "Spice Route", "contactName": "Meera", "email": "Owner@SpiceRoute.in",
                              "details": {"cuisines": ["south_indian", "biryani"], "foodType": "both", "opensAt": "09:00", "closesAt": "23:00"}},
-    ("retail", "grocery-store"): {"businessName": "Fresh Mart", "contactName": "Anil",
-                                  "details": {"opensAt": "07:00", "closesAt": "22:00", "fulfilment": ["delivery", "pickup"]}},
+    ("groceries", "grocery-store"): {"businessName": "Fresh Mart", "contactName": "Anil",
+                                     "details": {"opensAt": "07:00", "closesAt": "22:00", "fulfilment": ["delivery", "pickup"]}},
+    ("retail", "fashion-store"): {"businessName": "Thread Story", "contactName": "Nisha",
+                                  "details": {"opensAt": "10:00", "closesAt": "21:00", "fulfilment": ["delivery"]}},
+    ("pharmacy", "pharmacy"): {"businessName": "CarePlus Pharmacy", "contactName": "Dr. Rao",
+                               "details": {"drugLicenceNumber": "KA-B-20-123456", "pharmacistName": "S. Rao",
+                                           "pharmacistRegistration": "KSPC 45678", "opensAt": "08:00", "closesAt": "22:00",
+                                           "fulfilment": ["delivery", "pickup"]}},
+    ("events", "event-planner"): {"businessName": "Shubh Events", "contactName": "Kiran", "details": {"workforceSize": 12}},
+    ("experiences", "temple"): {"businessName": "Sri Lakshmi Temple Trust", "contactName": "Trustee",
+                                "details": {"dailyCapacity": 4000, "opensAt": "05:00", "closesAt": "21:00"}},
+    ("travel", "bus-operator"): {"businessName": "Ridgeway Coaches", "contactName": "Manoj",
+                                 "details": {"travelServices": ["bus"], "fleetSize": 18}},
     ("logistics", "parcel-partner"): {"businessName": "Sunil Parcel", "details": {"services": ["same_day"], "dailyCapacity": 40}},
     ("services", "manpower-provider"): {"businessName": "Skilled Hands", "contactName": "Joseph",
                                         "details": {"serviceTypes": ["cleaning", "security"], "workforceSize": 25, "availability": "all_days"}},
@@ -209,7 +227,8 @@ def test_full_onboarding_per_category(api, ptype, category):
     authed(api)
     me = api.get("/api/v1/partner/me").json()["partner"]
     assert me["category"]["slug"] == category and me["partnerCode"] == p["partnerCode"]
-    assert me["category"]["configuration"]["home"]["modules"]
+    assert me["mode"] == me["category"]["configuration"]["home"]["mode"] != "upcoming"
+    assert me["capabilities"] and all({"key", "label"} == set(c) for c in me["capabilities"])
 
 
 def test_individual_partner_uses_name_as_contact_and_email_is_normalised(api):
@@ -380,3 +399,20 @@ def test_error_responses_do_not_leak_internals(api):
     r = sign_in(api, forged=True)
     body = r.json()["error"]
     assert "Signature" not in body["message"] and "Traceback" not in str(body)
+
+
+def test_partner_type_is_locked_once_the_partner_id_exists(api):
+    """A restaurant can't turn itself into a driver from the app: the type is fixed once submitted (staff change it)."""
+    authed(api)
+    complete_onboarding(api)
+    r = api.post("/api/v1/partner/onboarding/category", {"partnerType": "transport", "category": "driver"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "partner_locked"
+    me = api.get("/api/v1/partner/me").json()["partner"]
+    assert me["partnerType"]["slug"] == "food" and me["mode"] == "restaurant"
+    assert [c["key"] for c in me["capabilities"]] == ["food_orders", "delivery"]
+
+
+def test_retired_types_cannot_be_chosen_but_existing_partners_still_resolve(api):
+    authed(api)
+    r = api.post("/api/v1/partner/onboarding/category", {"partnerType": "local", "category": "local-business"})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_category"

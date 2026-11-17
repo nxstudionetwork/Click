@@ -17,3 +17,4 @@ export * from './experiences';
 export * from './buddy';
 export * from './money';
 export * from './session';
+export * from './partner-restaurant';

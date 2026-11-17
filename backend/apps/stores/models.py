@@ -75,6 +75,13 @@ class Store(BaseModel):
     dispatch_days = models.PositiveSmallIntegerField(default=1, help_text="Working days to pack and hand over an order.")
     cod_enabled = models.BooleanField(default=True, help_text="Seller accepts cash on delivery.")
     return_policy = models.CharField(max_length=300, blank=True, help_text="Seller's return terms shown to customers.")
+    # Kitchen operations, controlled by the operator in Click Partner (Restaurant mode). Expiry is applied by
+    # apps.orders.restaurant.release_expired (partner requests, order placement and `click_jobs --frequent`).
+    prep_time_minutes = models.PositiveSmallIntegerField(default=20, help_text="Usual preparation time set by the restaurant.")
+    busy_extra_minutes = models.PositiveSmallIntegerField(default=0, help_text="Extra minutes currently added to the delivery window.")
+    busy_until = models.DateTimeField(null=True, blank=True)
+    paused_until = models.DateTimeField(null=True, blank=True, help_text="Temporarily closed until this time (reopens automatically).")
+    pause_reason = models.CharField(max_length=80, blank=True)
 
     class Meta:
         ordering = ["-rating_average", "name"]
@@ -119,6 +126,18 @@ class StoreOffer(BaseModel):
     discount_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Percent (0–100) or amount.")
     max_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Cap for percent offers.")
     min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    class Review(models.TextChoices):
+        PENDING = "pending", "Waiting for Click review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Not approved"
+
+    # Offers a partner creates in Click Partner start pending; customers see them only once Click approves them
+    # (is_active stays False until then). Offers Click staff create are approved.
+    review_status = models.CharField(max_length=10, choices=Review.choices, default=Review.APPROVED)
+    review_note = models.CharField(max_length=200, blank=True)
+    created_by_partner = models.BooleanField(default=False)
+    paused_by_partner = models.BooleanField(default=False)
 
     @property
     def is_redeemable(self) -> bool:

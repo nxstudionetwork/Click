@@ -315,6 +315,7 @@ class Passenger(BaseModel):
     queue = models.PositiveIntegerField(default=0, help_text="RAC / waitlist position when issued.")
     fare = models.DecimalField(max_digits=10, decimal_places=2)
     holds_seat = models.BooleanField(default=True, help_text="False once cancelled or released.")
+    boarded_at = models.DateTimeField(null=True, blank=True, help_text="Set by the operator in Click Partner at boarding.")
 
     class Meta:
         ordering = ["booking", "position"]

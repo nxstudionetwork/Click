@@ -37,6 +37,16 @@ function isUnreachable(err: unknown) {
   return err instanceof ApiError && (err.status === 0 || err.status >= 500);
 }
 
+/**
+ * One refresh request at a time. Refresh tokens rotate, so two parallel refreshes with the same cookie (React's
+ * development double-mount, two tabs restoring together) would make the second look like token reuse and sign out.
+ */
+let restoring: Promise<Session> | null = null;
+function restoreOnce(): Promise<Session> {
+  restoring ??= api.auth.refresh().finally(() => { restoring = null; });
+  return restoring;
+}
+
 export function PartnerSessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>('booting');
@@ -57,7 +67,7 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
     (async () => {
       setBootError(null);
       try {
-        const restored = await api.auth.refresh();
+        const restored = await restoreOnce();
         if (!cancelled) apply(restored);
       } catch (err) {
         if (cancelled) return;

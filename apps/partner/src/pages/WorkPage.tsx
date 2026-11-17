@@ -1,11 +1,9 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Icon } from '@click/ui';
-import { AppShell } from '../components/AppShell';
+import { AppShell, WORK_LABEL } from '../components/AppShell';
 import { useHome, useWork } from '../features/home/queries';
 import { Empty, listSkeleton, WorkList } from '../features/home/sections';
 import { apiMessage } from '../lib/format';
-
-const TITLE: Record<string, string> = { ride: 'Rides', order: 'Orders', booking: 'Shows & bookings' };
 
 /** The partner's work queue: same items and actions as Home, filtered by the workspace's own views. */
 export function WorkPage() {
@@ -15,7 +13,7 @@ export function WorkPage() {
   const home = useHome();
   const data = work.data;
   const view = data?.view ?? requested;
-  const title = TITLE[home.data?.workspace.workNoun ?? ''] ?? 'Work';
+  const title = WORK_LABEL[home.data?.workspace.workNoun ?? '']?.title ?? 'Work';
 
   return (
     <AppShell>

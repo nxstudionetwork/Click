@@ -6,6 +6,8 @@ import { PARTNER_QUERY_KEY } from '../../session/PartnerSession';
 export const HOME_KEY = ['partner', 'home'] as const;
 export const WORK_KEY = ['partner', 'work'] as const;
 export const NOTIFICATIONS_KEY = ['partner', 'notifications'] as const;
+/** Restaurant mode queries (kitchen, orders, menu, offers, insights) live under this prefix. */
+export const RESTAURANT_KEY = ['partner', 'restaurant'] as const;
 
 /**
  * Click has no push channel yet (see docs/architecture.md), so live work is polled: every 10 s while the tab is
@@ -44,6 +46,7 @@ export function useWorkAction() {
       void qc.invalidateQueries({ queryKey: HOME_KEY });
       void qc.invalidateQueries({ queryKey: WORK_KEY });
       void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+      void qc.invalidateQueries({ queryKey: RESTAURANT_KEY });
     },
   });
 }
@@ -55,6 +58,9 @@ export function useSetAvailability() {
     onSuccess: ({ partner, onboardingStep }) => {
       qc.setQueryData(PARTNER_QUERY_KEY, { partner, onboardingStep });
     },
-    onSettled: () => { void qc.invalidateQueries({ queryKey: HOME_KEY }); },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: HOME_KEY });
+      void qc.invalidateQueries({ queryKey: RESTAURANT_KEY });
+    },
   });
 }

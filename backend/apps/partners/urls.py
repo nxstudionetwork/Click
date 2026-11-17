@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.orders import restaurant_views as rv
+
 from . import views
 
 urlpatterns = [
@@ -18,5 +20,19 @@ urlpatterns = [
     path("notifications", views.NotificationListView.as_view(), name="partner-notifications"),
     path("notifications/read-all", views.NotificationReadView.as_view(), name="partner-notifications-read-all"),
     path("notifications/<uuid:pk>/read", views.NotificationReadView.as_view(), name="partner-notification-read"),
+    # Restaurant mode (apps.orders.restaurant): menu, kitchen operations, order history, offers, insights
+    path("restaurant/menu", rv.MenuView.as_view(), name="partner-restaurant-menu"),
+    path("restaurant/menu/categories", rv.MenuCategoriesView.as_view(), name="partner-restaurant-categories"),
+    path("restaurant/menu/categories/order", rv.MenuCategoryOrderView.as_view(), name="partner-restaurant-categories-order"),
+    path("restaurant/menu/categories/<uuid:pk>", rv.MenuCategoryView.as_view(), name="partner-restaurant-category"),
+    path("restaurant/menu/items", rv.MenuItemsView.as_view(), name="partner-restaurant-items"),
+    path("restaurant/menu/items/order", rv.MenuItemOrderView.as_view(), name="partner-restaurant-items-order"),
+    path("restaurant/menu/items/<uuid:pk>", rv.MenuItemView.as_view(), name="partner-restaurant-item"),
+    path("restaurant/operations", rv.OperationsView.as_view(), name="partner-restaurant-operations"),
+    path("restaurant/orders", rv.OrdersView.as_view(), name="partner-restaurant-orders"),
+    path("restaurant/kitchen", rv.KitchenView.as_view(), name="partner-restaurant-kitchen"),
+    path("restaurant/offers", rv.OffersView.as_view(), name="partner-restaurant-offers"),
+    path("restaurant/offers/<uuid:pk>/<slug:action>", rv.OfferActionView.as_view(), name="partner-restaurant-offer-action"),
+    path("restaurant/insights", rv.InsightsView.as_view(), name="partner-restaurant-insights"),
     path("dev-login", views.DevPartnerLoginView.as_view(), name="partner-dev-login"),  # 404 unless DEBUG
 ]

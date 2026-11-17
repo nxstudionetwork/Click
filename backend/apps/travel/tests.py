@@ -262,3 +262,50 @@ def test_account_features_and_central_list(net, customer):
     nxt = api.get(f"{CUST}/next").json()["booking"]
     assert nxt["id"] == bk["id"]
     assert Passenger.objects.filter(booking_id=bk["id"]).count() == 1
+
+
+def test_operator_partner_workspace_delays_cancels_and_closes_bookings(net):
+    """Click Partner (Travel mode): an operator sees its own runs, delays and cancellations reach travellers, closing
+    bookings stops new tickets, and another partner can't touch the run."""
+    from apps.partners.test_home import make_partner
+
+    partner, op_api = make_partner("bus-operator", "ops@ridgeway.test", name="Ridgeway Coaches")
+    other, other_api = make_partner("bus-operator", "ops@other.test", name="Other Travels")
+    assert op_api.get("/api/v1/partner/home").json()["workspace"]["state"] == "not_connected"
+    Operator.objects.filter(pk=net["bus"].operator_id).update(partner=partner)
+    assert op_api.post("/api/v1/partner/availability", {"available": True}).status_code == 200
+
+    cust = make_customer("rider@x.com")
+    fund(cust)
+    capi = client(cust)
+    o = search(capi, "bus", "hyderabad", "vijayawada").json()["results"][0]
+    first = book(capi, o, "seater", pax(), seats=["2"])
+    assert first.status_code == 201, first.content
+
+    home = op_api.get("/api/v1/partner/home").json()
+    assert home["workspace"]["kind"] == "travel" and home["workspace"]["state"] == "live"
+    work = op_api.get("/api/v1/partner/work", {"view": "upcoming"}).json()
+    run = next(i for i in work["items"] if i["kind"] == "journey" and i["id"] == o["journeyId"])
+    assert {"label": "Seats sold", "value": "1 of 4"} in run["fields"]
+
+    # Delay: every traveller is notified through the travel domain.
+    r = op_api.post(f"/api/v1/partner/work/journey/{run['id']}/delay_15", {}, format="json")
+    assert r.status_code == 200 and "15 min late" in r.json()["item"]["statusLabel"]
+    assert Journey.objects.get(pk=run["id"]).delay_minutes == 15
+    # Boarding opens only near departure.
+    bk = TravelBooking.objects.get(pk=first.json()["id"])
+    assert op_api.post(f"/api/v1/partner/work/travel_booking/{bk.id}/board", {}, format="json").status_code == 409
+    # Another operator can't act on this run.
+    assert other_api.post(f"/api/v1/partner/work/journey/{run['id']}/cancel_run", {"reason": "x"}, format="json").status_code in (404, 409)
+
+    # Closing bookings stops new tickets on this operator's runs.
+    assert op_api.post("/api/v1/partner/availability", {"available": False}).status_code == 200
+    closed = book(capi, o, "seater", pax(), seats=["3"])
+    assert closed.status_code == 409 and closed.json()["error"]["code"] == "operator_closed"
+
+    # Cancelling the run needs a reason and refunds the traveller in full.
+    assert op_api.post(f"/api/v1/partner/work/journey/{run['id']}/cancel_run", {}, format="json").status_code == 400
+    r = op_api.post(f"/api/v1/partner/work/journey/{run['id']}/cancel_run", {"reason": "Vehicle breakdown"}, format="json")
+    assert r.status_code == 200
+    bk.refresh_from_db()
+    assert bk.status == "cancelled" and bk.refunded == bk.total

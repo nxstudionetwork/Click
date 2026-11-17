@@ -31,6 +31,11 @@ def partner_catalog(db):
 
 
 def make_partner(category_slug, email, status=Partner.Status.ACTIVE, available=False, details=None, name="Partner Biz"):
+    if not PartnerCategory.objects.filter(slug=category_slug).exists():  # another test may have flushed the catalogue
+        from apps.partners.catalog import apply_catalog
+        from apps.partners.models import PartnerType
+
+        apply_catalog(PartnerType, PartnerCategory, Partner)
     category = PartnerCategory.objects.select_related("partner_type").get(slug=category_slug)
     user = User.objects.create_user(email, "S3cure-pass-123", full_name="Ravi Kumar")
     partner = Partner.objects.create(partner_type=category.partner_type, category=category, business_name=name, status=status,
@@ -80,7 +85,10 @@ def test_home_requires_sign_in_and_a_finished_profile(api, restaurant):
     ("cinema-hall", "venue", "Bookings open", ["shows", "tickets", "occupancy", "revenue"]),
     ("hotel", "hotels", "Accepting bookings", ["arrivals", "in_house", "departures", "revenue"]),
     ("resort", "hotels", "Accepting bookings", ["arrivals", "in_house", "departures", "revenue"]),
-    ("sports-venue", "upcoming", "Accepting bookings", []),
+    ("sports-venue", "experiences", "Bookings open", []),
+    ("temple", "experiences", "Bookings open", []),
+    ("bus-operator", "travel", "Bookings open", []),
+    ("fleet-operator", "upcoming", "Online", []),
     ("parcel-partner", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
     ("electrician", "services", "Available", ["jobs", "completed", "earnings", "rating"]),
     ("delivery-rider", "parcels", "Available", ["deliveries", "completed", "earnings", "pending"]),
@@ -112,6 +120,9 @@ def test_each_category_gets_its_own_home(slug, kind, on, metrics):
     if kind == "upcoming":
         assert home["workspace"]["state"] == "upcoming" and home["metrics"]["status"] == "unavailable"
         assert not home["availability"]["canChange"] and home["quickActions"] == []
+    elif kind in ("experiences", "travel"):  # nothing linked yet: Home says what's missing instead of empty numbers
+        assert home["workspace"]["state"] == "not_connected" and home["metrics"]["status"] == "unavailable"
+        assert not home["availability"]["canChange"]
     else:
         assert [m["key"] for m in home["metrics"]["data"]] == metrics
         assert all(q["to"].startswith("/") for q in home["quickActions"])

@@ -1,26 +1,53 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Icon, Logo, type IconName } from '@click/ui';
-import type { Partner, PartnerHome } from '@click/api';
+import type { Partner, PartnerHome, PartnerMode } from '@click/api';
 import { iconFor } from '../config/visuals';
 import { useHome } from '../features/home/queries';
 import { usePartnerSession } from '../session/PartnerSession';
 import { initials } from './PartnerCard';
 
-const WORK_LABEL: Record<string, { label: string; icon: IconName }> = {
-  ride: { label: 'Rides', icon: 'ride' },
-  order: { label: 'Orders', icon: 'receipt' },
-  booking: { label: 'Bookings', icon: 'ticket' },
+/** The Work tab per workspace noun (server-decided by the partner's type; the app only labels it). */
+export const WORK_LABEL: Record<string, { label: string; title: string; icon: IconName }> = {
+  ride: { label: 'Rides', title: 'Rides', icon: 'ride' },
+  order: { label: 'Orders', title: 'Orders', icon: 'receipt' },
+  booking: { label: 'Bookings', title: 'Shows & bookings', icon: 'ticket' },
+  delivery: { label: 'Deliveries', title: 'Deliveries', icon: 'parcel' },
+  stay: { label: 'Stays', title: 'Stays & bookings', icon: 'hotel' },
+  job: { label: 'Jobs', title: 'Jobs', icon: 'wrench' },
+  event: { label: 'Events', title: 'Events', icon: 'gift' },
+  visit: { label: 'Visits', title: 'Visits & entry', icon: 'compass' },
+  trip: { label: 'Trips', title: 'Trips & runs', icon: 'bus' },
 };
 
-/** Home is common; Work and Earnings appear only when the partner's workspace is live (never as dead links). */
-export function navItems(home: PartnerHome | undefined) {
-  const items: { to: string; label: string; icon: IconName }[] = [{ to: '/home', label: 'Home', icon: 'home' }];
+type NavItem = { to: string; label: string; icon: IconName; tab: boolean };
+
+/** Restaurant mode: Home | Orders | Kitchen | Menu | More on the phone bar; the desktop rail lists every tool. */
+const RESTAURANT_NAV: NavItem[] = [
+  { to: '/home', label: 'Home', icon: 'home', tab: true },
+  { to: '/restaurant/orders', label: 'Orders', icon: 'receipt', tab: true },
+  { to: '/restaurant/kitchen', label: 'Kitchen', icon: 'food', tab: true },
+  { to: '/restaurant/menu', label: 'Menu', icon: 'book', tab: true },
+  { to: '/restaurant/offers', label: 'Offers', icon: 'tag', tab: false },
+  { to: '/restaurant/insights', label: 'Insights', icon: 'chart', tab: false },
+  { to: '/earnings', label: 'Earnings', icon: 'wallet', tab: false },
+  { to: '/notifications', label: 'Alerts', icon: 'bell', tab: false },
+  { to: '/more', label: 'More', icon: 'menu', tab: true },
+];
+
+/**
+ * Navigation follows the partner's server-derived mode. Home is common; Work and Earnings appear only when the
+ * partner's workspace is live (never as dead links). `tab` items fit the phone bar; the rail shows the rest too.
+ */
+export function navItems(home: PartnerHome | undefined, mode?: PartnerMode): NavItem[] {
+  // Restaurant tools stay in place while Home loads; they hide only when the restaurant isn't connected yet.
+  if (mode === 'restaurant' && (!home || home.workspace.state === 'live')) return RESTAURANT_NAV;
+  const items: NavItem[] = [{ to: '/home', label: 'Home', icon: 'home', tab: true }];
   if (home?.workspace.state === 'live') {
     const work = WORK_LABEL[home.workspace.workNoun] ?? { label: 'Work', icon: 'briefcase' as IconName };
-    items.push({ to: '/work', ...work }, { to: '/earnings', label: 'Earnings', icon: 'wallet' });
+    items.push({ to: '/work', label: work.label, icon: work.icon, tab: true }, { to: '/earnings', label: 'Earnings', icon: 'wallet', tab: true });
   }
-  items.push({ to: '/notifications', label: 'Alerts', icon: 'bell' });
+  items.push({ to: '/notifications', label: 'Alerts', icon: 'bell', tab: true });
   return items;
 }
 
@@ -99,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const home = useHome();
   const [help, setHelp] = useState(false);
   if (!partner) return null;
-  const items = navItems(home.data);
+  const items = navItems(home.data, partner.mode);
   const unread = home.data?.notifications.unread ?? 0;
 
   return (
@@ -141,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="tabbar" aria-label="Partner navigation">
-        {items.map((i) => (
+        {items.filter((i) => i.tab).map((i) => (
           <NavLink key={i.to} to={i.to} className="tabbar__item">
             <span className="tabbar__icon"><Icon name={i.icon} size={22} />
               {i.to === '/notifications' && unread > 0 && <span className="badge" aria-hidden="true">{unread > 9 ? '9+' : unread}</span>}

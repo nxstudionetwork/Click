@@ -84,6 +84,11 @@ class Partner(BaseModel):
     business_name = models.CharField(max_length=150, blank=True)
     is_available = models.BooleanField(default=False, help_text="Partner-controlled online/open toggle (later phases).")
     profile_completed_at = models.DateTimeField(null=True, blank=True)
+    capabilities = models.JSONField(
+        null=True, blank=True, default=None,
+        help_text="Capability keys Click has granted (see catalog.py). Empty = the category's default capabilities apply. "
+                  "Staff set an explicit list to grant or revoke; partners can never change it.",
+    )
 
     class Meta:
         ordering = ["-created_at"]

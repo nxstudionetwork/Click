@@ -94,3 +94,25 @@ Partner → category → resolved Home configuration (backend/apps/partners/cata
 `python manage.py seed_dev_data` creates one verified test partner per Home configuration (restaurant, grocery store,
 shop, cinema linked to seeded records; hotel, parcel, electrician on the "not live yet" Home) besides the seeded
 drivers. In development builds the sign-in screen has **Login as test partner** (backend endpoint is 404 unless DEBUG).
+
+## Restaurant mode
+
+When the server says `partner.mode === 'restaurant'`, the app switches to restaurant navigation
+(phone: Home | Orders | Kitchen | Menu | More; the desktop rail also lists Offers, Insights, Earnings and Alerts).
+The backend lives in `backend/apps/orders/restaurant.py` (`/api/v1/partner/restaurant/*`) and refuses every other partner type.
+
+- **Kitchen** (`/restaurant/kitchen`): live orders in New → Accepted → Preparing → Ready columns with a target ready time
+  (accepted time + preparation time + any busy minutes). The same order actions as Home, confirmed by the server.
+- **Orders** (`/restaurant/orders`): stage filters, search by order number, a date filter and paging.
+- **Menu** (`/restaurant/menu`): categories and items (price, food type, photo link, sizes/add-ons as option groups),
+  one-tap availability, hide/show, reorder. Customers see changes on their next request; duplicates are refused.
+- **Kitchen card on Home**: busy (+10/20/30 min on the delivery window customers see, for an hour), temporary closure
+  with a reason and automatic reopening, usual preparation time. Expiry runs on partner requests, at add-to-cart and
+  order placement, and in `python manage.py click_jobs --frequent`.
+- **Offers** (`/restaurant/offers`): partner offers are validated server-side and stay hidden from customers until
+  Click approves them (Django admin → Store offers → Approve). Approved offers can be paused and resumed.
+- **Insights** (`/restaurant/insights`): sales, orders, preparation time, acceptance/cancellation, best sellers and
+  ratings, computed only from real orders, status history and reviews.
+
+Not built yet: Buzz posts for partners (Buzz has no partner-authored posts yet), partner support tickets, staff roles,
+photo upload (items take an https image link), and pickup orders (all Click food orders are delivery today).

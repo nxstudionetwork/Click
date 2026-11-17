@@ -20,6 +20,12 @@ const CardPage = lazy(() => import('./pages/CardPage').then((m) => ({ default: m
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
 const WorkPage = lazy(() => import('./pages/WorkPage').then((m) => ({ default: m.WorkPage })));
 const EarningsPage = lazy(() => import('./pages/EarningsPage').then((m) => ({ default: m.EarningsPage })));
+const KitchenPage = lazy(() => import('./pages/restaurant/KitchenPage').then((m) => ({ default: m.KitchenPage })));
+const OrdersPage = lazy(() => import('./pages/restaurant/OrdersPage').then((m) => ({ default: m.OrdersPage })));
+const MenuPage = lazy(() => import('./pages/restaurant/MenuPage').then((m) => ({ default: m.MenuPage })));
+const OffersPage = lazy(() => import('./pages/restaurant/OffersPage').then((m) => ({ default: m.OffersPage })));
+const InsightsPage = lazy(() => import('./pages/restaurant/InsightsPage').then((m) => ({ default: m.InsightsPage })));
+const MorePage = lazy(() => import('./pages/restaurant/MorePage').then((m) => ({ default: m.MorePage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 
 const SPLASH_MIN_MS = 1800;
@@ -52,6 +58,16 @@ function Step({ step, element }: { step: OnboardingStep; element: ReactNode }) {
 
 function Onboarded({ element }: { element: ReactNode }) {
   return <SignedIn>{(current) => (current === 'complete' ? element : <Navigate to={STEP_ROUTE[current]} replace />)}</SignedIn>;
+}
+
+/** Restaurant tools only for restaurant partners (the API refuses everyone else too; this just avoids dead screens). */
+function RestaurantOnly({ element }: { element: ReactNode }) {
+  return <Onboarded element={<RestaurantGate>{element}</RestaurantGate>} />;
+}
+
+function RestaurantGate({ children }: { children: ReactNode }) {
+  const { partner } = usePartnerSession();
+  return partner.state?.partner?.mode === 'restaurant' ? <>{children}</> : <Navigate to="/home" replace />;
 }
 
 function SignedOutOnly({ element }: { element: ReactNode }) {
@@ -101,6 +117,12 @@ export function App() {
             <Route path="home" element={<Onboarded element={<HomePage />} />} />
             <Route path="work" element={<Onboarded element={<WorkPage />} />} />
             <Route path="earnings" element={<Onboarded element={<EarningsPage />} />} />
+            <Route path="restaurant/kitchen" element={<RestaurantOnly element={<KitchenPage />} />} />
+            <Route path="restaurant/orders" element={<RestaurantOnly element={<OrdersPage />} />} />
+            <Route path="restaurant/menu" element={<RestaurantOnly element={<MenuPage />} />} />
+            <Route path="restaurant/offers" element={<RestaurantOnly element={<OffersPage />} />} />
+            <Route path="restaurant/insights" element={<RestaurantOnly element={<InsightsPage />} />} />
+            <Route path="more" element={<RestaurantOnly element={<MorePage />} />} />
             <Route path="notifications" element={<Onboarded element={<NotificationsPage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

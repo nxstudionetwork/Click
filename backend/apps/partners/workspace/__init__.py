@@ -28,6 +28,8 @@ PROVIDERS: dict[str, str] = {
     "services": "apps.professionals.partner_workspace.ServicesProvider",
     "events": "apps.eventhub.partner_workspace.EventsProvider",
     "hotels": "apps.hotels.partner_workspace.HotelsProvider",
+    "experiences": "apps.experiences.partner_workspace.ExperiencesProvider",
+    "travel": "apps.travel.partner_workspace.TravelProvider",
     "upcoming": "apps.partners.workspace.upcoming.UpcomingProvider",
 }
 CAN_OPERATE = {Partner.Status.VERIFIED, Partner.Status.ACTIVE}
@@ -124,7 +126,8 @@ def _greeting_name(partner: Partner) -> str:
     from ..services import configuration_for
 
     individual = configuration_for(partner.category)["identity"]["individual"]
-    name = (getattr(partner.profile, "contact_name", "") or "").strip()
+    profile = getattr(partner, "profile", None)  # staff-created partners may not have a profile row yet
+    name = (getattr(profile, "contact_name", "") or "").strip()
     if individual and name:
         return name.split()[0]
     return partner.business_name or "Partner"

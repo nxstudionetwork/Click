@@ -118,8 +118,8 @@ def test_booking_from_hold_prices_food_offer_and_creates_a_verifiable_ticket(wor
     # Venue check-in: only the operating partner, once.
     from apps.partners.models import Partner, PartnerCategory, PartnerMembership, PartnerType, PartnerVenue
 
-    ptype = PartnerType.objects.create(slug="entertainment", name="Entertainment")
-    cat = PartnerCategory.objects.create(partner_type=ptype, slug="cinema", name="Cinema")
+    ptype, _ = PartnerType.objects.get_or_create(slug="entertainment", defaults={"name": "Cinema & Shows"})
+    cat, _ = PartnerCategory.objects.get_or_create(slug="cinema-hall", defaults={"partner_type": ptype, "name": "Cinema Hall"})
     staff = make_customer("staff@example.com")
     partner = Partner.objects.create(partner_type=ptype, category=cat, business_name="Click Cineplex")
     PartnerMembership.objects.create(partner=partner, user=staff, role="owner")

@@ -11,6 +11,7 @@ import './styles/base.css';
 import '@click/ui/ui.css';
 import './styles/partner.css';
 import './styles/home.css';
+import './styles/restaurant.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

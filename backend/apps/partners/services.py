@@ -60,6 +60,24 @@ def configuration_for(category: PartnerCategory) -> dict:
     return resolve_configuration(category.partner_type.configuration, category.configuration)
 
 
+def capabilities_of(partner: Partner) -> list[dict]:
+    """The capabilities this partner has: Click's explicit grant, or the category defaults when none was set."""
+    available = configuration_for(partner.category)["capabilities"]
+    granted = set(partner.capabilities) if partner.capabilities is not None else {c["key"] for c in available if c["default"]}
+    return [{"key": c["key"], "label": c["label"]} for c in available if c["key"] in granted]
+
+
+def has_capability(partner: Partner, key: str) -> bool:
+    return any(c["key"] == key for c in capabilities_of(partner))
+
+
+def capability_filter(key: str, prefix: str = ""):
+    """Queryset filter for partners holding `key` (default grant or explicit), for matching and routing."""
+    from django.db.models import Q
+
+    return Q(**{f"{prefix}capabilities__isnull": True}) | Q(**{f"{prefix}capabilities__contains": [key]})
+
+
 def primary_address(partner: Partner) -> PartnerAddress | None:
     return partner.addresses.filter(is_primary=True).first()
 

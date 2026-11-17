@@ -3,7 +3,7 @@ import type { IconName } from '@click/ui';
 /**
  * The one place that maps partner types to real photography and icons.
  * Keys are the stable type slugs served by the API; any type added later
- * without an entry here falls back to the Local Business visuals.
+ * without an entry here falls back to the generic local-business visuals.
  */
 export interface Scene {
   photo: string;
@@ -35,12 +35,26 @@ const VISUALS: Record<string, TypeVisual> = {
       { photo: 'restaurant', alt: 'A bright restaurant dining room with wooden tables', stage: 'Grow', caption: 'Bring more guests to your tables' },
     ],
   },
-  retail: {
+  groceries: {
     accent: '#16a34a',
     scenes: [
       { photo: 'produce', alt: 'Shelves of fresh vegetables and fruit in a grocery store', stage: 'Stock', caption: 'Show customers what’s on your shelves' },
       { photo: 'supermarket', alt: 'A long supermarket aisle lined with products', stage: 'Pick', caption: 'Pick items as orders arrive' },
       { photo: 'grocery-bags', alt: 'Paper grocery bags packed with bread, apples and bananas', stage: 'Pack', caption: 'Pack orders ready for handoff' },
+    ],
+  },
+  retail: {
+    accent: '#7c3aed',
+    scenes: [
+      { photo: 'shop-owner', alt: 'A shop owner serving a customer at the counter', stage: 'Sell', caption: 'Sell your products to Click customers' },
+      { photo: 'shop-counter', alt: 'A shop owner taking a card payment at the till', stage: 'Earn', caption: 'Pack orders and get paid' },
+    ],
+  },
+  pharmacy: {
+    accent: '#0d9488',
+    scenes: [
+      { photo: 'pharmacy-store', alt: 'A bright pharmacy with stocked shelves', stage: 'Stock', caption: 'List medicines and health essentials' },
+      { photo: 'medicines', alt: 'Medicine capsules spilling from a bottle', stage: 'Check', caption: 'Check prescriptions before you dispense' },
     ],
   },
   logistics: {
@@ -72,6 +86,25 @@ const VISUALS: Record<string, TypeVisual> = {
       { photo: 'hotel-night', alt: 'A hotel lit up at dusk beside its pool', stage: 'Book', caption: 'Take bookings around the clock' },
     ],
   },
+  events: {
+    accent: '#db2777',
+    scenes: [
+      { photo: 'banquet-hall', alt: 'A banquet hall set with round tables and chandeliers', stage: 'Host', caption: 'Plan, decorate and host events' },
+    ],
+  },
+  experiences: {
+    accent: '#ca8a04',
+    scenes: [
+      { photo: 'monument', alt: 'The Taj Mahal reflected in its long pool', stage: 'Welcome', caption: 'Sell entry tickets and time slots' },
+    ],
+  },
+  travel: {
+    accent: '#4f46e5',
+    scenes: [
+      { photo: 'coach-bus', alt: 'A coach bus with its lights on, on a mountain road at dusk', stage: 'Depart', caption: 'Run trips customers book on Click' },
+      { photo: 'travel-planning', alt: 'A map, camera and travel guides laid out for a trip', stage: 'Plan', caption: 'Offer tours and travel packages' },
+    ],
+  },
   local: {
     accent: '#7c3aed',
     scenes: [
@@ -91,19 +124,23 @@ export function visualFor(typeSlug: string | undefined): TypeVisual {
 export const ECOSYSTEM_STORY: (Scene & { label: string })[] = [
   { ...VISUALS.transport!.scenes[0]!, label: 'Drivers' },
   { ...VISUALS.food!.scenes[0]!, label: 'Restaurants' },
-  { ...VISUALS.retail!.scenes[2]!, label: 'Grocery & retail' },
-  { ...VISUALS.logistics!.scenes[2]!, label: 'Parcel & logistics' },
-  { ...VISUALS.services!.scenes[0]!, label: 'Manpower & services' },
-  { ...VISUALS.entertainment!.scenes[0]!, label: 'Cinemas' },
-  { ...VISUALS.hospitality!.scenes[0]!, label: 'Hotels & venues' },
-  { ...VISUALS.local!.scenes[0]!, label: 'Local businesses' },
+  { ...VISUALS.groceries!.scenes[2]!, label: 'Groceries' },
+  { ...VISUALS.retail!.scenes[0]!, label: 'Shops' },
+  { ...VISUALS.pharmacy!.scenes[0]!, label: 'Pharmacies' },
+  { ...VISUALS.logistics!.scenes[2]!, label: 'Parcel' },
+  { ...VISUALS.services!.scenes[0]!, label: 'Services' },
+  { ...VISUALS.entertainment!.scenes[0]!, label: 'Cinema & shows' },
+  { ...VISUALS.hospitality!.scenes[0]!, label: 'Hotels' },
+  { ...VISUALS.travel!.scenes[0]!, label: 'Travel' },
+  { ...VISUALS.events!.scenes[0]!, label: 'Events' },
 ];
 
 const ICONS: Record<string, IconName> = {
   car: 'car', auto: 'auto', bike: 'bike', fleet: 'fleet', key: 'key', bus: 'bus', food: 'food', coffee: 'coffee',
   cake: 'cake', grocery: 'grocery', shop: 'shop', device: 'device', shirt: 'shirt', parcel: 'parcel',
   warehouse: 'warehouse', wrench: 'wrench', team: 'team', sparkle: 'sparkle', home: 'home', briefcase: 'briefcase',
-  ticket: 'ticket', film: 'film', hotel: 'hotel', ball: 'ball', compass: 'compass', store: 'store', bag: 'bag', plus: 'plus',
+  ticket: 'ticket', film: 'film', hotel: 'hotel', ball: 'ball', compass: 'compass', store: 'store', bag: 'bag', plus: 'plus', temple: 'temple', gift: 'gift',
+  camera: 'camera', headphones: 'headphones', beauty: 'beauty', plane: 'plane', train: 'train', heart: 'heart',
 };
 
 export const iconFor = (key: string | undefined): IconName => (key && ICONS[key]) || 'store';

@@ -173,3 +173,16 @@ def test_places_come_from_click_data_only(auth_api, customer, address):
 def test_ride_endpoints_require_a_customer(api):
     assert api.post("/api/v1/customer/rides/quote", {}, format="json").status_code == 401
     assert api.get("/api/v1/customer/rides").status_code == 401
+
+
+def test_matching_respects_the_ride_capability_click_grants(cab):
+    """A driver Click hasn't approved for ride trips (capability revoked in the Business OS) is never offered a ride."""
+    from apps.rides.matching import eligible_drivers
+
+    ok, _ = make_driver("ok@click.local")
+    revoked, _ = make_driver("revoked@click.local", lat=12.9726)
+    Partner.objects.filter(pk=revoked.pk).update(capabilities=["parcel_delivery"])
+    found = [p.pk for p, _ in eligible_drivers(cab, (12.9725, 77.6420))]
+    assert ok.pk in found and revoked.pk not in found
+    Partner.objects.filter(pk=revoked.pk).update(capabilities=["rides"])  # granted again
+    assert revoked.pk in [p.pk for p, _ in eligible_drivers(cab, (12.9725, 77.6420))]

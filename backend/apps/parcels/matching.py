@@ -36,7 +36,10 @@ def vehicle_type_of(partner: Partner) -> str:
 
 def _candidates():
     cutoff = timezone.now() - LOCATION_FRESH_FOR
+    from apps.partners.services import capability_filter
+
     return (DriverLocation.objects.filter(
+        capability_filter("parcel_delivery", "driver__"),
         reported_at__gte=cutoff, driver__is_available=True,
         driver__status__in=[Partner.Status.VERIFIED, Partner.Status.ACTIVE],
         driver__category__slug__in=parcel_categories(),

@@ -278,6 +278,7 @@ def _provider(name, category_slug, city, now):
     if not m:
         PartnerMembership.objects.create(partner=partner, user=user, role="owner")
     partner.partner_code = partner.partner_code or _code()
+    partner.partner_type, partner.category = category.partner_type, category  # follows catalogue changes
     partner.status = Partner.Status.ACTIVE
     partner.is_available = True
     partner.profile_completed_at = partner.profile_completed_at or now
@@ -297,7 +298,8 @@ def seed_experiences(log) -> None:
             family_friendly=kind in ("zoo", "garden", "beach"), kids_friendly=kind in ("zoo", "garden"), accent="#57534e"))
     made = 0
     for prov, name, kind, city, region, area, lat, lng, extras, template in BOOKABLE:
-        cat = "activity-provider" if kind in ("walking_tour", "boat_ride", "city_tour", "cruise", "workshop", "adventure", "food", "tour") else "ticketing-venue"
+        cat = ("activity-provider" if kind in ("walking_tour", "boat_ride", "city_tour", "cruise", "workshop", "adventure", "food", "tour")
+               else "temple" if kind == "temple" else "attraction")
         partner = _provider(prov, cat, city, now)
         a, _ = Attraction.objects.update_or_create(slug=slugify(name)[:140], defaults=dict(
             name=name, kind=kind, city=city, region=region, area=area, latitude=lat, longitude=lng, address=f"{area}, {city}, {region}", provider=partner,

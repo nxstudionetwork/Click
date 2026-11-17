@@ -12,9 +12,11 @@ from django.core.management.base import BaseCommand
 
 def frequent() -> dict:
     from apps.payments.gateway import expire_unpaid
+    from apps.orders.restaurant import release_due
     from apps.wallet.services import expire_topups
 
-    return {"unpaid_orders_cancelled": expire_unpaid(), "topups_expired": expire_topups()}
+    return {"unpaid_orders_cancelled": expire_unpaid(), "topups_expired": expire_topups(),
+            "restaurant_states_released": release_due()}
 
 
 def daily() -> dict:

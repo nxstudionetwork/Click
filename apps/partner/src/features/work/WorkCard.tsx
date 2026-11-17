@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Icon, useToast, type IconName } from '@click/ui';
 import type { WorkAction, WorkItem } from '@click/api';
@@ -18,7 +18,9 @@ function directionsUrl(n: NonNullable<WorkItem['navigate']>) {
  * One unit of work (ride request, trip, order, show, booking, stock alert). Status is always text plus tone, never
  * colour alone. Actions go to the server; nothing is shown as done until the server confirms it.
  */
-export function WorkCard({ item, emphasis = false }: { item: WorkItem; emphasis?: boolean }) {
+export function WorkCard({ item, emphasis = false, body, className = '' }: {
+  item: WorkItem; emphasis?: boolean; body?: ReactNode; className?: string;
+}) {
   const toast = useToast();
   const act = useWorkAction();
   const [confirming, setConfirming] = useState<WorkAction | null>(null);
@@ -46,7 +48,7 @@ export function WorkCard({ item, emphasis = false }: { item: WorkItem; emphasis?
 
   const busyKey = act.isPending ? act.variables?.action : null;
   return (
-    <article className={`work work--${item.tone} ${emphasis ? 'work--emphasis' : ''}`} aria-labelledby={`w-${item.id}`}>
+    <article className={`work work--${item.tone} ${emphasis ? 'work--emphasis' : ''} ${className}`} aria-labelledby={`w-${item.id}`}>
       <header className="work__head">
         <span className="work__icon" aria-hidden="true"><Icon name={KIND_ICON[item.kind] ?? 'receipt'} size={20} /></span>
         <div className="work__title">
@@ -59,7 +61,8 @@ export function WorkCard({ item, emphasis = false }: { item: WorkItem; emphasis?
         </div>
       </header>
 
-      {item.fields.length > 0 && (
+      {body}
+      {!body && item.fields.length > 0 && (
         <dl className="work__fields">
           {item.fields.map((f) => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
         </dl>

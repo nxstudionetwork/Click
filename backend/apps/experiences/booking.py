@@ -201,6 +201,8 @@ def _offering(data) -> Offering:
          .filter(pk=data["offering_id"], is_active=True, attraction__is_listed=True, attraction__bookable=True).first())
     if o is None:
         raise DomainError("This can’t be booked through Click. right now.", code="not_bookable", status_code=404)
+    if o.attraction.provider_id and not o.attraction.provider.is_available:  # the provider closed bookings in Click Partner
+        raise DomainError(f"{o.attraction.name} isn’t taking bookings right now.", code="provider_closed", status_code=409)
     return o
 
 

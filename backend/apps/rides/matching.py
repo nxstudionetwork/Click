@@ -25,10 +25,12 @@ MAX_OFFERS = 5
 def eligible_drivers(ride_type: RideType, point: tuple[float, float], radius_km: float = MATCH_RADIUS_KM, exclude=()):
     """[(partner, distance_km)] nearest first: online, verified, right vehicle, recently located, within radius."""
     from apps.partners.catalog import categories_with_workspace
+    from apps.partners.services import capability_filter
 
     cutoff = timezone.now() - LOCATION_FRESH_FOR
     locations = (
         DriverLocation.objects.filter(
+            capability_filter("rides", "driver__"),  # Click can revoke a driver's ride capability (Business OS)
             reported_at__gte=cutoff,
             driver__is_available=True,
             driver__status__in=[Partner.Status.VERIFIED, Partner.Status.ACTIVE],

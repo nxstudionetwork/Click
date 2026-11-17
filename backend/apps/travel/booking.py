@@ -50,6 +50,9 @@ def _resolve(data) -> tuple[Journey, Stop, Stop, Service]:
     j = Journey.objects.select_related("service__operator").filter(pk=data["journey_id"]).first()
     if j is None or not j.service.is_active or j.service.operator.status != "active":
         raise DomainError("This journey is no longer available. Refresh the results.", code="journey_unavailable", status_code=404)
+    partner = j.service.operator.partner
+    if partner is not None and not partner.is_available:  # the operator closed bookings in Click Partner
+        raise DomainError(f"{j.service.operator.name} isn’t taking new bookings right now.", code="operator_closed", status_code=409)
     stops = {s.id: s for s in j.service.stops.select_related("place__city")}
     a, b = stops.get(data["from_stop_id"]), stops.get(data["to_stop_id"])
     if a is None or b is None or a.seq >= b.seq or not a.boarding or not b.dropping or not a.depart or not b.arrive:

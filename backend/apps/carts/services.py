@@ -164,6 +164,10 @@ def add_item(customer: CustomerProfile, product_id, quantity: int, note: str = "
         product = Product.objects.select_related("store").get(pk=product_id, is_active=True)
     except Product.DoesNotExist:
         raise DomainError("This item is no longer available.", code="product_not_found", status_code=404)
+    if product.store.paused_until:
+        from apps.orders.restaurant import release_due
+
+        release_due(product.store)  # a temporary closure that has ended reopens before we check
     if not product.is_available or not product.store.is_open:
         raise DomainError("This item can't be ordered right now.", code="product_unavailable")
 
