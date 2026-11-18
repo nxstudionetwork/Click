@@ -621,7 +621,7 @@ export interface AssistantCapabilities {
 export interface BuzzItem {
   id: string;
   kind: 'offer' | 'event' | 'trailer' | 'store' | 'product' | 'event_team' | 'post';
-  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'events' | 'hotels' | 'ride' | 'parcel';
+  theme: 'food' | 'grocery' | 'shopping' | 'movies' | 'services' | 'events' | 'hotels' | 'ride' | 'parcel' | 'travel';
   title: string;
   body: string;
   tag: string;
@@ -630,6 +630,12 @@ export interface BuzzItem {
   mediaType: 'image' | 'video' | '';
   action: { label: string; path: string };
   publishedAt: string;
+  /** Partner posts only: engagement and the attached item / offer (null for other kinds). */
+  post: {
+    likes: number; liked: boolean; saved: boolean;
+    item: { name: string; price: Money; available: boolean } | null;
+    offer: string | null;
+  } | null;
 }
 
 // --- Wallet -----------------------------------------------------------------
@@ -963,6 +969,8 @@ export interface WorkItem {
   actions: WorkAction[];
   navigate: { lat: number; lng: number; label: string } | null;
   link: string;
+  /** Answer before this time (e.g. a ride request); the app counts down. */
+  deadline?: string | null;
 }
 
 export interface HomeMetric { key: string; label: string; value: unknown; display: string; hint: string }

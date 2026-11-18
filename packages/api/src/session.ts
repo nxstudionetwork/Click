@@ -19,6 +19,11 @@ export interface ClickClient {
   session: SessionStore;
   /** Single-flight refresh: concurrent 401s share one refresh request. Resolves null when signed out. */
   refreshSession(): Promise<Session | null>;
+  /**
+   * The same single refresh request, but rejecting on failure so the caller can tell "signed out" from "offline".
+   * Refresh tokens rotate, so every refresh in an app must share one request or the second looks like token reuse.
+   */
+  restoreSession(): Promise<Session>;
 }
 
 export function createClickClient(options: { baseUrl: string; clientId: string }): ClickClient {
@@ -47,9 +52,23 @@ export function createClickClient(options: { baseUrl: string; clientId: string }
   });
   const auth = authApi(http);
 
+  let rawInFlight: Promise<Session> | null = null;
+  function rawRefresh(): Promise<Session> {
+    rawInFlight ??= auth.refresh().finally(() => {
+      rawInFlight = null;
+    });
+    return rawInFlight;
+  }
+
+  function restoreSession(): Promise<Session> {
+    return rawRefresh().then((s) => {
+      session.set(s.access);
+      return s;
+    });
+  }
+
   function refreshSession(): Promise<Session | null> {
-    refreshInFlight ??= auth
-      .refresh()
+    refreshInFlight ??= rawRefresh()
       .then(
         (s) => {
           session.set(s.access);
@@ -66,5 +85,5 @@ export function createClickClient(options: { baseUrl: string; clientId: string }
     return refreshInFlight;
   }
 
-  return { http, session, refreshSession };
+  return { http, session, refreshSession, restoreSession };
 }

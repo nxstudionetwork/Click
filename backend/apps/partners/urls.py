@@ -1,6 +1,8 @@
 from django.urls import path
 
+from apps.buzz import views as BuzzViews
 from apps.orders import restaurant_views as rv
+from apps.rides import driver_views as dv
 
 from . import views
 
@@ -34,5 +36,20 @@ urlpatterns = [
     path("restaurant/offers", rv.OffersView.as_view(), name="partner-restaurant-offers"),
     path("restaurant/offers/<uuid:pk>/<slug:action>", rv.OfferActionView.as_view(), name="partner-restaurant-offer-action"),
     path("restaurant/insights", rv.InsightsView.as_view(), name="partner-restaurant-insights"),
+    # Driver mode (apps.rides.driver): profile & vehicle, earnings, trip history, rate rider, safety
+    path("driver/profile", dv.ProfileView.as_view(), name="partner-driver-profile"),
+    path("driver/earnings", dv.EarningsView.as_view(), name="partner-driver-earnings"),
+    path("driver/trips", dv.TripsView.as_view(), name="partner-driver-trips"),
+    path("driver/trips/<uuid:pk>/rate-rider", dv.RateRiderView.as_view(), name="partner-driver-rate-rider"),
+    path("driver/trips/<uuid:pk>/safety", dv.SafetyView.as_view(), name="partner-driver-safety"),
+    # Click. Buzz posts (every partner type with a live listing)
+    path("buzz", BuzzViews.PartnerBuzzView.as_view(), name="partner-buzz"),
+    path("buzz/media", BuzzViews.PartnerBuzzMediaView.as_view(), name="partner-buzz-media"),
+    path("buzz/media/<uuid:pk>", BuzzViews.PartnerBuzzMediaView.as_view(), name="partner-buzz-media-item"),
+    path("buzz/community", BuzzViews.PartnerBuzzCommunityView.as_view(), name="partner-buzz-community"),
+    path("buzz/<uuid:pk>", BuzzViews.PartnerBuzzPostView.as_view(), name="partner-buzz-post"),
+    path("buzz/<uuid:pk>/<slug:action>", BuzzViews.PartnerBuzzActionView.as_view(), name="partner-buzz-action"),
+    # Verification documents (every partner type)
+    path("documents", views.DocumentsView.as_view(), name="partner-documents"),
     path("dev-login", views.DevPartnerLoginView.as_view(), name="partner-dev-login"),  # 404 unless DEBUG
 ]

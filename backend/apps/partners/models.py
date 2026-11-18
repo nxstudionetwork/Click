@@ -260,3 +260,32 @@ class PartnerNotification(BaseModel):
             models.Index(fields=["partner", "-created_at"], name="partners_notif_recent_idx"),
             models.Index(fields=["partner"], condition=Q(read_at__isnull=True), name="partners_notif_unread_idx"),
         ]
+
+
+class PartnerDocument(BaseModel):
+    """
+    A verification document the partner provided (keys come from the category's `documents` in catalog.py).
+    Click staff verify or reject it (Business OS / admin). A verified document whose expiry has passed counts as
+    expired: for a required document that blocks operating (e.g. a driver can't go online with an expired licence).
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="documents")
+    key = models.SlugField(max_length=40)
+    number = models.CharField(max_length=40, blank=True, help_text="Document number as printed.")
+    expires_on = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    review_note = models.CharField(max_length=200, blank=True)
+    submitted_at = models.DateTimeField()
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["key"]
+        constraints = [models.UniqueConstraint(fields=["partner", "key"], name="partners_document_unique")]
+
+    def __str__(self) -> str:
+        return f"{self.partner} · {self.key}"

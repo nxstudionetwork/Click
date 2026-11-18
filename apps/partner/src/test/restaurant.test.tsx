@@ -43,7 +43,7 @@ beforeEach(() => {
 
 test('restaurant navigation is Home | Orders | Kitchen | Menu | More on the phone, and only for restaurants', () => {
   expect(navItems(liveHome, 'restaurant').filter((i) => i.tab).map((i) => i.label)).toEqual(['Home', 'Orders', 'Kitchen', 'Menu', 'More']);
-  expect(navItems(liveHome, 'store').map((i) => i.label)).toEqual(['Home', 'Orders', 'Earnings', 'Alerts']);
+  expect(navItems(liveHome, 'store').map((i) => i.label)).toEqual(['Home', 'Orders', 'Buzz', 'Earnings', 'Alerts']);
   const notConnected = { ...liveHome, workspace: { ...liveHome.workspace, state: 'not_connected' } } as PartnerHome;
   expect(navItems(notConnected, 'restaurant').map((i) => i.label)).toEqual(['Home', 'Alerts']);
 });
@@ -90,4 +90,19 @@ test('marking a menu item unavailable is one tap and is saved on the server', as
   const toggle = await screen.findByRole('switch', { name: 'Pad Thai available to order' });
   await userEvent.click(toggle);
   await waitFor(() => expect(api.restaurant.updateItem).toHaveBeenCalledWith('i1', { isAvailable: false }));
+});
+
+test('driver navigation is Home | Rides | Buzz | Earnings | Menu on the phone', () => {
+  expect(navItems(liveHome, 'driver').filter((i) => i.tab).map((i) => i.label)).toEqual(['Home', 'Rides', 'Buzz', 'Earnings', 'Menu']);
+});
+
+test('a ride request counts down to its deadline', async () => {
+  const { WorkCard } = await import('../features/work/WorkCard');
+  renderPage(<WorkCard item={{
+    kind: 'ride', id: 'r1', ref: 'CLK-R1', title: 'Home → Office', subtitle: 'Cab', status: 'request', statusLabel: 'New ride request',
+    tone: 'urgent', at: new Date().toISOString(), amount: '180.00', currency: 'INR', fields: [], navigate: null, link: '',
+    actions: [{ key: 'accept', label: 'Accept', style: 'primary', confirm: '', needsReason: false }],
+    deadline: new Date(Date.now() + 30_000).toISOString(),
+  }} />);
+  expect(screen.getByRole('timer')).toHaveTextContent(/Respond in (29|30)s/);
 });

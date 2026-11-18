@@ -26,3 +26,11 @@ def test_buzz_feed_empty_and_limits(api):
     assert api.get("/api/v1/buzz").json() == {"results": []}
     assert api.get("/api/v1/buzz?limit=0").status_code == 400
     assert api.get("/api/v1/buzz?limit=31").status_code == 400
+
+
+def test_every_store_type_has_a_theme_and_a_real_destination(api):
+    from apps.stores.models import StoreType
+
+    make_store("Care Pharmacy", store_type=StoreType.PHARMACY, rating_count=40)
+    item = next(i for i in api.get("/api/v1/buzz").json()["results"] if i["title"] == "Care Pharmacy")
+    assert item["action"] == {"label": "Shop pharmacy", "path": "/pharma"} and item["theme"] == "shopping"

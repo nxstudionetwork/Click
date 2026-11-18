@@ -5,9 +5,9 @@ Every Buzz item is a real Click record (an active offer, a show that can be book
 as a short "instant" with exactly one action that leads into the matching Click flow (order, shop, book). Nothing is
 invented here: if a domain has no live records, it contributes no items.
 
-Extension point: partner-published media posts (short videos and photos) will be a `BuzzPost` model owned by
-`apps.partners`. They plug into `build_feed` as one more source with the same item shape; the API and the
-Customer App do not change.
+Partner posts (apps.buzz.models.BuzzPost, written from the Partner App and approved by Click) are one more source
+with the same item shape, plus a `post` block with engagement and the attached item/offer. Their action is always
+one of the partner's own live listings, re-checked when served.
 """
 
 from dataclasses import asdict, dataclass
@@ -18,8 +18,14 @@ from apps.bookings.views import public_events
 from apps.stores.models import Store, StoreType
 from apps.stores.views import active_offers, public_stores
 
-THEME = {StoreType.RESTAURANT: "food", StoreType.GROCERY: "grocery", StoreType.RETAIL: "shopping"}
-STORE_VERB = {StoreType.RESTAURANT: "Order now", StoreType.GROCERY: "Shop groceries", StoreType.RETAIL: "Shop now"}
+THEME = {StoreType.RESTAURANT: "food", StoreType.GROCERY: "grocery", StoreType.RETAIL: "shopping", StoreType.PHARMACY: "shopping"}
+STORE_VERB = {StoreType.RESTAURANT: "Order now", StoreType.GROCERY: "Shop groceries", StoreType.RETAIL: "Shop now",
+              StoreType.PHARMACY: "Shop pharmacy"}
+
+
+def _store_path(s) -> str:
+    """Where a store opens in the Customer App (every store type has one)."""
+    return {StoreType.GROCERY: f"/groceries/store/{s.slug}", StoreType.PHARMACY: "/pharma"}.get(s.store_type, f"/stores/{s.slug}")
 MAX_ITEMS = 30
 
 
@@ -48,6 +54,7 @@ class BuzzItem:
     media_type: str  # "image" | "video" | ""
     action: BuzzAction
     published_at: str
+    post: dict | None = None  # partner posts only: {likes, liked, saved, item, offer}
 
 
 def _offer_items(limit):
@@ -58,7 +65,7 @@ def _offer_items(limit):
             id=f"offer:{o.id}", kind="offer", theme=THEME[s.store_type], title=o.title,
             body=o.description or f"At {s.name}, {s.locality or s.city}.", tag="Offer",
             source=BuzzSource(s.name, s.slug), media_url=s.image_url, media_type="image" if s.image_url else "",
-            action=BuzzAction(STORE_VERB[s.store_type], (f"/groceries/store/{s.slug}" if s.store_type == StoreType.GROCERY else f"/stores/{s.slug}")), published_at=o.created_at.isoformat(),
+            action=BuzzAction(STORE_VERB[s.store_type], _store_path(s)), published_at=o.created_at.isoformat(),
         )
 
 
@@ -92,7 +99,7 @@ def _store_items(limit):
             id=f"store:{s.id}", kind="store", theme=THEME[s.store_type], title=s.name,
             body=f"{cats} · rated {s.rating_average} by {s.rating_count:,} customers", tag="Top rated",
             source=BuzzSource(s.name, s.slug), media_url=s.image_url, media_type="image" if s.image_url else "",
-            action=BuzzAction(STORE_VERB[s.store_type], (f"/groceries/store/{s.slug}" if s.store_type == StoreType.GROCERY else f"/stores/{s.slug}")), published_at=s.created_at.isoformat(),
+            action=BuzzAction(STORE_VERB[s.store_type], _store_path(s)), published_at=s.created_at.isoformat(),
         )
 
 
@@ -160,11 +167,115 @@ def _event_team_items(limit):
         )
 
 
-def build_feed(limit: int = 12) -> list[dict]:
-    """Interleave sources so the feed alternates between offers, shows and places."""
+def _post_items(limit, user=None):
+    """Approved, live partner posts. A post whose listing, item or offer is no longer live is not served."""
+    from .models import BuzzReaction
+    from .partner import CTA_LABEL, THEME, listings, live_posts, media_url, partner_mode
+
+    posts = list(live_posts().order_by("-publish_at", "-reviewed_at")[: limit * 2])
+    mine = set()
+    if user is not None and user.is_authenticated:
+        mine = set(BuzzReaction.objects.filter(user=user, post__in=posts).values_list("post_id", "kind"))
+    n, by_partner = 0, {}
+    for p in posts:
+        if p.partner_id not in by_partner:  # one lookup per partner, not per post
+            by_partner[p.partner_id] = listings(p.partner)
+        listing = next((x for x in by_partner[p.partner_id] if x["type"] == p.target_type and x["id"] == p.target_id), None)
+        if listing is None or (p.store_offer_id and not _offer_live(p.store_offer)):
+            continue
+        media = next(iter(p.media.all()), None)
+        mode = partner_mode(p.partner)
+        theme = "grocery" if listing.get("store_type") == "grocery" else THEME.get(mode, "shopping")
+        yield BuzzItem(
+            id=f"post:{p.id}", kind="post", theme=theme, title=p.headline, body=p.caption, tag=p.get_kind_display(),
+            source=BuzzSource(p.partner.business_name, listing["handle"]),
+            media_url=media_url(media, 1080) if media else "", media_type=media.kind if media else "",
+            action=BuzzAction(CTA_LABEL[p.cta], listing["link"]),
+            published_at=(p.publish_at or p.reviewed_at or p.created_at).isoformat(),
+            post={"likes": p.likes, "liked": (p.id, "like") in mine, "saved": (p.id, "save") in mine,
+                  "item": {"name": p.product.name, "price": f"{p.product.price:.2f}", "available": p.product.is_available}
+                  if p.product and p.product.is_active else None,
+                  "offer": p.store_offer.title if p.store_offer_id else None},
+        )
+        n += 1
+        if n >= limit:
+            break
+
+
+def _offer_live(offer) -> bool:
+    from apps.stores.views import active_offers
+
+    return active_offers().filter(pk=offer.pk).exists()
+
+
+def build_feed(limit: int = 12, user=None) -> list[dict]:
+    """Interleave sources so the feed alternates between partner posts, offers, shows and places."""
     limit = max(1, min(limit, MAX_ITEMS))
     per_source = limit
-    sources = [list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
+    sources = [list(_post_items(per_source, user)), list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
                list(_grocery_items(per_source)), list(_event_team_items(per_source)), list(_store_items(per_source))]
     mixed = [item for item in chain.from_iterable(zip_longest(*sources)) if item is not None]
     return [asdict(i) for i in mixed[:limit]]
+
+
+# --- engagement on partner posts ---------------------------------------------------------------------------------
+
+def _live_post(post_id):
+    from apps.core.api.exceptions import DomainError
+
+    from .partner import live_posts
+
+    post = live_posts(audience=None).filter(pk=post_id).first()
+    if post is None:
+        raise DomainError("This post isn't available any more.", code="not_found", status_code=404)
+    return post
+
+
+def toggle_reaction(user, post_id, kind: str) -> dict:
+    from django.db import transaction
+
+    from .models import BuzzPost, BuzzReaction
+
+    post = _live_post(post_id)
+    with transaction.atomic():
+        existing = BuzzReaction.objects.filter(post=post, user=user, kind=kind)
+        on = not existing.exists()
+        if on:
+            BuzzReaction.objects.get_or_create(post=post, user=user, kind=kind)
+        else:
+            existing.delete()
+        count = BuzzReaction.objects.filter(post=post, kind=kind).count()
+        BuzzPost.objects.filter(pk=post.pk).update(**{"likes" if kind == "like" else "saves": count})
+    return {"on": on, "count": count}
+
+
+def record_event(post_id, kind: str, viewer: str) -> bool:
+    """A view or CTA click, counted once per viewer per day."""
+    from django.db import IntegrityError, transaction
+    from django.db.models import F
+    from django.utils import timezone
+
+    from .models import BuzzEvent, BuzzPost
+
+    post = _live_post(post_id)
+    try:
+        with transaction.atomic():
+            BuzzEvent.objects.create(post=post, kind=kind, viewer=viewer, day=timezone.localdate())
+            BuzzPost.objects.filter(pk=post.pk).update(**{"views" if kind == "view" else "cta_clicks": F("views" if kind == "view" else "cta_clicks") + 1})
+    except IntegrityError:
+        return False
+    return True
+
+
+def report(user, post_id, reason: str, note: str = "") -> None:
+    from apps.core.api.exceptions import DomainError
+
+    from .models import BuzzReport
+
+    post = _live_post(post_id)
+    if reason not in BuzzReport.Reason.values:
+        raise DomainError("Choose a reason.", code="validation_error", details={"reason": ["Choose a reason."]})
+    if post.partner.memberships.filter(user=user).exists():
+        raise DomainError("You can’t report your own post.", code="own_post")
+    BuzzReport.objects.get_or_create(post=post, reporter=user, status=BuzzReport.Status.OPEN,
+                                     defaults={"reason": reason, "note": str(note)[:300]})

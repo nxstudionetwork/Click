@@ -63,6 +63,8 @@ def availability_state(partner: Partner, provider: Provider) -> dict:
         blocked = f"You can switch to “{status.get('on', 'On')}” once {service} launches."
     elif connection == "not_connected":
         blocked = message
+    else:
+        blocked = provider.blocked_reason()
     is_on = bool(partner.is_available) and not blocked
     return {
         "is_on": is_on,

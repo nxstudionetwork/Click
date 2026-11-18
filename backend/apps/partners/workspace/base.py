@@ -77,6 +77,7 @@ class WorkItem:
     amount: Decimal | None = None
     currency: str = "INR"
     fields: list[tuple[str, str]] = field(default_factory=list)
+    deadline: datetime | None = None  # answer before this (e.g. a ride request); the app counts down
     actions: list[Action] = field(default_factory=list)
     navigate: dict | None = None  # {"lat", "lng", "label"} for drivers
     link: str = ""
@@ -89,6 +90,7 @@ class WorkItem:
             "amount": money(self.amount) if self.amount is not None else None, "currency": self.currency,
             "fields": [{"label": k, "value": v} for k, v in self.fields if v not in (None, "")],
             "actions": [a.as_dict() for a in self.actions], "navigate": self.navigate, "link": self.link,
+            "deadline": self.deadline.isoformat() if self.deadline else None,
         }
 
 
@@ -139,6 +141,10 @@ class Provider:
         return None
 
     # --- availability ------------------------------------------------------------------------
+    def blocked_reason(self) -> str:
+        """Why the partner can't switch on right now beyond account status ('' = nothing blocks), e.g. expired documents."""
+        return ""
+
     def can_go_unavailable(self) -> str:
         """Empty when the partner may switch off now, otherwise the reason (e.g. an active trip)."""
         return ""

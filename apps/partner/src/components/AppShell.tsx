@@ -29,10 +29,21 @@ const RESTAURANT_NAV: NavItem[] = [
   { to: '/restaurant/kitchen', label: 'Kitchen', icon: 'food', tab: true },
   { to: '/restaurant/menu', label: 'Menu', icon: 'book', tab: true },
   { to: '/restaurant/offers', label: 'Offers', icon: 'tag', tab: false },
+  { to: '/buzz', label: 'Buzz', icon: 'sparkle', tab: false },
   { to: '/restaurant/insights', label: 'Insights', icon: 'chart', tab: false },
   { to: '/earnings', label: 'Earnings', icon: 'wallet', tab: false },
   { to: '/notifications', label: 'Alerts', icon: 'bell', tab: false },
   { to: '/more', label: 'More', icon: 'menu', tab: true },
+];
+
+/** Driver mode: Home | Rides | Buzz | Earnings | Menu. */
+const DRIVER_NAV: NavItem[] = [
+  { to: '/home', label: 'Home', icon: 'home', tab: true },
+  { to: '/driver/rides', label: 'Rides', icon: 'ride', tab: true },
+  { to: '/buzz', label: 'Buzz', icon: 'sparkle', tab: true },
+  { to: '/driver/earnings', label: 'Earnings', icon: 'wallet', tab: true },
+  { to: '/notifications', label: 'Alerts', icon: 'bell', tab: false },
+  { to: '/driver/menu', label: 'Menu', icon: 'menu', tab: true },
 ];
 
 /**
@@ -42,10 +53,12 @@ const RESTAURANT_NAV: NavItem[] = [
 export function navItems(home: PartnerHome | undefined, mode?: PartnerMode): NavItem[] {
   // Restaurant tools stay in place while Home loads; they hide only when the restaurant isn't connected yet.
   if (mode === 'restaurant' && (!home || home.workspace.state === 'live')) return RESTAURANT_NAV;
+  if (mode === 'driver' && (!home || home.workspace.state === 'live')) return DRIVER_NAV;
   const items: NavItem[] = [{ to: '/home', label: 'Home', icon: 'home', tab: true }];
   if (home?.workspace.state === 'live') {
     const work = WORK_LABEL[home.workspace.workNoun] ?? { label: 'Work', icon: 'briefcase' as IconName };
-    items.push({ to: '/work', label: work.label, icon: work.icon, tab: true }, { to: '/earnings', label: 'Earnings', icon: 'wallet', tab: true });
+    items.push({ to: '/work', label: work.label, icon: work.icon, tab: true }, { to: '/buzz', label: 'Buzz', icon: 'sparkle', tab: true },
+      { to: '/earnings', label: 'Earnings', icon: 'wallet', tab: true });
   }
   items.push({ to: '/notifications', label: 'Alerts', icon: 'bell', tab: true });
   return items;

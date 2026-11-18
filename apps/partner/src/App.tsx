@@ -26,6 +26,13 @@ const MenuPage = lazy(() => import('./pages/restaurant/MenuPage').then((m) => ({
 const OffersPage = lazy(() => import('./pages/restaurant/OffersPage').then((m) => ({ default: m.OffersPage })));
 const InsightsPage = lazy(() => import('./pages/restaurant/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const MorePage = lazy(() => import('./pages/restaurant/MorePage').then((m) => ({ default: m.MorePage })));
+const RidesPage = lazy(() => import('./pages/driver/RidesPage').then((m) => ({ default: m.RidesPage })));
+const DriverEarningsPage = lazy(() => import('./pages/driver/DriverEarningsPage').then((m) => ({ default: m.DriverEarningsPage })));
+const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfilePage').then((m) => ({ default: m.DriverProfilePage })));
+const DriverMenuPage = lazy(() => import('./pages/driver/DriverMenuPage').then((m) => ({ default: m.DriverMenuPage })));
+const DriverSafetyPage = lazy(() => import('./pages/driver/DriverMenuPage').then((m) => ({ default: m.DriverSafetyPage })));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage })));
+const BuzzPage = lazy(() => import('./pages/BuzzPage').then((m) => ({ default: m.BuzzPage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 
 const SPLASH_MIN_MS = 1800;
@@ -68,6 +75,16 @@ function RestaurantOnly({ element }: { element: ReactNode }) {
 function RestaurantGate({ children }: { children: ReactNode }) {
   const { partner } = usePartnerSession();
   return partner.state?.partner?.mode === 'restaurant' ? <>{children}</> : <Navigate to="/home" replace />;
+}
+
+/** Driver tools only for ride partners (the API refuses everyone else too). */
+function DriverOnly({ element }: { element: ReactNode }) {
+  return <Onboarded element={<DriverGate>{element}</DriverGate>} />;
+}
+
+function DriverGate({ children }: { children: ReactNode }) {
+  const { partner } = usePartnerSession();
+  return partner.state?.partner?.mode === 'driver' ? <>{children}</> : <Navigate to="/home" replace />;
 }
 
 function SignedOutOnly({ element }: { element: ReactNode }) {
@@ -123,6 +140,13 @@ export function App() {
             <Route path="restaurant/offers" element={<RestaurantOnly element={<OffersPage />} />} />
             <Route path="restaurant/insights" element={<RestaurantOnly element={<InsightsPage />} />} />
             <Route path="more" element={<RestaurantOnly element={<MorePage />} />} />
+            <Route path="driver/rides" element={<DriverOnly element={<RidesPage />} />} />
+            <Route path="driver/earnings" element={<DriverOnly element={<DriverEarningsPage />} />} />
+            <Route path="driver/profile" element={<DriverOnly element={<DriverProfilePage />} />} />
+            <Route path="driver/menu" element={<DriverOnly element={<DriverMenuPage />} />} />
+            <Route path="driver/safety" element={<DriverOnly element={<DriverSafetyPage />} />} />
+            <Route path="buzz" element={<Onboarded element={<BuzzPage />} />} />
+            <Route path="documents" element={<Onboarded element={<DocumentsPage />} />} />
             <Route path="notifications" element={<Onboarded element={<NotificationsPage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

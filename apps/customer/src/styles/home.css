@@ -253,3 +253,16 @@
 .buzz-media--art, .discover__art { display: grid; place-items: center; color: rgb(255 255 255 / 30%); background: radial-gradient(90% 70% at 80% 10%, rgb(255 255 255 / 22%), transparent 60%), radial-gradient(70% 60% at 0% 100%, rgb(251 191 36 / 18%), transparent 60%), linear-gradient(155deg, var(--c-theme), var(--c-theme-solid)); }
 .discover__art { position: absolute; inset: 0; padding-bottom: 30%; }
 .buzz-media--art svg, .discover__art svg { transform: rotate(-8deg); filter: drop-shadow(0 10px 20px rgb(0 0 0 / 20%)); }
+
+/* Buzz: engagement on partner posts (like / save / report) and the featured item */
+.buzz-engage { position: absolute; right: 12px; bottom: 34%; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
+.buzz-engage__btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 48px; min-height: 48px; border: 0; background: none;
+  color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; text-shadow: 0 1px 4px rgb(0 0 0 / 50%); }
+.buzz-engage__btn svg { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 45%)); }
+.buzz-engage__btn.is-on { color: #ff4d7a; }
+.buzz-engage__btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
+.buzz-slide__item { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.buzz-slide__item strong { color: #ffd2d2; }
+.buzz-report { display: flex; flex-direction: column; gap: 14px; padding: var(--s-5, 20px); }
+.buzz-report fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.buzz-report__opt { display: flex; align-items: center; gap: 10px; min-height: 44px; }

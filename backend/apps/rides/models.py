@@ -187,11 +187,13 @@ class RideDriverOffer(BaseModel):
         ACCEPTED = "accepted", "Accepted"
         DECLINED = "declined", "Declined"
         EXPIRED = "expired", "Expired"
+        WITHDRAWN = "withdrawn", "Taken by another driver"
 
     ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name="driver_offers")
     driver = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="ride_offers")
     distance_km = models.DecimalField(max_digits=7, decimal_places=2)
     response = models.CharField(max_length=10, choices=Response.choices, default=Response.PENDING)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="The driver must answer before this; then it passes on.")
 
     class Meta:
         ordering = ["distance_km"]
@@ -218,6 +220,18 @@ class RideRating(BaseModel):
         constraints = [models.CheckConstraint(condition=Q(stars__gte=1, stars__lte=5), name="rides_rating_range")]
 
 
+class RideRiderRating(BaseModel):
+    """The driver's rating of the rider after a completed trip (seen by Click, never shown to other drivers by name)."""
+
+    ride = models.OneToOneField(Ride, on_delete=models.CASCADE, related_name="rider_rating")
+    driver = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="rider_ratings_given")
+    stars = models.PositiveSmallIntegerField()
+    note = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=Q(stars__gte=1, stars__lte=5), name="rides_rider_rating_range")]
+
+
 class RideSafetyEvent(BaseModel):
     """Safety actions taken during a ride (SOS pressed, trip shared, issue reported) for follow-up by Click."""
 
@@ -229,3 +243,4 @@ class RideSafetyEvent(BaseModel):
     ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name="safety_events")
     kind = models.CharField(max_length=10, choices=Kind.choices)
     note = models.CharField(max_length=500, blank=True)
+    reported_by = models.CharField(max_length=10, choices=[("customer", "Rider"), ("driver", "Driver")], default="customer")

@@ -54,24 +54,14 @@ def driver_card(ride: Ride) -> dict | None:
     d = ride.driver
     if d is None:
         return None
-    details = getattr(getattr(d, "profile", None), "details", {}) or {}
-    stats = d.ride_ratings.aggregate(avg=Avg("stars"), n=Count("id"))
+    from .driver import public_identity
+
     loc = getattr(d, "ride_location", None)
     location = None
     if loc and ride.status in ("driver_assigned", "driver_arrived", "in_progress"):
         location = {"lat": float(loc.lat), "lng": float(loc.lng), "reported_at": loc.reported_at.isoformat(),
                     "live": timezone.now() - loc.reported_at <= LIVE_FOR}
-    name = (getattr(d.profile, "contact_name", "") if hasattr(d, "profile") else "") or d.business_name or "Your driver"
-    return {
-        "name": name.split()[0] if name else "Your driver",
-        "rating": round(stats["avg"], 1) if stats["avg"] else None,
-        "rating_count": stats["n"],
-        "vehicle_type": details.get("vehicle_type", ""),
-        "vehicle_model": details.get("vehicle_model", ""),
-        "vehicle_color": details.get("vehicle_color", ""),
-        "plate": details.get("vehicle_number", ""),
-        "location": location,
-    }
+    return {**public_identity(d), "location": location}  # the driver sees this same card in Click Partner
 
 
 class RideSerializer(serializers.ModelSerializer):

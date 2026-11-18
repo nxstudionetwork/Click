@@ -29,6 +29,7 @@ from apps.pharma import views as pharma_views
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
+from apps.buzz import views as buzz_views
 from apps.buzz.views import BuzzFeedView
 from apps.shop.urls import customer_urls as shop_customer_urls, public_urls as shop_public_urls
 from apps.groceries import urls as grocery_urls
@@ -210,6 +211,10 @@ api_v1 = [
     path("support/articles/<slug:slug>", support_views.ArticleView.as_view(), name="support-article"),
     path("payments/webhooks/<slug:provider>", wallet_views.ProviderWebhookView.as_view(), name="payments-webhook"),
     path("buzz", BuzzFeedView.as_view(), name="buzz"),
+    path("buzz/posts/<uuid:pk>/like", buzz_views.ReactionView.as_view(), {"kind": "like"}, name="buzz-like"),
+    path("buzz/posts/<uuid:pk>/save", buzz_views.ReactionView.as_view(), {"kind": "save"}, name="buzz-save"),
+    path("buzz/posts/<uuid:pk>/event", buzz_views.EventView.as_view(), name="buzz-event"),
+    path("buzz/posts/<uuid:pk>/report", buzz_views.ReportView.as_view(), name="buzz-report"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
     path("partner/", include(ride_partner_urls)),

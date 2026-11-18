@@ -114,5 +114,42 @@ The backend lives in `backend/apps/orders/restaurant.py` (`/api/v1/partner/resta
 - **Insights** (`/restaurant/insights`): sales, orders, preparation time, acceptance/cancellation, best sellers and
   ratings, computed only from real orders, status history and reviews.
 
-Not built yet: Buzz posts for partners (Buzz has no partner-authored posts yet), partner support tickets, staff roles,
-photo upload (items take an https image link), and pickup orders (all Click food orders are delivery today).
+Not built yet: partner support tickets, staff roles, menu photo upload (items take an https image link), and pickup
+orders (all Click food orders are delivery today). Buzz posts: see Click. Buzz below.
+
+## Driver mode
+
+When `partner.mode === 'driver'`: phone bar Home | Rides | Buzz | Earnings | Menu (Alerts on the desktop rail).
+Backend: `backend/apps/rides/driver.py` and `driver_views.py` (`/api/v1/partner/driver/*`), plus the ride actions on
+`/partner/work/ride/<id>/<action>`.
+
+- **Requests** expire after 40 s (a countdown shows on the card) and pass to the next nearest driver. Accepting an
+  expired request is refused. `click_jobs --frequent` also expires them.
+- **Active trip**: arrived → start → complete (each confirmed), cancel before pickup with a reason (the rider goes back
+  to matching), and “Rider didn’t show”, offered only after 5 minutes waiting at the pickup. Safety (SOS / report) is
+  on the trip and in the Safety centre.
+- **History** (`/driver/rides?view=history`): rate the rider once per completed trip and report a past trip.
+- **Earnings** (`/driver/earnings`): today, yesterday, week and month from completed trips, split into cash collected
+  and paid via Click. Commission and payouts aren’t configured yet, so nothing is deducted (the page says so).
+- **Profile & vehicle** (`/driver/profile`) shows what riders see. **Documents** (`/documents`, every partner type):
+  number and expiry, verified or rejected by Click in the admin. An expired required document blocks going online and
+  matching.
+
+## Click. Buzz (every partner type)
+
+`/buzz` (`backend/apps/buzz/partner.py`, `/api/v1/partner/buzz/*`). Partners post photos or one short video, a
+headline and caption, and **one button that leads to their own live Click listing**: store or menu item, hotel,
+services profile, event team, shows, ride booking or parcels. The server rejects anything else. Optional: a featured
+item (customers see its live availability) and one of the partner’s live offers.
+
+- **Review**: posts go to Click (Django admin → Buzz posts → Approve / Reject / Take down). Editing a reviewed post
+  sends it back to review. Statuses: draft, in review, scheduled, live, paused, expired, not approved, removed, archived.
+- **Media**: JPG/PNG/WebP up to 8 MB, re-encoded to WebP (480 and 1080 px, metadata stripped). MP4/WebM up to 25 MB,
+  one per post, at most 4 files per post. Files go to Django media storage (object storage in production), never the
+  database. Uploads not attached to a post are removed by `click_jobs --daily`.
+- **Performance**: views and button taps from the Customer App, counted once per viewer per day, plus likes and saves.
+- **Customers** see approved posts first in Click. Buzz, can like, save and report them (reports go to Buzz reports in
+  the admin), and the button opens the real listing.
+- **Partner community** tab: approved posts from other partners, with like and report.
+
+Not built yet: comments on posts, video transcoding (videos are validated, not re-encoded) and paid Buzz promotion.

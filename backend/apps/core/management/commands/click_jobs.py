@@ -13,20 +13,23 @@ from django.core.management.base import BaseCommand
 def frequent() -> dict:
     from apps.payments.gateway import expire_unpaid
     from apps.orders.restaurant import release_due
+    from apps.rides.driver import expire_stale_offers
     from apps.wallet.services import expire_topups
 
     return {"unpaid_orders_cancelled": expire_unpaid(), "topups_expired": expire_topups(),
-            "restaurant_states_released": release_due()}
+            "restaurant_states_released": release_due(), "ride_requests_expired": expire_stale_offers()}
 
 
 def daily() -> dict:
+    from apps.buzz.partner import cleanup_unused_media
     from apps.giftcards.services import run_due as giftcards_due
     from apps.pharma.views import run_due as pharma_due
     from apps.rewards import services as rewards
     from apps.wallet import services as wallet
 
     return {"wallet_credit_expired": wallet.sweep_expired(), "wallet_reminders": wallet.remind_expiring(), "points_expired": rewards.sweep_expired(),
-            "gift_cards": giftcards_due(), "refill_reminders": pharma_due()}
+            "gift_cards": giftcards_due(), "refill_reminders": pharma_due(),
+            "buzz_uploads_discarded": cleanup_unused_media()}
 
 
 class Command(BaseCommand):

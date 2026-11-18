@@ -15,12 +15,12 @@ WIDTHS = (320, 640, 1280)
 MAX_BYTES = 8 * 1024 * 1024
 
 
-def store_upload(image_obj, upload) -> None:
-    """Fill `image_obj` (a ProductImage) from an uploaded file. Raises DomainError for unusable files."""
+def encode_renditions(upload, stem: str, widths=WIDTHS, max_bytes: int = MAX_BYTES) -> tuple[dict, int, int]:
+    """Validate an uploaded image, strip metadata and save WebP renditions under `stem`. Returns (renditions, w, h)."""
     from PIL import Image, ImageOps, UnidentifiedImageError
 
-    if upload.size > MAX_BYTES:
-        raise DomainError("Images must be 8 MB or smaller.", code="image_too_large")
+    if upload.size > max_bytes:
+        raise DomainError(f"Images must be {max_bytes // (1024 * 1024)} MB or smaller.", code="image_too_large")
     try:
         img = Image.open(upload)
         if img.format not in {"JPEG", "PNG", "WEBP"}:
@@ -31,9 +31,8 @@ def store_upload(image_obj, upload) -> None:
     except (UnidentifiedImageError, OSError):
         raise DomainError("That file isn't a valid image.", code="image_invalid")
 
-    stem = f"products/{image_obj.product_id}/{uuid.uuid4().hex}"
     renditions = {}
-    for w in WIDTHS:
+    for w in widths:
         copy = img.copy()
         if copy.width > w:
             copy = copy.resize((w, round(copy.height * w / copy.width)), Image.LANCZOS)
@@ -42,7 +41,13 @@ def store_upload(image_obj, upload) -> None:
         renditions[str(w)] = default_storage.save(f"{stem}-{w}.webp", ContentFile(buf.getvalue()))
         if copy.width < w:
             break  # smaller than this width: no larger renditions
-    image_obj.renditions, image_obj.width, image_obj.height = renditions, img.width, img.height
+    return renditions, img.width, img.height
+
+
+def store_upload(image_obj, upload) -> None:
+    """Fill `image_obj` (a ProductImage) from an uploaded file. Raises DomainError for unusable files."""
+    stem = f"products/{image_obj.product_id}/{uuid.uuid4().hex}"
+    image_obj.renditions, image_obj.width, image_obj.height = encode_renditions(upload, stem)
 
 
 def delete_files(image_obj) -> None:

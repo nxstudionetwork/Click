@@ -45,7 +45,8 @@ export const catalogApi = (http: HttpClient) => ({
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
   /** Click. Buzz: actionable instants from real offers, shows and stores. */
-  buzz: (limit = 12) => http.request<{ results: BuzzItem[] }>('/buzz', { query: { limit }, auth: false }),
+  /** Signed-in viewers also get their likes and saves on partner posts. */
+  buzz: (limit = 12) => http.request<{ results: BuzzItem[] }>('/buzz', { query: { limit } }),
 });
 
 /** Movies & live events (public discovery). */

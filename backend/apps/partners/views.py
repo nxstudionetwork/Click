@@ -211,3 +211,22 @@ class DevPartnerLoginView(APIView):
             raise DomainError("Test partner not found. Run `python manage.py seed_dev_data`.", code="dev_partner_missing", status_code=409)
         user = partner.memberships.get(role="owner").user
         return _session_response(user)
+
+
+class DocumentsView(PartnerView):
+    """GET /partner/documents: what this partner type needs and each document's state. POST {key, number, expiresOn}."""
+
+    throttle_scope = "partner_onboarding"
+
+    def get(self, request):
+        from .documents import blocking_reason, documents_state
+
+        partner = services.require_owned_partner(request.user)
+        return Response({"documents": documents_state(partner), "blocked_reason": blocking_reason(partner)})
+
+    def post(self, request):
+        from .documents import blocking_reason, documents_state, submit
+
+        partner = services.require_owned_partner(request.user)
+        submit(partner, request.data if isinstance(request.data, dict) else {})
+        return Response({"documents": documents_state(partner), "blocked_reason": blocking_reason(partner)}, status=201)

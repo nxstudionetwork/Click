@@ -227,8 +227,9 @@ def test_cancellation_tiers_and_operator_cancel(net):
         bk = book(api, soon["results"][0], "seater", pax(), seats=["3"]).json()
         detail = api.get(f"{CUST}/bookings/{bk['id']}").json()
         c = detail["cancellation"]
-        within = datetime.fromisoformat(detail["departsAt"]) - timezone.now() <= timedelta(hours=24)
-        assert c["allowed"] and c["feePercent"] == (50 if within else 0) and D(c["refund"]) == D(bk["total"]) * (D("0.5") if within else 1)
+        left = datetime.fromisoformat(detail["departsAt"]) - timezone.now()
+        pct = 0 if left >= timedelta(hours=24) else 50 if left >= timedelta(hours=6) else 100  # the tiers in `net`
+        assert c["allowed"] and c["feePercent"] == pct and D(c["refund"]) == D(bk["total"]) * (1 - D(pct) / 100)
     o = search(api, "train", "hyderabad", "vijayawada").json()["results"][0]
     bk = book(api, o, "3A", pax()).json()
     n = booking.operator_update(Journey.objects.get(pk=o["journeyId"]), Journey.Status.CANCELLED)

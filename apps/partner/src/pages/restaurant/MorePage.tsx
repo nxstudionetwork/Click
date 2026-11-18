@@ -6,9 +6,11 @@ import { usePartnerSession } from '../../session/PartnerSession';
 const LINKS: { to: string; label: string; hint: string; icon: IconName }[] = [
   { to: '/restaurant/kitchen', label: 'Kitchen', hint: 'Live orders by stage', icon: 'food' },
   { to: '/restaurant/offers', label: 'Offers', hint: 'Create and pause offers', icon: 'tag' },
+  { to: '/buzz', label: 'Buzz', hint: 'Promote dishes and offers with photos and videos', icon: 'sparkle' },
   { to: '/restaurant/insights', label: 'Insights', hint: 'Sales, kitchen performance, best sellers', icon: 'chart' },
   { to: '/earnings', label: 'Earnings', hint: 'Daily sales and recent orders', icon: 'wallet' },
   { to: '/notifications', label: 'Notifications', hint: 'New orders and account updates', icon: 'bell' },
+  { to: '/documents', label: 'Documents', hint: 'FSSAI licence and verification documents', icon: 'card' },
   { to: '/card', label: 'Partner card', hint: 'Your Partner ID and verification', icon: 'card' },
 ];
 

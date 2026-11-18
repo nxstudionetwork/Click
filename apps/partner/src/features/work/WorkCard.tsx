@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Icon, useToast, type IconName } from '@click/ui';
 import type { WorkAction, WorkItem } from '@click/api';
@@ -8,6 +8,21 @@ import { clockTime, formatMoney, timeAgo } from '../../lib/money';
 import { useWorkAction } from '../home/queries';
 
 const KIND_ICON: Record<string, IconName> = { ride: 'ride', order: 'receipt', show: 'film', booking: 'ticket', stock: 'grocery' };
+
+/** Seconds left to answer (ride requests). Click passes the request on when it runs out; the server decides. */
+function Countdown({ deadline }: { deadline: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const left = Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000));
+  return (
+    <span className={`countdown ${left <= 10 ? 'countdown--low' : ''}`} role="timer" aria-live="off">
+      {left > 0 ? `Respond in ${left}s` : 'Expired'}
+    </span>
+  );
+}
 
 /** Directions open in the partner's own maps app (OpenStreetMap link; Click never tracks the route). */
 function directionsUrl(n: NonNullable<WorkItem['navigate']>) {
@@ -57,6 +72,7 @@ export function WorkCard({ item, emphasis = false, body, className = '' }: {
         </div>
         <div className="work__meta">
           <span className={`tag tag--${item.tone}`}>{item.statusLabel}</span>
+          {item.deadline && <Countdown deadline={item.deadline} />}
           {item.amount && <strong className="work__amount">{formatMoney(item.amount)}</strong>}
         </div>
       </header>

@@ -47,6 +47,11 @@ class RidesProvider(Provider):
         return Ride.objects.filter(driver=self.partner).select_related("ride_type", "customer__user")
 
     # --- availability / location ---------------------------------------------------------------
+    def blocked_reason(self) -> str:
+        from apps.partners.documents import blocking_reason
+
+        return blocking_reason(self.partner)
+
     def can_go_unavailable(self) -> str:
         if self._rides().filter(status__in=ACTIVE).exists():
             return "Finish your current trip before going offline."
@@ -75,6 +80,7 @@ class RidesProvider(Provider):
                     ("Trip", f"{r.distance_km:.1f} km · about {r.duration_minutes} min"),
                     ("To pickup", f"{offer.distance_km:.1f} km away"), ("Payment", _payment(r))],
             actions=[Action("accept", "Accept", "primary"), Action("decline", "Decline", "secondary")],
+            deadline=offer.expires_at,
         )
 
     def _trip_item(self, r: Ride) -> WorkItem:
@@ -87,6 +93,16 @@ class RidesProvider(Provider):
                 confirm = (f"Confirm you’ve dropped the rider and collected ₹{r.total:.0f} in cash." if r.payment_method == "cash"
                            else "Confirm you’ve dropped the rider at the destination.")
             actions.append(Action(step.key, step.label, "primary", confirm=confirm))
+        if r.status == RideStatus.DRIVER_ASSIGNED:
+            actions.append(Action("cancel", "Cancel ride", "danger", needs_reason=True,
+                                  confirm="Click will find the rider another driver. Frequent cancellations affect your account."))
+        if r.status == RideStatus.DRIVER_ARRIVED:
+            # Offered only once the driver has waited long enough; Home refreshes, so the button appears on its own.
+            from .driver import NO_SHOW_AFTER, arrived_at
+            since = arrived_at(r)
+            if not since or timezone.now() - since >= NO_SHOW_AFTER:
+                actions.append(Action("no_show", "Rider didn’t show", "secondary",
+                                      confirm="You waited at the pickup and couldn’t find the rider. The ride will be cancelled."))
         tone = {"completed": "success", "cancelled": "muted", "no_driver": "muted"}.get(r.status, "active")
         return WorkItem(
             kind="ride", id=str(r.id), ref=r.number, title=f"{r.pickup_label} → {r.drop_label}",
@@ -102,6 +118,9 @@ class RidesProvider(Provider):
         )
 
     def _pending_offers(self):
+        from .driver import expire_stale_offers
+
+        expire_stale_offers()  # requests nobody answered in time pass on before we list them
         return (RideDriverOffer.objects.filter(driver=self.partner, response="pending", ride__status=RideStatus.SEARCHING)
                 .select_related("ride", "ride__ride_type").order_by("created_at"))
 
@@ -208,6 +227,15 @@ class RidesProvider(Provider):
         elif action == "decline":
             ride = services.driver_decline(get_object_or_404(Ride, pk=item_id), self.partner)
             return None
+        elif action == "cancel":
+            from .driver import driver_cancel
+
+            driver_cancel(get_object_or_404(Ride, pk=item_id), self.partner, str(payload.get("reason", "")))
+            return None
+        elif action == "no_show":
+            from .driver import rider_no_show
+
+            ride = rider_no_show(get_object_or_404(Ride, pk=item_id), self.partner)
         elif action in STEP_STATUS:
             ride = services.driver_step(get_object_or_404(Ride, pk=item_id), self.partner, STEP_STATUS[action])
         else:

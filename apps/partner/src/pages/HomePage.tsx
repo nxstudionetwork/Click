@@ -6,6 +6,7 @@ import { Photo } from '../components/Photo';
 import { visualFor } from '../config/visuals';
 import { LocationShare } from '../features/home/LocationShare';
 import { OperationsCard } from '../features/restaurant/OperationsCard';
+import { TripSafety } from '../features/driver/TripSafety';
 import { useHome } from '../features/home/queries';
 import {
   Activity, AvailabilityCard, EarningsCard, Empty, listSkeleton, Module, Overview, Performance, QuickActions, SectionBody, WorkList,
@@ -98,6 +99,7 @@ export function HomePage() {
                   <SectionBody section={data?.active} loading={loading} skeleton={listSkeleton}>
                     {(items) => <WorkList items={items} emphasis />}
                   </SectionBody>
+                  {partner.mode === 'driver' && data?.active.status === 'ok' && data.active.data[0] && <TripSafety trip={data.active.data[0]} />}
                 </Module>
               )}
 

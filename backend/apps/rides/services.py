@@ -207,9 +207,11 @@ def driver_accept(ride: Ride, driver) -> Ride:
     offer = ride.driver_offers.filter(driver=driver, response="pending").first()
     if offer is None or ride.status != RideStatus.SEARCHING:
         raise ConflictError("This ride is no longer available.", code="ride_unavailable")
+    if offer.expires_at and offer.expires_at <= timezone.now():
+        raise ConflictError("This request expired and has passed to another driver.", code="request_expired")
     offer.response = "accepted"
     offer.save(update_fields=["response", "updated_at"])
-    ride.driver_offers.exclude(pk=offer.pk).filter(response="pending").update(response="expired")
+    ride.driver_offers.exclude(pk=offer.pk).filter(response="pending").update(response="withdrawn")
     ride.driver = driver
     ride.driver_assigned_at = timezone.now()
     ride.save(update_fields=["driver", "driver_assigned_at", "updated_at"])

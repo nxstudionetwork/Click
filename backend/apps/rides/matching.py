@@ -48,6 +48,11 @@ def eligible_drivers(ride_type: RideType, point: tuple[float, float], radius_km:
             continue
         if loc.driver.rides.filter(status__in=["driver_assigned", "driver_arrived", "in_progress"]).exists():
             continue  # already on a trip
+        if loc.driver.documents.exists():
+            from apps.partners.documents import blocking_reason
+
+            if blocking_reason(loc.driver):
+                continue  # an expired licence / insurance keeps the driver out of matching
         d = haversine_km(point, (float(loc.lat), float(loc.lng)))
         if d <= radius_km:
             out.append((loc.driver, d))
@@ -67,8 +72,13 @@ def offer_ride(ride) -> int:
     """Offer the ride to the nearest eligible drivers it hasn't been offered to yet. Returns how many were offered it."""
     from .models import RideDriverOffer
 
-    already = list(ride.driver_offers.values_list("driver_id", flat=True))
+    from .driver import offer_expiry
+
+    # Drivers who answered (or let it time out) aren't asked again; those it was taken from by another driver who later
+    # cancelled can be offered it again.
+    already = list(ride.driver_offers.exclude(response="withdrawn").values_list("driver_id", flat=True))
     drivers = eligible_drivers(ride.ride_type, (float(ride.pickup_lat), float(ride.pickup_lng)), exclude=already)[:MAX_OFFERS]
     for partner, km in drivers:
-        RideDriverOffer.objects.get_or_create(ride=ride, driver=partner, defaults={"distance_km": Decimal(str(round(km, 2)))})
+        RideDriverOffer.objects.update_or_create(ride=ride, driver=partner, defaults={
+            "distance_km": Decimal(str(round(km, 2))), "expires_at": offer_expiry(), "response": "pending"})
     return len(drivers)

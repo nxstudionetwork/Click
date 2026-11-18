@@ -113,3 +113,24 @@
   border: 1px solid var(--c-line); color: var(--c-ink); text-decoration: none; min-height: 64px; }
 .more__item > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
 .more__item:hover { background: var(--c-surface-2); text-decoration: none; }
+
+/* Driver mode */
+.countdown { font-size: var(--fs-xs); font-weight: 800; color: var(--c-ink-2); font-variant-numeric: tabular-nums; }
+.countdown--low { color: var(--c-danger); }
+.safety-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn--block { width: 100%; justify-content: center; }
+.stars { display: inline-flex; align-items: center; gap: 2px; }
+.stars__btn { width: 36px; height: 36px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none;
+  color: var(--c-sun, #f5b301); cursor: pointer; }
+.stars__btn:hover, .stars__btn:focus-visible { background: var(--c-surface-2); }
+.earn-hero__total { font-size: var(--fs-3xl); font-weight: 800; margin: 0; }
+.rider-card { display: flex; gap: 14px; align-items: center; padding: 12px; border-radius: 16px; background: var(--c-surface-2); }
+.rider-card p { margin: 0; }
+.rider-card__avatar { width: 52px; height: 52px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--c-brand);
+  color: #fff; font-weight: 800; font-size: var(--fs-lg); }
+.rider-card__name { font-weight: 800; }
+.plate { display: inline-block; margin-top: 4px !important; padding: 2px 8px; border: 2px solid var(--c-ink); border-radius: 6px;
+  font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: 0.04em; }
+dl.ledger > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--c-line); }
+dl.ledger dt { color: var(--c-ink-2); font-size: var(--fs-sm); }
+dl.ledger dd { margin: 0; font-weight: 700; text-align: right; }
