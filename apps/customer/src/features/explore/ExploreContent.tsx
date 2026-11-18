@@ -1,14 +1,26 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthProvider';
 import { Icon, type IconName } from '../../components/ui';
 import { CLICK_FEATURES } from '../../config/services';
 import { ExploreBanner } from './ExploreBanner';
 import { YourClickBadges } from './YourClickBadges';
+import { useT } from '../../i18n';
+import type { Key } from '../../i18n/en';
 
-const ACCOUNT: { to: string; title: string; hint: string; icon: IconName }[] = [
-  { to: '/account/payments', title: 'Payments', hint: 'Manage your payment methods', icon: 'card' },
-  { to: '/settings', title: 'Settings', hint: 'Preferences, appearance and account controls', icon: 'settings' },
-  { to: '/help', title: 'Help & Support', hint: 'Get help from Click.', icon: 'help' },
-  { to: '/account/addresses', title: 'Addresses', hint: 'Manage saved locations', icon: 'pin' },
+const QUICK: { to: string; key: Key; icon: IconName }[] = [
+  { to: '/offers', key: 'quick.offers', icon: 'tag' }, { to: '/orders', key: 'quick.orders', icon: 'bag' }, { to: '/rides', key: 'quick.rides', icon: 'ride' },
+  { to: '/bookings/mine', key: 'quick.bookings', icon: 'ticket' }, { to: '/parcels/history', key: 'quick.parcels', icon: 'parcel' },
+  { to: '/wishlist', key: 'quick.wishlist', icon: 'heart' }, { to: '/rewards', key: 'quick.rewards', icon: 'star' }, { to: '/buzz', key: 'quick.buzz', icon: 'play' },
+  { to: '/referrals', key: 'quick.refer', icon: 'gift' }, { to: '/help', key: 'quick.help', icon: 'help' },
+];
+const ACCOUNT: { to: string; title: Key; hint?: Key; icon: IconName }[] = [
+  { to: '/account', title: 'account.profile', hint: 'account.profileHint', icon: 'user' },
+  { to: '/account/addresses', title: 'account.addresses', hint: 'account.addressesHint', icon: 'pin' },
+  { to: '/account/payments', title: 'account.payments', hint: 'account.paymentsHint', icon: 'card' },
+  { to: '/notifications', title: 'account.notifications', hint: 'account.notificationsHint', icon: 'bell' },
+  { to: '/settings', title: 'account.settings', hint: 'account.settingsHint', icon: 'settings' },
+  { to: '/safety', title: 'account.security', hint: 'account.securityHint', icon: 'shield' },
+  { to: '/about', title: 'account.about', icon: 'book' }, { to: '/terms', title: 'account.terms', icon: 'receipt' }, { to: '/privacy', title: 'account.privacy', icon: 'eye' },
 ];
 
 /**
@@ -17,17 +29,27 @@ const ACCOUNT: { to: string; title: string; hint: string; icon: IconName }[] = [
  * registry (config/services.ts); nothing is hand-ordered here. `onNavigate` lets the sheet close on any tap.
  */
 export function ExploreContent({ titleId = 'explore-h', onNavigate }: { titleId?: string; onNavigate?: () => void }) {
+  const t = useT();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   return (
     <div className="explore" onClick={(e) => { if (onNavigate && (e.target as HTMLElement).closest('a')) onNavigate(); }}>
       <header className="explore__head">
-        <h1 id={titleId}>Explore</h1>
-        <p>Everything Click. can do for you</p>
+        <h1 id={titleId}>{t('explore.title')}</h1>
+        <p>{t('explore.subtitle')}</p>
       </header>
+
+      <section className="explore__sec" aria-labelledby={`${titleId}-quick`}>
+        <h2 id={`${titleId}-quick`} className="explore__h">{t('explore.quick')}</h2>
+        <ul className="xquick">{QUICK.map((q) => (
+          <li key={q.to}><Link to={q.to} className="xquick__item"><span className="xquick__icon"><Icon name={q.icon} size={20} /></span><span>{t(q.key)}</span></Link></li>
+        ))}</ul>
+      </section>
 
       <ExploreBanner />
 
       <section className="explore__sec" aria-labelledby={`${titleId}-features`}>
-        <h2 id={`${titleId}-features`} className="explore__h">Click. Features</h2>
+        <h2 id={`${titleId}-features`} className="explore__h">{t('explore.features')}</h2>
         <ul className="xfeatures">
           {CLICK_FEATURES.map((f) => (
             <li key={f.id}>
@@ -44,20 +66,24 @@ export function ExploreContent({ titleId = 'explore-h', onNavigate }: { titleId?
       </section>
 
       <section className="explore__sec" aria-labelledby={`${titleId}-yours`}>
-        <h2 id={`${titleId}-yours`} className="explore__h">Your Click.</h2>
+        <h2 id={`${titleId}-yours`} className="explore__h">{t('explore.yours')}</h2>
         <YourClickBadges />
       </section>
 
       <section className="explore__sec" aria-labelledby={`${titleId}-account`}>
-        <h2 id={`${titleId}-account`} className="explore__h">Account</h2>
+        <h2 id={`${titleId}-account`} className="explore__h">{t('explore.account')}</h2>
         <nav className="xaccount" aria-label="Account">
           {ACCOUNT.map((a) => (
             <Link key={a.to} to={a.to} className="xaccount__row">
               <span className="xaccount__icon"><Icon name={a.icon} size={20} /></span>
-              <span className="xaccount__text"><strong>{a.title}</strong><span>{a.hint}</span></span>
+              <span className="xaccount__text"><strong>{t(a.title)}</strong>{a.hint && <span>{t(a.hint)}</span>}</span>
               <Icon name="right" size={18} className="xaccount__chev" />
             </Link>
           ))}
+          <button type="button" className="xaccount__row" onClick={() => { onNavigate?.(); void logout().then(() => navigate('/')); }}>
+            <span className="xaccount__icon"><Icon name="logout" size={20} /></span>
+            <span className="xaccount__text"><strong>{t('account.logout')}</strong></span>
+          </button>
         </nav>
       </section>
 

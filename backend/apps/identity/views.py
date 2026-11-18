@@ -61,6 +61,7 @@ class SignupSerializer(serializers.Serializer):
     full_name = serializers.CharField(min_length=2, max_length=150)
     email = serializers.EmailField(max_length=254)
     addresses = serializers.ListField(child=serializers.DictField(), min_length=1, max_length=MAX_ADDRESSES)
+    referral_code = serializers.CharField(max_length=12, required=False, allow_blank=True, default="")
 
     def validate_full_name(self, v):
         return " ".join(v.split())
@@ -98,6 +99,10 @@ class IdentitySignupView(AuthView):
         identity = services.read_signup_token(s.validated_data["signup_token"])
         user, created = services.complete_signup(identity, full_name=s.validated_data["full_name"], email=s.validated_data["email"],
                                                  addresses=s.validated_data["addresses"])
+        if created and s.validated_data["referral_code"]:
+            from apps.referrals.services import attach
+
+            attach(user.customer_profile, s.validated_data["referral_code"])
         response = _session_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         response.data["status"] = "authenticated"
         return response

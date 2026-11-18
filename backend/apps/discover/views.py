@@ -8,7 +8,7 @@ from apps.core.api.exceptions import DomainError
 from apps.core.api.permissions import IsCustomer
 
 from . import engine
-from .models import AdCampaign, AdHide
+from .models import AdCampaign, AdHide, HomeSection
 
 
 def _customer(request):
@@ -49,3 +49,17 @@ class HideView(APIView):
             raise DomainError("Not found.", code="not_found", status_code=404)
         AdHide.objects.get_or_create(customer=request.user.customer_profile, campaign=c)
         return Response({"hidden": True})
+
+
+class HomeLayoutView(APIView):
+    """GET /home/layout — which Home sections to show, in order (controlled by Click. operations)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        rows = list(HomeSection.objects.all())
+        if not rows:
+            return Response({"sections": HomeSection.CODES, "managed": False})
+        known = {r.code for r in rows}
+        order = [r.code for r in rows if r.enabled] + [c for c in HomeSection.CODES if c not in known]  # new sections appear by default
+        return Response({"sections": order, "managed": True})

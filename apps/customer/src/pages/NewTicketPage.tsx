@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, SUPPORT_LINK_FIELD, type SupportCreate } from '@click/api';
 import { Button, Icon, Skeleton } from '../components/ui';
 import { MoneyHead, iconFor, newKey } from '../features/money/parts';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 
 /** Old deep links (?orderId=, ?travelBookingId=, ?bookingId=…) → the related-item type and support category. */
@@ -69,7 +70,7 @@ export function NewTicketPage() {
       if (file) await api.money.support.send(t.id, '', file).catch(() => undefined);
       return t;
     },
-    onSuccess: (t) => { qc.invalidateQueries({ queryKey: ['customer', 'support'] }); nav(`/help/tickets/${t.id}`, { replace: true, state: { created: true } }); },
+    onSuccess: (t) => { track('support_requested', { category }); qc.invalidateQueries({ queryKey: ['customer', 'support'] }); nav(`/help/tickets/${t.id}`, { replace: true, state: { created: true } }); },
     onError: (e) => {
       if (e instanceof ApiError && e.code === 'duplicate_ticket' && (e.details as { id?: string } | undefined)?.id) {
         nav(`/help/tickets/${(e.details as { id: string }).id}`, { replace: true });

@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import AdCampaign, AdEvent, DiscoverConfig
+from .models import AdCampaign, AdEvent, DiscoverConfig, HomeSection
 
 
 @admin.register(AdCampaign)
@@ -21,3 +21,9 @@ class AdEventAdmin(admin.ModelAdmin):
 
 
 admin.site.register(DiscoverConfig)
+
+
+@admin.register(HomeSection)
+class HomeSectionAdmin(admin.ModelAdmin):
+    list_display = ("code", "enabled", "position")
+    list_editable = ("enabled", "position")

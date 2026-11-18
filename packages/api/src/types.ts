@@ -35,7 +35,7 @@ export interface User {
   fullName: string;
   phone: string;
   roles: Role[];
-  /** Public Click Customer ID, e.g. CLK-CS-7K2QXM (null for non-customers). */
+  /** Public Click Customer ID, e.g. CL-CU-000123 (earlier customers keep CLK-CS-XXXXXX; null for non-customers). */
   customerCode: string | null;
   phoneVerified: boolean;
   avatarUrl: string | null;
@@ -57,6 +57,8 @@ export interface SignupInput {
   fullName: string;
   email: string;
   addresses: AddressInput[];
+  /** Invite code from a friend's link; invalid or own codes are ignored by the server. */
+  referralCode?: string;
 }
 
 export interface Session {

@@ -19,6 +19,8 @@ import { GiftCardDetailPage, GiftCardsPage, MyGiftCardsPage } from './pages/Gift
 import { SafetyPage } from './pages/SafetyPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { PharmaPage, PharmaProductPage, PrescriptionsPage } from './pages/PharmaPage';
+import { JoinPage, ReferralsPage } from './pages/ReferralsPage';
+import { LegalPage } from './pages/LegalPage';
 import { BookingPage } from './pages/BookingPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BuddyGoPage } from './pages/BuddyGoPage';
@@ -142,6 +144,7 @@ function AppRoutes() {
       <Route path="login" element={<LoginPage />} />
       <Route path="login/verify" element={<VerifyPage />} />
       <Route path="signup" element={<SignupPage />} />
+      <Route path="join/:code" element={<JoinPage />} />
       <Route path="welcome/card" element={guard(lazyCard(true))} />
       <Route path="register" element={<Navigate to="/login" replace />} />
       {/* Immersive experiences with their own layouts (no app header / bottom navigation) */}
@@ -264,6 +267,10 @@ function AppRoutes() {
         <Route path="safety" element={guard(<SafetyPage />)} />
         <Route path="discover" element={<DiscoverPage />} />
         <Route path="pharma" element={<PharmaPage />} />
+        <Route path="referrals" element={guard(<ReferralsPage />)} />
+        <Route path="about" element={<LegalPage doc="about" />} />
+        <Route path="terms" element={<LegalPage doc="terms" />} />
+        <Route path="privacy" element={<LegalPage doc="privacy" />} />
         <Route path="pharma/p/:id" element={<PharmaProductPage />} />
         <Route path="pharma/prescriptions" element={guard(<PrescriptionsPage />)} />
         <Route path="settings" element={guard(<SettingsPage />)} />

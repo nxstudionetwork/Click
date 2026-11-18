@@ -10,6 +10,7 @@ import { OfferPicker } from '../features/cart/OfferPicker';
 import { Totals } from '../features/cart/Totals';
 import { cartKey, useCart } from '../features/cart/useCart';
 import { deliveryWindow } from '../features/shop/time';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
 import { OnlineMethodOptions } from '../features/payments/OnlinePay';
@@ -21,6 +22,7 @@ import { formatMoney } from '../lib/format';
 
 export function CheckoutPage() {
   const { user } = useAuth();
+  useEffect(() => { track('checkout_started', { service: 'cart' }); }, []);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const cart = useCart();

@@ -25,7 +25,7 @@ python manage.py seed_dev_data --catalog-only
 | Field | Value |
 |---|---|
 | Name | Click Test User |
-| Click Customer ID | `CLK-CS-TEST001` |
+| Click Customer ID | `CLK-CS-TEST001` (seeded before the `CL-CU-` format; new sign-ups get `CL-CU-…`) |
 | Email | `test.customer@click.local` (the reserved `.local` domain can't be a real inbox) |
 | Phone (verified) | `+1 650-555-0101` (US 555-01xx numbers are reserved for fiction) |
 | Password (dev only) | `ClickDev@2026` |

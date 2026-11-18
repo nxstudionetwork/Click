@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
+import { api } from '../lib/api';
 import { BuzzPreview } from '../features/home/BuzzPreview';
 import { DiscoverySection } from '../features/home/DiscoverySection';
 import { HomeHero } from '../features/home/HomeHero';
@@ -16,19 +19,13 @@ import { MoneyCards, RecentActivity } from '../features/home/YourClick';
 export function HomePage() {
   const { status } = useAuth();
   const authed = status === 'authenticated';
-  return (
-    <div className="home">
-      <HomeHero />
-      <QuickServices />
-      <OfferCarousel />
-      <NearbySection />
-      <PopularSection />
-      <DiscoverySection />
-      <ShoppingPicks />
-      <BuzzPreview />
-      {authed && <RecentActivity />}
-      {authed && <MoneyCards />}
-      <MomentSections />
-    </div>
-  );
+  // Click. operations can turn sections off or reorder them (/home/layout); without a layout the default order is used.
+  const layout = useQuery({ queryKey: ['home', 'layout'], queryFn: api.money.homeLayout, staleTime: 10 * 60_000 });
+  const SECTIONS: Record<string, ReactNode> = {
+    hero: <HomeHero />, quick: <QuickServices />, offers: <OfferCarousel />, nearby: <NearbySection />, popular: <PopularSection />,
+    discovery: <DiscoverySection />, shopping: <ShoppingPicks />, buzz: <BuzzPreview />, recent: authed ? <RecentActivity /> : null,
+    money: authed ? <MoneyCards /> : null, moments: <MomentSections />,
+  };
+  const order = layout.data?.sections ?? Object.keys(SECTIONS);
+  return <div className="home">{order.filter((c) => c in SECTIONS).map((c) => <div key={c} className="home__slot">{SECTIONS[c]}</div>)}</div>;
 }

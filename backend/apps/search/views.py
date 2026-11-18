@@ -35,7 +35,7 @@ class GlobalSearchView(APIView):
         data = engine.search(q, c, group=request.query_params.get("group", ""))
         data["mine"] = engine.lookup_id(c, q)
         data["sponsored"] = _sponsored(request, c, data["query"], request.query_params.get("group", ""))
-        if c and len(data["query"]) >= 2 and request.query_params.get("record") != "0":
+        if c and c.personalized and len(data["query"]) >= 2 and request.query_params.get("record") != "0":
             last = c.search_history.first()
             if not last or last.normalized != data["query"]:
                 SearchHistory.objects.create(customer=c, query=q.strip()[:100], normalized=data["query"], results=data["count"] + len(data["mine"]))

@@ -31,8 +31,9 @@ App ──POST /api/v1/auth/identity/signup {signupToken, fullName, email, addre
   - a dotted path to your SMS sender class with `send(phone_e164, text)`. Its credentials go in `backend/.env`.
 - **Identity model:**
   - `users.User` has an internal UUID primary key.
-  - `customers.CustomerProfile.customer_code` is the permanent, customer-facing Click ID (`CLK-CS-XXXXXX`, random,
-    non-sequential).
+  - `customers.CustomerProfile.customer_code` is the permanent, customer-facing Click ID. New customers get
+    `CL-CU-000001`, `CL-CU-000002`, … from a PostgreSQL sequence (`customers_customer_code_seq`, gap-tolerant, never
+    reused). Customers created before the switch keep their `CLK-CS-XXXXXX` code; an ID is never changed.
   - `identity.ExternalIdentity(provider, subject)` links a user to the identity that proved their phone
     (`phone_otp`, subject = E.164 phone).
   - A verified phone already on an account links back to it instead of creating a duplicate, so customers who signed

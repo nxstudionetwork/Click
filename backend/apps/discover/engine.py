@@ -144,7 +144,7 @@ def organic(customer, city: str, service: str = "") -> list[dict]:
     week = now - timedelta(days=7)
     trending = list(stores.annotate(n=Count("orders", filter=Q(orders__created_at__gte=week) & ~Q(orders__status="cancelled"))).filter(n__gte=2).order_by("-n")[:10])
     add("trending", "Trending now", "Most ordered this week", [_store_card(s, f"{s.n} orders this week") for s in trending])
-    if customer:
+    if customer and customer.personalized:
         mine = list(Order.objects.filter(customer=customer).exclude(status="cancelled").values_list("store_id", flat=True)[:50])
         again = [s for s in stores.filter(pk__in=mine)][:8]
         add("again", "Because you ordered here", "Places you’ve liked before", [_store_card(s, "You ordered here before") for s in again])

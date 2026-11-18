@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { EmptyState, ErrorState, Icon, Skeleton, SmartImage, useToast } from '../components/ui';
 import { useAddresses } from '../features/addresses/useAddresses';
 import { MoneyHead, THEME, iconFor } from '../features/money/parts';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 
 const SERVICES = [['', 'Everything'], ['food', 'Food'], ['groceries', 'Groceries'], ['shop', 'Shop'], ['hotels', 'Stays'], ['bookings', 'Places']];
@@ -69,6 +70,7 @@ export function DiscoverTile({ c, onHidden }: { c: DiscoverCard; onHidden?: () =
  *  with a few clearly labelled sponsored cards. Explore stays the quick launcher; Home stays your dashboard. */
 export function DiscoverPage() {
   const { status } = useAuth();
+  useEffect(() => { track('discover_opened'); }, []);
   const nav = useNavigate();
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();

@@ -647,3 +647,18 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
 - **Also:** invoices are issued the moment a payment is captured (refund documents are notified); delivered orders
   ask for a review; Activity includes gift cards, reviews and prescriptions; checkout shows the points an order earns
   and how to redeem points for Wallet credit.
+- **Click ID:** new customers get sequential `CL-CU-000001` IDs; existing `CLK-CS-` IDs stay (see authentication.md).
+- **Referrals** (`apps/referrals`): one code per customer, `/join/<code>` links, the code is sent with sign-up (invalid
+  or own codes are ignored). Points go to both sides only when the friend's first order is delivered, at most
+  `CLICK_REFERRAL_MONTHLY_CAP` rewarded invites a month per referrer; amounts from `CLICK_REFERRAL_*_POINTS`.
+- **Preferences** (`/customer/preferences`): app language (English, हिन्दी, తెలుగు; strings in
+  `apps/customer/src/i18n`, missing keys fall back to English) and "Personalise my Click." — off stops personal
+  recommendations and recent-search history and clears saved searches.
+- **Home layout** (`discover.HomeSection`, `/home/layout`): operations turn Home sections on or off and reorder them in
+  Django admin (Business OS screen later); the app falls back to the default order.
+- **Analytics** (`apps/analytics`, `/analytics/events`): batched client events from an allow-list; only identifiers and
+  counts are stored — never search text, contact details or payment data.
+- **Menu (Explore sheet):** quick actions first (Offers, Orders, Rides, Bookings, Parcels, Wishlist, Rewards, Buzz,
+  Refer a friend, Help), then features, then the full account list ending with Log out. About, Terms and Privacy are
+  plain-language summaries until the reviewed legal texts are published. An offline banner shows when the device
+  loses its connection.

@@ -16,6 +16,7 @@ import { GiftCardOption } from './GiftCardsPage';
 import { CheckoutRewards } from '../features/payments/CheckoutRewards';
 import { WalletOption } from '../features/wallet/WalletOption';
 import { walletKey } from '../features/wallet/useWallet';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/format';
 import { useDeliveryLocation } from '../location/LocationProvider';
@@ -30,6 +31,7 @@ const SUBS: { id: Substitution; label: string; hint: string }[] = [
 export function GroceryCheckoutPage() {
   useThemeOverride('grocery');
   const { user } = useAuth();
+  useEffect(() => { track('checkout_started', { service: 'grocery' }); }, []);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const cart = useCart();

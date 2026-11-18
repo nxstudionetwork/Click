@@ -8,6 +8,7 @@ import { useCapabilities } from '../features/assist/useCapabilities';
 import { useRecorder } from '../features/assist/useRecorder';
 import { ConfirmCard, MessageView, QUICK } from '../features/buddy/parts';
 import { useBuddyChat } from '../features/buddy/useBuddyChat';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import { useDeliveryLocation } from '../location/LocationProvider';
 
@@ -23,6 +24,7 @@ export function BuddyPage() {
   const { status } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
+  useEffect(() => { track('buddy_opened'); }, []);
   const [sp, setSp] = useSearchParams();
   const cid = sp.get('c');
   const chat = useBuddyChat('man', cid, (id) => setSp({ c: id }, { replace: true }));

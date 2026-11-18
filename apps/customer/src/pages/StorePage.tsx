@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import type { Product } from '@click/api';
 import { ApiError } from '@click/api';
@@ -14,10 +14,13 @@ import { WishlistButton } from '../features/wishlist/WishlistButton';
 import { serviceForStoreType } from '../config/services';
 import { useThemeOverride } from '../components/layout/AppShell';
 import { etaLabel, formatMoney, priceLevelLabel } from '../lib/format';
+import { track } from '../lib/analytics';
 
 export function StorePage() {
   const { slug = '' } = useParams();
   const store = useStore(slug);
+  const storeType = store.data?.storeType;
+  useEffect(() => { if (slug && storeType) track('store_viewed', { store_id: slug, service: storeType }); }, [slug, storeType]);
   useThemeOverride(store.data ? serviceForStoreType(store.data.storeType).theme : null);
   const menu = useMenu(slug);
   const { data: cart } = useCart();

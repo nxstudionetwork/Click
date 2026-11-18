@@ -5,6 +5,7 @@ import type { SearchHit } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { EmptyState, ErrorState, Icon, Skeleton, SmartImage } from '../components/ui';
 import { THEME, iconFor } from '../features/money/parts';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import { DiscoverTile } from './DiscoverPage';
 import { formatMoney } from '../lib/format';
@@ -32,6 +33,8 @@ export function SearchPage() {
   useEffect(() => { const t = setTimeout(() => setTyped(draft.trim()), 200); return () => clearTimeout(t); }, [draft]);
 
   const results = useQuery({ queryKey: ['search', 'global', q, group], queryFn: () => api.money.search.global(q, group), enabled: q.trim().length >= 2, placeholderData: keepPreviousData });
+  // Only the group is sent, never the search text.
+  useEffect(() => { if (q.trim().length >= 2) track('search_performed', { group: group || 'all' }); }, [q, group]);
   const suggest = useQuery({ queryKey: ['search', 'suggest', typed, status], queryFn: () => api.money.search.suggest(typed), enabled: focused && status !== 'loading', placeholderData: keepPreviousData });
   const clear = useMutation({ mutationFn: (id?: string) => api.money.search.clearRecent(id), onSuccess: () => qc.invalidateQueries({ queryKey: ['search', 'suggest'] }) });
 

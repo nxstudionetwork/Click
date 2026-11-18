@@ -100,6 +100,8 @@ INSTALLED_APPS = [
     "apps.giftcards",
     "apps.discover",
     "apps.pharma",
+    "apps.referrals",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [
@@ -312,3 +314,7 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
     "loggers": {"click.audit": {"handlers": ["console"], "level": "INFO", "propagate": False}},
 }
+# Referrals: points to the referrer / the new customer when the new customer's first order is delivered; monthly cap.
+CLICK_REFERRAL_REFERRER_POINTS = int(os.environ.get("CLICK_REFERRAL_REFERRER_POINTS", "200"))
+CLICK_REFERRAL_REFEREE_POINTS = int(os.environ.get("CLICK_REFERRAL_REFEREE_POINTS", "100"))
+CLICK_REFERRAL_MONTHLY_CAP = int(os.environ.get("CLICK_REFERRAL_MONTHLY_CAP", "10"))

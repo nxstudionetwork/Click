@@ -26,6 +26,9 @@ from apps.giftcards import views as giftcard_views
 from apps.support import safety as safety_views
 from apps.discover import views as discover_views
 from apps.pharma import views as pharma_views
+from apps.referrals import views as referral_views
+from apps.analytics import views as analytics_views
+from apps.customers import preferences as customer_preferences
 from apps.ai import conversation_views as ai_conv
 from apps.ai.views import AssistantCapabilitiesView, AssistantTranscribeView, CustomerAssistantView
 from apps.bookings import views as booking_views
@@ -111,6 +114,8 @@ customer_urls = [
     path("invoices", invoice_views.InvoicesView.as_view(), name="invoices"),
     path("safety", safety_views.SafetyView.as_view(), name="safety"),
     path("discover/hide", discover_views.HideView.as_view(), name="discover-hide"),
+    path("referrals", referral_views.MineView.as_view(), name="referrals"),
+    path("preferences", customer_preferences.PreferencesView.as_view(), name="customer-preferences"),
     path("pharma/prescriptions", pharma_views.PrescriptionsView.as_view(), name="pharma-rx"),
     path("pharma/prescriptions/<uuid:pk>", pharma_views.PrescriptionView.as_view(), name="pharma-rx-one"),
     path("pharma/refills", pharma_views.RefillsView.as_view(), name="pharma-refills"),
@@ -173,12 +178,15 @@ api_v1 = [
     path("search/global", search_views.GlobalSearchView.as_view(), name="search-global"),
     path("gift-cards", giftcard_views.DesignsView.as_view(), name="gift-card-designs"),
     path("discover", discover_views.FeedView.as_view(), name="discover"),
+    path("referrals/<str:code>", referral_views.CheckView.as_view(), name="referral-check"),
+    path("analytics/events", analytics_views.EventsView.as_view(), name="analytics-events"),
     path("pharma/home", pharma_views.HomeView.as_view(), name="pharma-home"),
     path("pharma/products", pharma_views.ProductsView.as_view(), name="pharma-products"),
     path("pharma/products/<uuid:pk>", pharma_views.ProductView.as_view(), name="pharma-product"),
     path("pharma/prescriptions/<uuid:pk>/file", pharma_views.PrescriptionFileView.as_view(), name="pharma-rx-file"),
     path("partner/pharma/prescriptions/<uuid:pk>/review", pharma_views.PartnerReviewView.as_view(), name="pharma-rx-review"),
     path("discover/events", discover_views.EventView.as_view(), name="discover-events"),
+    path("home/layout", discover_views.HomeLayoutView.as_view(), name="home-layout"),
     path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),

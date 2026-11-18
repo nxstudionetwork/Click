@@ -55,6 +55,7 @@ export const PERSONAL_FEATURES: ClickService[] = [
   { id: 'rewards', name: 'Rewards', tagline: 'Click. points on every order', icon: 'star', path: '/rewards', status: 'live', theme: 'rewards' },
   { id: 'wallet', name: 'Wallet', tagline: 'Balance, refunds and credits', icon: 'wallet', path: '/wallet', status: 'live', theme: 'wallet' },
   { id: 'discover', name: 'Discover', tagline: 'New, popular and worth trying near you', icon: 'compass', path: '/discover', status: 'live', theme: 'explore' },
+  { id: 'referrals', name: 'Refer a friend', tagline: 'Invite friends, both get points', icon: 'gift', path: '/referrals', status: 'live', theme: 'rewards' },
   { id: 'giftcards', name: 'Gift Cards', tagline: 'Give something they’ll love', icon: 'gift', path: '/gift-cards', status: 'live', theme: 'offers' },
   { id: 'safety', name: 'Safety Center', tagline: 'Emergency help and reporting', icon: 'shield', path: '/safety', status: 'live', theme: 'ride' },
   { id: 'invoices', name: 'Invoices', tagline: 'Invoices for orders and bookings', icon: 'receipt', path: '/account/invoices', status: 'live', theme: 'wallet' },

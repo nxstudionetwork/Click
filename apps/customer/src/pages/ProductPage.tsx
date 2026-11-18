@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '@click/api';
@@ -9,6 +9,7 @@ import { OptionPicker, useOptionSelection } from '../features/menu/OptionPicker'
 import { useAddToCart } from '../features/menu/useAddToCart';
 import { ProductCard } from '../features/stores/ProductCard';
 import { WishlistButton } from '../features/wishlist/WishlistButton';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import { ShopProductPage } from './ShopProductPage';
 import { etaLabel, formatMoney } from '../lib/format';
@@ -18,6 +19,7 @@ const useProductQuery = (id: string) => useQuery({ queryKey: ['products', id], q
 export function ProductPage() {
   const { id = '' } = useParams();
   const product = useProductQuery(id);
+  useEffect(() => { if (id) track('product_viewed', { product_id: id }); }, [id]);
   useThemeOverride(product.data ? serviceForStoreType(product.data.store.storeType).theme : null);
   const { addToCart, isAdding } = useAddToCart();
   const [qty, setQty] = useState(1);

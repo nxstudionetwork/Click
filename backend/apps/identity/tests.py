@@ -80,7 +80,7 @@ def test_new_customer_flow_creates_one_customer_with_click_id_and_identity(api):
     r = signup(api, st, addresses=[ADDR, {**ADDR, "label": "college", "line1": "Hostel B"}])
     assert r.status_code == 201, r.json()
     user = r.json()["user"]
-    assert user["customerCode"].startswith("CLK-CS-") and user["phoneVerified"] is True and user["phone"] == "+919000011111"
+    assert user["customerCode"].startswith("CL-CU-") and user["phoneVerified"] is True and user["phone"] == "+919000011111"
     assert r.cookies["click_refresh"]["httponly"]
     u = User.objects.get(email="meera@example.com")
     link = ExternalIdentity.objects.get(user=u)

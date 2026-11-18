@@ -259,6 +259,22 @@ export interface PrescriptionView {
 type Page<T> = { results: T[]; hasNext: boolean; page: number; count?: number };
 
 export const moneyApi = (http: HttpClient) => ({
+  preferences: {
+    get: () => http.request<{ language: string; personalized: boolean; languages: { code: string; label: string }[] }>('/customer/preferences'),
+    set: (input: { language?: string; personalized?: boolean }) =>
+      http.request<{ language: string; personalized: boolean; languages: { code: string; label: string }[] }>('/customer/preferences', { method: 'PATCH', body: input }),
+  },
+  referrals: {
+    mine: () => http.request<{ code: string; link: string; earnedPoints: number;
+      rules: { referrerPoints: number; refereePoints: number; monthlyCap: number; how: string };
+      referrals: { id: UUID; name: string; status: 'joined' | 'rewarded' | 'not_eligible'; statusLabel: string; reason: string; joinedAt: ISODateTime }[] }>('/customer/referrals'),
+    check: (code: string) => http.request<{ code: string; inviter: string; refereePoints: number }>(`/referrals/${encodeURIComponent(code)}`, { auth: false }),
+  },
+  analytics: {
+    send: (body: { session: string; platform: string; events: { name: string; props?: Record<string, string | number>; at: string }[] }) =>
+      http.request<{ accepted: number }>('/analytics/events', { method: 'POST', body }),
+  },
+  homeLayout: () => http.request<{ sections: string[]; managed: boolean }>('/home/layout', { auth: false }),
   account: {
     deletion: () => http.request<{ blockers: { code: string; message: string; link: string }[]; phone: string; keeps: string }>('/me/delete'),
     delete: (token: string, reason: string) => http.request<{ deleted: boolean }>('/me/delete', { method: 'POST', body: { token, reason } }),

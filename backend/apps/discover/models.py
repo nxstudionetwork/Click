@@ -119,3 +119,17 @@ class DiscoverConfig(BaseModel):
     @classmethod
     def current(cls) -> "DiscoverConfig":
         return cls.objects.order_by("-created_at").first() or cls()
+
+
+class HomeSection(BaseModel):
+    """Home page sections Click. operations can turn off or reorder (Business OS later; Django admin today).
+    With no rows, the app's default order is used."""
+
+    CODES = ["hero", "quick", "offers", "nearby", "popular", "discovery", "shopping", "buzz", "recent", "money", "moments"]
+
+    code = models.CharField(max_length=20, unique=True, choices=[(c, c) for c in CODES])
+    enabled = models.BooleanField(default=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "code"]

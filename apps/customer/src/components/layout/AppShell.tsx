@@ -12,17 +12,19 @@ import { GlobalSearch } from '../shell/GlobalSearch';
 import { ProfileButton } from '../shell/ProfileButton';
 import { Icon, type IconName } from '../ui';
 import { Logo } from './Logo';
+import { useT } from '../../i18n';
+import type { Key } from '../../i18n/en';
 
 /**
  * Primary navigation. Each destination carries its own service colour (inactive: subtle, active: strong).
  * Explore opens as a bottom sheet over the current page (`sheet`); the others are routes.
  */
-export const PRIMARY: { to: string; label: string; icon: IconName; theme: Theme; end?: boolean; sheet?: boolean }[] = [
-  { to: '/', label: 'Home', icon: 'home', theme: 'default', end: true },
-  { to: '/rides', label: 'Ride', icon: 'ride', theme: 'ride' },
-  { to: '/food', label: 'Food', icon: 'food', theme: 'food' },
-  { to: '/shopping', label: 'Shop', icon: 'shop', theme: 'shopping' },
-  { to: '/explore', label: 'Explore', icon: 'compass', theme: 'explore', sheet: true },
+export const PRIMARY: { to: string; label: Key; icon: IconName; theme: Theme; end?: boolean; sheet?: boolean }[] = [
+  { to: '/', label: 'nav.home', icon: 'home', theme: 'default', end: true },
+  { to: '/rides', label: 'nav.ride', icon: 'ride', theme: 'ride' },
+  { to: '/food', label: 'nav.food', icon: 'food', theme: 'food' },
+  { to: '/shopping', label: 'nav.shop', icon: 'shop', theme: 'shopping' },
+  { to: '/explore', label: 'nav.explore', icon: 'compass', theme: 'explore', sheet: true },
 ];
 
 const ThemeOverride = createContext<(t: Theme | null) => void>(() => {});
@@ -34,6 +36,8 @@ export function useThemeOverride(theme: Theme | null) {
 
 export function AppShell() {
   const { status } = useAuth();
+  const t = useT();
+  const online = useOnline();
   const { pathname } = useLocation();
   const { data: cart } = useCart();
   const { data: unread = 0 } = useUnreadCount();
@@ -92,13 +96,14 @@ export function AppShell() {
           <nav className="header__nav" aria-label="Primary">
             {PRIMARY.map((n) => n.sheet ? (
               <button key={n.to} type="button" data-theme={n.theme} className={exploreOpen || pathname === n.to ? 'active' : ''}
-                aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}><Icon name={n.icon} size={18} />{n.label}</button>
+                aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}><Icon name={n.icon} size={18} />{t(n.label)}</button>
             ) : (
-              <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => (isActive && !exploreOpen ? 'active' : '')}><Icon name={n.icon} size={18} />{n.label}</NavLink>
+              <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => (isActive && !exploreOpen ? 'active' : '')}><Icon name={n.icon} size={18} />{t(n.label)}</NavLink>
             ))}
           </nav>
         </header>
 
+        {!online && <div className="offline-bar" role="status">{t('common.offline')}</div>}
         <main className="main" id="main">
           <div key={pathname} className="route">
             <Outlet />
@@ -111,12 +116,12 @@ export function AppShell() {
             <button key={n.to} type="button" data-theme={n.theme} className={`bottom-nav__item ${exploreOpen || pathname === n.to ? 'active' : ''}`}
               aria-haspopup="dialog" aria-expanded={exploreOpen} onClick={openExplore}>
               <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
-              <span className="bottom-nav__label">{n.label}</span>
+              <span className="bottom-nav__label">{t(n.label)}</span>
             </button>
           ) : (
             <NavLink key={n.to} to={n.to} end={n.end} data-theme={n.theme} className={({ isActive }) => `bottom-nav__item ${isActive && !exploreOpen ? 'active' : ''}`}>
               <span className="bottom-nav__icon"><Icon name={n.icon} /></span>
-              <span className="bottom-nav__label">{n.label}</span>
+              <span className="bottom-nav__label">{t(n.label)}</span>
             </NavLink>
           ))}
         </nav>
@@ -124,4 +129,17 @@ export function AppShell() {
       </div>
     </ThemeOverride.Provider>
   );
+}
+
+/** Tracks the browser's connectivity so the shell can say when actions will not go through. */
+function useOnline() {
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine !== false));
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
+  return online;
 }

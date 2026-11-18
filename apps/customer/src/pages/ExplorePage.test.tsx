@@ -54,12 +54,16 @@ describe('Explore', () => {
     expect(screen.getByRole('link', { name: /Open your activity/ })).toHaveAttribute('href', '/activity');
   });
 
-  it('Account rows open the existing pages; the footer carries the tagline and IFX attribution', () => {
+  it('Quick actions come first; account rows open the existing pages and end with log out; footer carries the attribution', () => {
     renderWithProviders(<ExplorePage />);
+    const quick = screen.getByRole('heading', { name: 'Quick actions' });
+    expect(quick.compareDocumentPosition(screen.getByRole('heading', { name: 'Account' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const account = screen.getByRole('navigation', { name: 'Account' });
     expect(within(account).getAllByRole('link').map((l) => [l.querySelector('strong')!.textContent, l.getAttribute('href')])).toEqual([
-      ['Payments', '/account/payments'], ['Settings', '/settings'], ['Help & Support', '/help'], ['Addresses', '/account/addresses'],
+      ['Profile', '/account'], ['Saved locations', '/account/addresses'], ['Payments', '/account/payments'], ['Notifications', '/notifications'],
+      ['Settings & privacy', '/settings'], ['Security & safety', '/safety'], ['About Click.', '/about'], ['Terms of use', '/terms'], ['Privacy policy', '/privacy'],
     ]);
+    expect(within(account).getByRole('button', { name: 'Log out' })).toBeInTheDocument();
     expect(screen.getByText('A venture of IFX Group')).toBeInTheDocument();
     expect(document.body.textContent).toContain('Everything you need.One Click. away.');
     expect(document.body.textContent).not.toMatch(/\bMenu\b/);
