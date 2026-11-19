@@ -20,3 +20,4 @@ export * from './session';
 export * from './partner-restaurant';
 export * from './partner-driver';
 export * from './partner-buzz';
+export * from './os';

@@ -1,13 +1,23 @@
-# Click Business OS (Phase 6, not started)
+# Click Business OS
 
-Internal Click company operating system, for Click staff only.
+Internal Click company operating system: React + TypeScript (Vite), on the shared `@click/api` (`osApi`) and
+`@click/ui` packages and the backend's `/api/v1/os/*` surface.
 
-**Belongs here:** customer/partner/business administration, partner approval, order and support operations
-(working customer support tickets), finance, staff, roles and permissions, analytics, audit tools, platform
-administration, AI business intelligence.
+**Foundation (built):** splash, multi-step sign-in (employee / administrator / partner / other; password + TOTP
+two-step verification, invitations), session handling (separate OS session, idle + absolute expiry, immediate
+revocation), first-login onboarding, permission-aware shell (sidebar, header, Ctrl/⌘+K search, notifications, Business
+AI), Home command center (role-composed widgets), My Work, Approvals (inbox, requests, delegation), Tasks,
+Notifications, Calendar, Profile, Settings (preferences, security & sessions, organization structure, users, roles &
+scoped permissions, workflows, audit trail, system, integrations) and a registered landing page for every future
+business module.
 
-**Does not belong here:** customer screens (`apps/customer`) or partner self-service (`apps/partner`).
+**Next:** each business module (Finance, People & HR, Procurement, Inventory, Partners, …) is built on this
+foundation. See [docs/business-os.md](../../docs/business-os.md).
 
-Uses the shared `@click/api` package and the backend's `/api/v1/os/*` surface (to be added), with staff
-accounts and explicit Django permissions enforced on the server. Until then, Django admin (`/admin/`) is the
-interim internal tool.
+```bash
+npm run dev -w @click/business-os   # http://localhost:5177, proxies /api to :4000 (CLICK_API_PROXY overrides)
+npm run test -w @click/business-os
+```
+
+The browser never decides access: every request is authenticated and authorized by the API, and lists are filtered
+by scope in the database.

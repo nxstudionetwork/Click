@@ -102,6 +102,13 @@ INSTALLED_APPS = [
     "apps.pharma",
     "apps.referrals",
     "apps.analytics",
+    # Business OS foundation
+    "apps.organization",
+    "apps.people",
+    "apps.access",
+    "apps.audit",
+    "apps.workflows",
+    "apps.workspace",
 ]
 
 MIDDLEWARE = [
@@ -194,6 +201,7 @@ REST_FRAMEWORK = {
         "reviews": os.environ.get("THROTTLE_REVIEWS", "20/min"),  # writing / reporting reviews  # Shopping search
         "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
         "buzz": os.environ.get("THROTTLE_BUZZ", "120/min"),  # Buzz likes, saves, views, reports
+        "os_auth": os.environ.get("THROTTLE_OS_AUTH", "20/min"),  # Business OS sign-in steps
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -220,7 +228,7 @@ AUTH_REFRESH_COOKIE = {
     "domain": os.environ.get("AUTH_COOKIE_DOMAIN") or None,
 }
 
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173" if DEBUG else "")
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5177" if DEBUG else "")
 CORS_ALLOW_CREDENTIALS = True
 from corsheaders.defaults import default_headers  # noqa: E402
 
@@ -294,6 +302,10 @@ CLICK_PAYMENT_WEBHOOK_SECRET = os.environ.get("CLICK_PAYMENT_WEBHOOK_SECRET", ""
 
 # Official Click. support contacts (shown in Help & Support).
 # Emergency services number shown in Safety Center (India: 112, the national emergency number).
+# Referrals: points to the referrer / the new customer when the new customer's first order is delivered; monthly cap.
+CLICK_REFERRAL_REFERRER_POINTS = int(os.environ.get("CLICK_REFERRAL_REFERRER_POINTS", "200"))
+CLICK_REFERRAL_REFEREE_POINTS = int(os.environ.get("CLICK_REFERRAL_REFEREE_POINTS", "100"))
+CLICK_REFERRAL_MONTHLY_CAP = int(os.environ.get("CLICK_REFERRAL_MONTHLY_CAP", "10"))
 CLICK_EMERGENCY_NUMBER = os.environ.get("CLICK_EMERGENCY_NUMBER", "112")
 CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
 CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
@@ -307,6 +319,31 @@ CLICK_SPEECH_PROVIDER = os.environ.get("CLICK_SPEECH_PROVIDER", "")
 # Image recognition for camera search. Empty = off (QR scanning still works on-device in the app).
 CLICK_VISION_PROVIDER = os.environ.get("CLICK_VISION_PROVIDER", "")
 
+# --- Click Business OS -----------------------------------------------
+# Separate refresh cookie from the customer/partner apps, scoped to the OS auth endpoints.
+CLICK_OS_REFRESH_COOKIE = {
+    "name": "click_os_refresh",
+    "path": "/api/v1/os/auth/",
+    "secure": not DEBUG,
+    "samesite": os.environ.get("AUTH_COOKIE_SAMESITE", "Lax"),
+    "domain": os.environ.get("AUTH_COOKIE_DOMAIN") or None,
+}
+CLICK_OS_IDLE_MINUTES = int(os.environ.get("CLICK_OS_IDLE_MINUTES", "60"))  # signed out after this long without activity
+CLICK_OS_SESSION_MAX_HOURS = int(os.environ.get("CLICK_OS_SESSION_MAX_HOURS", "12"))  # absolute session length
+CLICK_OS_MAX_FAILED_LOGINS = int(os.environ.get("CLICK_OS_MAX_FAILED_LOGINS", "5"))
+CLICK_OS_LOCKOUT_MINUTES = int(os.environ.get("CLICK_OS_LOCKOUT_MINUTES", "15"))
+# Sensitive permissions (payroll, identity admin, sensitive audit …) and roles marked requires_mfa only take effect
+# with MFA on. Always on outside development.
+CLICK_OS_SENSITIVE_REQUIRES_MFA = env_bool("CLICK_OS_SENSITIVE_REQUIRES_MFA", not DEBUG) or not (DEBUG or TESTING)
+# Sign-in methods offered after the identifier step. Only list what is configured ("otp", "sso" plug in later).
+CLICK_OS_AUTH_METHODS = env_list("CLICK_OS_AUTH_METHODS", "password")
+# Extra notification channels beyond in-app, e.g. "apps.workspace.notify.EmailChannel".
+CLICK_OS_NOTIFICATION_CHANNELS = env_list("CLICK_OS_NOTIFICATION_CHANNELS", "")
+# Business AI provider (apps.workspace.ai.BusinessAIProvider). Basic = answers only from permission-checked tools.
+CLICK_OS_AI_PROVIDER = os.environ.get("CLICK_OS_AI_PROVIDER", "apps.workspace.ai.BasicBusinessAI")
+# DEVELOPMENT ONLY persona sign-in on the OS login screen (seeded by `manage.py seed_os_dev`). Off unless DEBUG.
+CLICK_OS_DEV_LOGIN = DEBUG and env_bool("CLICK_OS_DEV_LOGIN", True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -314,7 +351,3 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
     "loggers": {"click.audit": {"handlers": ["console"], "level": "INFO", "propagate": False}},
 }
-# Referrals: points to the referrer / the new customer when the new customer's first order is delivered; monthly cap.
-CLICK_REFERRAL_REFERRER_POINTS = int(os.environ.get("CLICK_REFERRAL_REFERRER_POINTS", "200"))
-CLICK_REFERRAL_REFEREE_POINTS = int(os.environ.get("CLICK_REFERRAL_REFEREE_POINTS", "100"))
-CLICK_REFERRAL_MONTHLY_CAP = int(os.environ.get("CLICK_REFERRAL_MONTHLY_CAP", "10"))

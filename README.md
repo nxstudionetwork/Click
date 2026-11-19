@@ -24,7 +24,7 @@ Click is a platform that brings everyday services (food, groceries, rides, deliv
 apps/
   customer/        Customer App (React + TypeScript, Vite)       ← active
   partner/         Click Partner App (React + TypeScript, Vite)   ← phase 1: sign-in → onboarding → Partner ID → Home
-  business-os/     Internal Click Business OS                     ← Phase 6 (boundary README only)
+  business-os/     Internal Click Business OS (React + TypeScript, Vite) ← foundation: sign-in, RBAC + scopes, approvals, audit, Home
 packages/
   api/             @click/api: shared typed API contract, HTTP client and session client for all apps
   ui/              @click/ui: shared UI primitives and the Click logo (each app supplies its own tokens)
@@ -69,11 +69,18 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/travel      Travel: bus / train / flight timetables, search, seats & berths (RAC / waitlist), tickets, cancellation, fare alerts
   apps/experiences Bookings: temples, attractions, experiences (tickets, slots, darshan), entry codes, and the list of every booking
   apps/eventhub    Events: plan events, event teams/specialists/venues, packages, quotes, bookings, milestones, checklist, reviews
+  apps/organization Business OS: organization, business units, regions → sites, departments, teams; commercial models
+  apps/people      Business OS: designations and the authoritative employee record
+  apps/access      Business OS: OS accounts, sessions, MFA, roles, scoped permissions, approval authority, service accounts
+  apps/audit       Business OS: append-only audit trail
+  apps/workflows   Business OS: approval policies/levels/requests, delegation, escalation, tasks
+  apps/workspace   Business OS: /api/v1/os/* — context, Home widgets, notifications, search, calendar, Business AI
 ```
 
 **One API, role-scoped surfaces:** `/api/v1/stores` (public), `/api/v1/auth/*` and `/api/v1/me` (shared identity),
 `/api/v1/customer/*` (customers, ownership enforced in querysets), `/api/v1/partner/*` (partner resolved from the
-signed-in user, never from client input). `/api/v1/os/*` comes later.
+signed-in user, never from client input), `/api/v1/os/*` (Business OS: separate session, scoped RBAC; see
+[docs/business-os.md](docs/business-os.md)).
 
 ## Local development
 
@@ -97,6 +104,7 @@ python manage.py runserver
 npm install
 npm run dev:customer
 npm run dev:partner   # Click Partner App on http://localhost:5174 (see apps/partner/README.md)
+npm run dev:os        # Click Business OS on http://localhost:5177 (run `python manage.py seed_os_dev` first)
 ```
 
 ## Customer sign-in

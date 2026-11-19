@@ -26,7 +26,17 @@ export interface ClickClient {
   restoreSession(): Promise<Session>;
 }
 
-export function createClickClient(options: { baseUrl: string; clientId: string }): ClickClient {
+export interface ClickClientOptions {
+  baseUrl: string;
+  clientId: string;
+  /**
+   * How to refresh the session. Defaults to the shared `/auth/refresh` (customer & partner apps). Business OS uses
+   * its own endpoint and cookie (`/os/auth/refresh`) so an OS session is separate from a customer session.
+   */
+  refresh?: (http: HttpClient) => Promise<Session>;
+}
+
+export function createClickClient(options: ClickClientOptions): ClickClient {
   let accessToken: string | null = null;
   let refreshInFlight: Promise<Session | null> | null = null;
   const listeners = new Set<(token: string | null) => void>();
@@ -46,15 +56,16 @@ export function createClickClient(options: { baseUrl: string; clientId: string }
   };
 
   const http = createHttpClient({
-    ...options,
+    baseUrl: options.baseUrl,
+    clientId: options.clientId,
     getAccessToken: session.get,
     refreshAccessToken: () => refreshSession().then((s) => s?.access ?? null),
   });
-  const auth = authApi(http);
+  const refresh = options.refresh ?? ((h: HttpClient) => authApi(h).refresh());
 
   let rawInFlight: Promise<Session> | null = null;
   function rawRefresh(): Promise<Session> {
-    rawInFlight ??= auth.refresh().finally(() => {
+    rawInFlight ??= refresh(http).finally(() => {
       rawInFlight = null;
     });
     return rawInFlight;

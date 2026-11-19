@@ -98,6 +98,17 @@ const PATHS = {
   temple: 'M12 2 4 8h16L12 2Zm-7 6v3h14V8M6 11v8m4-8v8m4-8v8m4-8v8M3 21h18M4 19h16',
   swap: 'M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3',
   seat: 'M7 4h8a2 2 0 0 1 2 2v6H7V4Zm-2 8h14v3H5v-3Zm2 3v5m10-5v5',
+  // Business OS
+  inbox: 'M4 13l2.5-8h11L20 13v6H4v-6Zm0 0h4.5l1 2h5l1-2H20',
+  list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  calendar: 'M5 5h14v15H5V5Zm0 5h14M9 3v4m6-4v4',
+  building: 'M5 21V4h10v17M15 9h4v12M3 21h18M8.5 8h3m-3 4h3m-3 4h3',
+  plug: 'M9 3v5m6-5v5M7 8h10v3a5 5 0 0 1-10 0V8Zm5 8v5',
+  flow: 'M6 4h4v4H6V4Zm8 12h4v4h-4v-4ZM8 8v4a2 2 0 0 0 2 2h4a2 2 0 0 1 2 2',
+  scale: 'M12 4v16M7 20h10M5 7h14M5 7l-2.5 6a3 3 0 0 0 5 0L5 7Zm14 0-2.5 6a3 3 0 0 0 5 0L19 7Z',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
+  lock: 'M6 11h12v9H6v-9Zm2 0V8a4 4 0 0 1 8 0v3',
+  sidebar: 'M4 5h16v14H4V5Zm5 0v14',
 } as const;
 
 export type IconName = keyof typeof PATHS;

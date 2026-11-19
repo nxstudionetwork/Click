@@ -10,7 +10,7 @@ One shared API for all Click products, versioned under /api/v1/.
   eventhub    /api/v1/eventhub/...            Click. Events: plan events, teams, venues, quotes (public + customer + partner)
   customer    /api/v1/customer/...            Customer App (IsCustomer + ownership)
   partner     /api/v1/partner/...             Click Partner App (resolved from request.user)
-  business os /api/v1/os/...                  Phase 6
+  business os /api/v1/os/...                  Business OS (apps.workspace.urls): staff, partners, service accounts
 """
 
 from django.conf import settings
@@ -227,6 +227,7 @@ api_v1 = [
     path("customer/", include(customer_urls)),
     path("partner/", include(ride_partner_urls)),
     path("partner/", include("apps.partners.urls")),
+    path("os/", include("apps.workspace.urls")),
 ]
 
 urlpatterns = [

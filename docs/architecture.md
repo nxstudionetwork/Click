@@ -6,7 +6,7 @@
 |-------------------------|-----------------------------------------|-------|
 | Customer App            | `apps/customer`                         | React + TypeScript (Vite) |
 | Partner App             | `apps/partner`                          | React + TypeScript (Vite); Click phone OTP sign-in |
-| Business OS             | `apps/business-os`                      | Phase 6 (internal) |
+| Business OS             | `apps/business-os`                      | React + TypeScript (Vite); foundation built — see [business-os.md](business-os.md) |
 | Shared code             | `packages/api`, `packages/ui`, `packages/phone-auth` | `@click/api`: contract, HTTP + session client; `@click/ui`: primitives + logo; `@click/phone-auth`: phone OTP adapter |
 | Backend                 | `backend/`                              | Django + DRF, one shared API |
 | Database                | PostgreSQL; migrations in `backend/apps/*/migrations` | Django owns the schema |
@@ -53,7 +53,7 @@ their lifecycles differ.
   - Partner Home: `partner/home` (whole dashboard, sections fail independently), `partner/availability`,
     `partner/work?view=`, `partner/work/<kind>/<id>/<action>`, `partner/earnings?days=7|30`,
     `partner/notifications` (+ `/read-all`, `/<id>/read`). `partner/dev-login` exists only with DEBUG.
-- **Business OS:** `os/*` (Phase 6)
+- **Business OS:** `os/*` — separate OS session (`click_os_refresh`), scoped RBAC, approvals, audit. See [business-os.md](business-os.md).
 
 Rules:
 - JSON is camelCase.
