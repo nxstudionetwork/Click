@@ -42,7 +42,7 @@ UNITS = [  # code, name, type, parent code, city
     ("DEL-BR", "Delhi Branch", "branch", "NDL", "New Delhi"),
 ]
 DEPARTMENTS = [("LEAD", "Leadership"), ("FIN", "Finance"), ("HR", "People & HR"), ("OPS", "Operations"),
-               ("PTN", "Partner Management"), ("TECH", "Technology"), ("CX", "Customer Experience")]
+               ("PTN", "Partner Management"), ("TECH", "Technology"), ("CX", "Customer Experience"), ("PROC", "Procurement")]
 DESIGNATIONS = [("CEO", "Chief Executive Officer", 10), ("HEAD", "Head of Department", 8), ("MGR", "Manager", 6),
                 ("ENG", "Engineer", 4), ("EXEC", "Executive", 3)]
 PERSONAS = [  # email, name, employee id, designation, department, unit, roles [(role, anchor unit)], manager email, persona label
@@ -64,6 +64,12 @@ PERSONAS = [  # email, name, employee id, designation, department, unit, roles [
      "priya.menon@click.dev", "Accountant"),
     ("anita.desai@click.dev", "Anita Desai", "EMP-000016", "MGR", "FIN", "CORP", [("treasury-manager", None), ("financial-controller", None)],
      "priya.menon@click.dev", "Treasury & Controller"),
+    ("kabir.malhotra@click.dev", "Kabir Malhotra", "EMP-000017", "HEAD", "PROC", "CORP", [("procurement-manager", None)], "ananya.rao@click.dev",
+     "Procurement Manager"),
+    ("pooja.shah@click.dev", "Pooja Shah", "EMP-000018", "EXEC", "PROC", "CORP", [("buyer", None), ("category-manager", None)], "kabir.malhotra@click.dev",
+     "Buyer & Category Manager"),
+    ("ravi.kumar@click.dev", "Ravi Kumar", "EMP-000019", "EXEC", "OPS", "HYD-BR", [("receiving-officer", None), ("quality-inspector", None)],
+     "arjun.kumar@click.dev", "Receiving & Quality"),
 ]
 
 
@@ -128,7 +134,66 @@ class Command(BaseCommand):
         self._hr(org, people, depts, units, desig)
         install(org)  # second pass links module data (e.g. finance cost centers) to the departments created above
         self._finance(org, people, depts)
+        self._procurement(org, people)
         return org
+
+    def _procurement(self, org, people):
+        """DEVELOPMENT procurement data: suppliers, a contract, a recurring purchase, an approved request and an open RFQ."""
+        from apps.finance.ledger import next_number
+        from apps.procurement import services as proc
+        from apps.procurement.models import (EventSupplier, ProcurementCategory, ProcurementContract, PurchaseRequest, PurchaseRequestLine, RecurringPurchase,
+                                             SourcingEvent, SourcingLine, Supplier)
+
+        if Supplier.objects.filter(organization=org).exists():
+            return
+        cat = {c.code: c for c in ProcurementCategory.objects.filter(organization=org)}
+        kabir, pooja, arjun = people["kabir.malhotra@click.dev"], people["pooja.shah@click.dev"], people["arjun.kumar@click.dev"]
+        ok = {"status": "verified", "by": "Development seed", "at": timezone.now().isoformat(), "note": ""}
+        sup = {}
+        for key, name, typ, cats, pref, city in (("dell", "Dell Technologies India Pvt Ltd", "manufacturer", ["TECH-HW"], "preferred", "Bengaluru"),
+                                                  ("lenovo", "Lenovo India Pvt Ltd", "manufacturer", ["TECH-HW"], "approved", "Bengaluru"),
+                                                  ("kalpana", "Kalpana Office Supplies", "retailer", ["OFF-STAT", "OFF-CONS"], "preferred", "Hyderabad"),
+                                                  ("cloud", "CloudServe India Pvt Ltd", "technology", ["TECH-CLOUD"], "approved", "Hyderabad")):
+            s = Supplier.objects.create(organization=org, code=next_number(org, "supplier"), legal_name=name, supplier_type=typ, status="active", preference=pref,
+                                        city=city, email=f"sales@{key}.example", tax_id=f"36ABCDE{1000 + len(sup)}F1Z{len(sup)}", bank_last4=f"{4000 + len(sup)}",
+                                        bank_ifsc="HDFC0000123", bank_verified=True, created_by=kabir, risk_level="low",
+                                        verification={"legal_name": ok, "tax_registration": ok, "bank_account": ok})
+            s.categories.set([cat[c] for c in cats])
+            sup[key] = s
+        Supplier.objects.create(organization=org, code=next_number(org, "supplier"), legal_name="Swift Prints & Signage", supplier_type="local", city="Hyderabad",
+                                email="hello@swiftprints.example", created_by=pooja)  # registered, waiting for verification & onboarding
+        today = timezone.localdate()
+        c = ProcurementContract.objects.create(organization=org, number=next_number(org, "contract"), supplier=sup["cloud"], title="Cloud hosting — annual",
+                                               contract_type="license", category=cat["TECH-CLOUD"], start_date=today - timedelta(days=320),
+                                               end_date=today + timedelta(days=45), value=Decimal("540000"), auto_renew=False, notice_period_days=30, owner=kabir,
+                                               slas="99.9% uptime; P1 response 30 minutes.")
+        RecurringPurchase.objects.create(organization=org, number=next_number(org, "recurring"), title="Cloud hosting — monthly", supplier=sup["cloud"], contract=c,
+                                         category=cat["TECH-CLOUD"], frequency="monthly", expected_amount=Decimal("45000"), next_date=today + timedelta(days=20),
+                                         owner=kabir)
+        pr = PurchaseRequest.objects.create(organization=org, number=next_number(org, "pr"), title="Laptops for new Hyderabad operations staff", requester=arjun,
+                                            department=arjun.employee.department, org_unit=arjun.employee.org_unit, category=cat["TECH-HW"], request_type="hardware",
+                                            expenditure="capex", justification="Three new operations executives join on the 1st; no spare laptops in the branch.",
+                                            estimated_total=Decimal("210000"), status="approved", approved_at=timezone.now(), required_by=today + timedelta(days=14))
+        PurchaseRequestLine.objects.create(request=pr, description="Business laptop, 16 GB RAM, 512 GB SSD", quantity=3, estimated_unit_cost=Decimal("70000"),
+                                           line_total=Decimal("210000"))
+        ev = SourcingEvent.objects.create(organization=org, number=next_number(org, "rfq"), kind="rfq", title=pr.title, purchase_request=pr, category=pr.category,
+                                          description=pr.justification, response_deadline=timezone.now() + timedelta(days=5), criteria=proc.DEFAULT_CRITERIA["rfq"],
+                                          owner=pooja, status="published", published_at=timezone.now(), delivery_location="Hyderabad Branch")
+        SourcingLine.objects.create(event=ev, description="Business laptop, 16 GB RAM, 512 GB SSD", quantity=3)
+        PurchaseRequest.objects.filter(pk=pr.pk).update(status="sourcing")
+        for k in ("dell", "lenovo"):
+            EventSupplier.objects.create(event=ev, supplier=sup[k])
+        rf = RequestFactory().post("/")
+        rf.user = pooja
+        from apps.access.authz import load_context
+
+        ctx = load_context(pooja)
+        proc.record_quote(rf, ctx, ev, {"supplierId": str(sup["dell"].pk), "supplier_id": str(sup["dell"].pk), "quote_reference": "DL-88231", "delivery_days": 7,
+                                        "warranty_months": 36, "payment_terms_days": 30, "valid_until": (today + timedelta(days=20)).isoformat(),
+                                        "lines": [{"unit_price": "68500", "tax_rate": "18"}]})
+        proc.record_quote(rf, ctx, ev, {"supplier_id": str(sup["lenovo"].pk), "quote_reference": "LN-2026-114", "delivery_days": 10, "warranty_months": 24,
+                                        "payment_terms_days": 45, "valid_until": (today + timedelta(days=15)).isoformat(),
+                                        "lines": [{"unit_price": "66200", "tax_rate": "18"}]})
 
     def _finance(self, org, people, depts):
         """DEVELOPMENT finance data: platform payments brought into the ledger, budgets, a bill and an overdue invoice."""

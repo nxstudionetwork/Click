@@ -37,6 +37,7 @@ MANAGER = [
     ("people.learning.view", "reports"), ("people.learning.assign", "reports"), ("people.lifecycle.create", "reports"),
     ("people.document.view", "reports"), ("workflows.task.assign", "reports"), ("workflows.request.view", "reports"),
     ("access.request.approve", "reports"), ("access.request.view", "reports"),
+    ("procurement.request.view", "reports"), ("procurement.request.approve", "reports"),
 ]
 HR_ALL = [c for c in registry.PERMISSIONS if c.startswith("people.")]
 
@@ -54,7 +55,7 @@ ROLES = [
     {
         "key": "people-manager", "name": "People Manager (automatic)", "priority": 60, "audience": "employee",
         "description": "Applied automatically to anyone with direct reports: team leave, attendance, goals, reviews and tasks — reports only.",
-        "grants": MANAGER, "widgets": ["team", "pending_leave", "upcoming_reviews"],
+        "grants": MANAGER, "widgets": ["team", "pending_leave", "upcoming_reviews"], "limits": {"purchase": Decimal("25000")},
     },
     {
         "key": "os-admin", "name": "System Administrator", "priority": 5, "audience": "employee", "requires_mfa": True, "emergency": True,

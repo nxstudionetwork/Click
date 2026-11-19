@@ -124,6 +124,7 @@ steps. All amounts are data, none are hard-coded.
 | Partner | `CLK-PT-…` | Partner app |
 | Order | `CLK-…` | Customer & partner apps |
 | Finance documents | `JV-`, `INV-`, `BILL-`, `CN-`, `DN-`, `PAY-`, `RCPT-`, `STL-`, `EXP-`, `BUD-`, `FA-`, `DSP-`, `AGR-` | Business OS (gap-free `NumberSeries`) |
+| Procurement documents | `PR-`, `RFQ-`, `RFP-`, `RFI-`, `QT-`, `AWD-`, `PO-`, `GRN-`, `SRN-`, `CT-`, `SUP-`, `PEX-`, `RP-` | Business OS (same series) |
 
 Employee IDs come from `people.models.next_id`, which skips values already taken, so explicit or imported IDs never
 collide. Old `CLK-E-` employee numbers were migrated to `EMP-`. An OS session is also separate from customer and
@@ -212,6 +213,44 @@ customers, partners, orders, employees and identities stay in their own apps and
 - Job: `python manage.py os_finance_jobs` every 15 minutes (brings captured / refunded payments into the ledger,
   detects gateway exceptions).
 
+## Procurement (module 5)
+
+`backend/apps/procurement/` (API `/api/v1/os/procurement/*`), UI at `/procurement`. Procurement owns how Click buys:
+need → purchase request → budget check → approval → RFQ / RFP / RFI → quotes → evaluation and negotiation → award →
+purchase order → goods / service receipt → supplier invoice (a Finance vendor bill) → three-way match → payment
+(Finance). Every document links back to the one before it (`traceability` on the request drawer).
+
+- **Suppliers are not partners.** One supplier master (`SUP-`) with onboarding, verification checks (legal name, tax
+  registration, bank account are required before onboarding can be submitted), risk factors, preference
+  (preferred / approved / conditional / restricted / blocked, permission-controlled and audited) and measured
+  scorecards (blank until there is data). A marketplace partner is a supplier only when the relationship says so.
+  Possible duplicates (name, GSTIN, PAN, bank) are shown for review and never merged automatically.
+- **Bank detail changes** are a fraud route: requested with the evidence of independent verification, approved by
+  someone else (`procurement.supplier_bank`), Finance alerted. Nothing changes before approval.
+- **Requests**: templates, budget check against Finance (`check_budget` → `reserve`), emergency limit, single-source
+  justification, budget-override reason. Approval via `procurement.request` (manager → finance ≥ 1,00,000 →
+  executive ≥ 10,00,000).
+- **Sourcing**: competitive quotes required above the policy threshold (default 1,00,000, minimum 3 quotes); awarding
+  with fewer needs a reason and raises a `no_competitive_quotes` exception. Weighted scoring plus TCO; evaluators with
+  a declared conflict for that supplier cannot score it. Negotiation creates a new quote revision — the original is
+  preserved. **Savings are counted once, at award, before tax** (GST is recoverable input credit).
+- **Orders**: approval (`procurement.order`), versioned amendments (`procurement.amendment`), the budget commitment
+  moves from the request to the order. Blocked or unapproved suppliers can't be ordered from (configurable).
+- **Receiving**: the buyer can't receive their own order; over-receipt is blocked; rejected quantities go to quality;
+  CAPEX receipts create a draft fixed asset in Finance. Click-owned inventory is marked pending until the Inventory
+  module exists.
+- **Invoice**: recorded from the order as a Finance vendor bill (the quoted GST rate resolves to the active tax rule);
+  the match (quantity received, price, tax, tolerance) runs through `finance.services.MATCHERS["procurement.order"]`.
+  A bill with a match exception can't be submitted.
+- **Controls**: exceptions (split purchases, duplicate suppliers, maverick spend, concentration, emergency, single
+  source) are flags for review, never accusations. Conflict-of-interest declarations, policies and ethics pages,
+  contracts with 90 / 60 / 30-day renewal alerts and renewal decisions, recurring purchases.
+- **Analytics** (organization-wide only): committed vs actual vs managed vs unmanaged spend, by supplier / category /
+  department / location / month / CAPEX-OPEX, concentration, cycle times, savings detail, CSV export.
+- Job: `python manage.py os_procurement_jobs` daily (recurring purchase drafts a week ahead, exception detection).
+  Contract expiry (90 / 60 / 30 / 7 days) is raised by the central alert detectors.
+- Not yet: GRNI (goods received not invoiced) accrual at period end, and supplier self-service portal.
+
 ## Business AI
 
 `backend/apps/workspace/ai.py`. The AI can only call tools; each tool declares a permission and runs as the asking
@@ -231,7 +270,8 @@ npm run dev -w @click/business-os      # http://localhost:5177 (proxies /api to 
 Sign in with **Development personas** on the login screen (DEBUG only) or any persona email with the development
 password printed by the seed. Personas: CEO, System Administrator, Finance Head, Finance Manager (South region),
 HR Manager, Operations Manager, Partner Manager, Branch Manager (Hyderabad), Recruiter, HR Business Partner
-(South), employees (one on probation), Internal Auditor, Accountant, Treasury & Controller. Employee numbers run
+(South), employees (one on probation), Internal Auditor, Accountant, Treasury & Controller, Procurement Manager,
+Buyer & Category Manager, Receiving & Quality (Hyderabad). Employee numbers run
 EMP-000001 upwards.
 
 Production bootstrap (no default passwords):

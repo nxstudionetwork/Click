@@ -72,6 +72,22 @@ const FinExpenses = lazyPage(pFinMoney, 'Expenses');
 const FinBudgets = lazyPage(pFinMoney, 'Budgets');
 const FinAssets = lazyPage(pFinMoney, 'Assets');
 const FinReconciliation = lazyPage(pFinMoney, 'Reconciliation');
+const pProc = () => import('./pages/procurement');
+const pProcMore = () => import('./pages/procurement/more');
+const ProcurementLayout = lazyPage(pProc, 'ProcurementLayout');
+const ProcurementHome = lazyPage(pProc, 'ProcurementHome');
+const ProcRequests = lazyPage(pProc, 'Requests');
+const ProcSourcing = lazyPage(pProc, 'Sourcing');
+const ProcOrders = lazyPage(pProc, 'Orders');
+const ProcReceiving = lazyPage(pProc, 'Receiving');
+const ProcSuppliers = lazyPage(pProcMore, 'Suppliers');
+const ProcContracts = lazyPage(pProcMore, 'Contracts');
+const ProcRecurring = lazyPage(pProcMore, 'Recurring');
+const ProcExceptions = lazyPage(pProcMore, 'Exceptions');
+const ProcConflicts = lazyPage(pProcMore, 'Conflicts');
+const ProcPolicies = lazyPage(pProcMore, 'Policies');
+const ProcAnalytics = lazyPage(pProcMore, 'Analytics');
+const ProcSettings = lazyPage(pProcMore, 'Settings');
 const HRHome = lazyPage(pCore, 'HRHome');
 const Directory = lazyPage(pCore, 'Directory');
 const Profile360 = lazyPage(pCore, 'Profile');
@@ -210,6 +226,21 @@ export function App() {
           <Route path="reports" element={<RequirePerm any={['finance.report.view']}><FinReports /></RequirePerm>} />
           <Route path="controls" element={<RequirePerm any={['finance.report.view']}><FinControls /></RequirePerm>} />
           <Route path="settings" element={<RequirePerm any={['finance.settings.view']}><FinSettings /></RequirePerm>} />
+        </Route>
+        <Route path="/procurement" element={<InShell><ProcurementLayout /></InShell>}>
+          <Route index element={<ProcurementHome />} />
+          <Route path="requests" element={<ProcRequests />} />
+          <Route path="conflicts" element={<ProcConflicts />} />
+          <Route path="policies" element={<ProcPolicies />} />
+          <Route path="sourcing" element={<RequirePerm any={['procurement.sourcing.view']}><ProcSourcing /></RequirePerm>} />
+          <Route path="orders" element={<RequirePerm any={['procurement.order.view']}><ProcOrders /></RequirePerm>} />
+          <Route path="recurring" element={<RequirePerm any={['procurement.order.view']}><ProcRecurring /></RequirePerm>} />
+          <Route path="receiving" element={<RequirePerm any={['procurement.receipt.view', 'procurement.receipt.create']}><ProcReceiving /></RequirePerm>} />
+          <Route path="suppliers" element={<RequirePerm any={['procurement.supplier.view']}><ProcSuppliers /></RequirePerm>} />
+          <Route path="contracts" element={<RequirePerm any={['procurement.contract.view']}><ProcContracts /></RequirePerm>} />
+          <Route path="exceptions" element={<RequirePerm any={['procurement.exception.view']}><ProcExceptions /></RequirePerm>} />
+          <Route path="analytics" element={<RequirePerm any={['procurement.analytics.view']}><ProcAnalytics /></RequirePerm>} />
+          <Route path="settings" element={<RequirePerm any={['procurement.settings.view']}><ProcSettings /></RequirePerm>} />
         </Route>
         <Route path="/access" element={<InShell><AccessLayout /></InShell>}>
           <Route index element={<AccessHome />} />
