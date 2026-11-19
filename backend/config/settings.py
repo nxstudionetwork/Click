@@ -109,6 +109,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.workflows",
     "apps.workspace",
+    "apps.documents",
 ]
 
 MIDDLEWARE = [
@@ -343,6 +344,14 @@ CLICK_OS_NOTIFICATION_CHANNELS = env_list("CLICK_OS_NOTIFICATION_CHANNELS", "")
 CLICK_OS_AI_PROVIDER = os.environ.get("CLICK_OS_AI_PROVIDER", "apps.workspace.ai.BasicBusinessAI")
 # DEVELOPMENT ONLY persona sign-in on the OS login screen (seeded by `manage.py seed_os_dev`). Off unless DEBUG.
 CLICK_OS_DEV_LOGIN = DEBUG and env_bool("CLICK_OS_DEV_LOGIN", True)
+# Approvals at or above this amount (currency) are flagged "high value" unless the policy sets its own threshold.
+CLICK_OS_HIGH_VALUE_AMOUNT = os.environ.get("CLICK_OS_HIGH_VALUE_AMOUNT", "100000")
+# Where "Contact support" in Business OS Help points (internal IT / Business OS support).
+CLICK_OS_SUPPORT_EMAIL = os.environ.get("CLICK_OS_SUPPORT_EMAIL", "")
+# Payroll provider for People & HR payroll inputs (dotted path). Empty = not connected; inputs can still be exported.
+CLICK_PAYROLL_PROVIDER = os.environ.get("CLICK_PAYROLL_PROVIDER", "")
+# Business OS ID namespace, deliberately different from the Click apps (customers CL-CU-…, partners CLK-PT-…, orders CLK-…).
+CLICK_OS_EMPLOYEE_ID_PREFIX = os.environ.get("CLICK_OS_EMPLOYEE_ID_PREFIX", "EMP")
 
 LOGGING = {
     "version": 1,

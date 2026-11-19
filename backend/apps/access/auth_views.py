@@ -99,6 +99,11 @@ def _fail(request, account: OSAccount | None, user: User | None, reason: str):
                    body=f"Too many failed sign-in attempts. It unlocks automatically in {settings.CLICK_OS_LOCKOUT_MINUTES} minutes.",
                    link="/settings/security", priority="critical")
             record(request, "auth.account_locked", category="security", actor=user, organization=account.organization, outcome="failure")
+            from apps.workspace.alerts import personal
+
+            personal(user, account.organization, key="locked", severity="high", title="Your account was locked after failed sign-ins",
+                     detail="If this wasn’t you, change your password and sign out of other devices.",
+                     action="Change your password in Settings → Security.", link="/settings/security")
         account.save(update_fields=fields)
     record(request, "auth.login", category="auth", actor=user, organization=account.organization if account else None,
            outcome="failure", metadata={"reason": reason})

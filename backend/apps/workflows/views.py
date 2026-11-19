@@ -31,7 +31,8 @@ def request_brief(r: ApprovalRequest) -> dict:
     return {"id": str(r.pk), "reference": r.reference, "title": r.title, "status": r.status, "amount": str(r.amount) if r.amount is not None else None,
             "currency": r.currency, "policy": {"key": r.policy.key, "name": r.policy.name, "module": r.policy.module},
             "requested_by": _person(r.requested_by), "org_unit": r.org_unit.name if r.org_unit_id else None,
-            "current_sequence": r.current_sequence, "due_at": r.due_at, "created_at": r.created_at, "decided_at": r.decided_at}
+            "current_sequence": r.current_sequence, "due_at": r.due_at, "created_at": r.created_at, "decided_at": r.decided_at,
+            "priority": r.priority, "flags": engine.urgency(r), "amount_unit": r.policy.amount_unit}
 
 
 class ApprovalsView(OSView):
@@ -101,7 +102,9 @@ def detail_payload(request, ctx, pk) -> dict:
         "history": [{"kind": h.kind, "author": _person(h.author), "body": h.body, "at": h.created_at}
                     for h in req.history.select_related("author")],
         "can_decide": allowed, "deciding_on_behalf_of": _person(on_behalf),
-        "can_cancel": req.requested_by_id == request.user.pk and req.status == "pending",
+        "can_cancel": req.requested_by_id == request.user.pk and req.status in ("pending", "changes_requested"),
+        "can_resubmit": req.requested_by_id == request.user.pk and req.status == "changes_requested",
+        "can_request_changes": allowed and req.policy.allow_request_changes,
     })
     return data
 
@@ -115,8 +118,11 @@ class ApprovalActionView(OSView):
     def post(self, request, pk, action):
         req = load_visible(self.authz, pk)[0]
         comment = str(request.data.get("comment", ""))[:2000]
-        if action in {"approve", "reject"}:
+        if action in {"approve", "reject", "request_changes"}:
             req = engine.decide(request, req, action, comment=comment)
+        elif action == "resubmit":
+            req = engine.resubmit(request, req, title=request.data.get("title"), description=request.data.get("description"),
+                                  amount=request.data.get("amount"), comment=comment)
         elif action == "cancel":
             req = engine.cancel(request, req, reason=comment)
         elif action == "comment":
@@ -270,7 +276,8 @@ def task_payload(t: Task, user) -> dict:
             "due_at": t.due_at, "completed_at": t.completed_at, "assignee": _person(t.assignee), "created_by": _person(t.created_by),
             "module": t.module, "link_path": t.link_path, "created_at": t.created_at,
             "overdue": bool(t.due_at and t.due_at < timezone.now() and t.status in ("open", "in_progress")),
-            "can_edit": user.pk in (t.assignee_id, t.created_by_id)}
+            "can_edit": user.pk in (t.assignee_id, t.created_by_id), "snoozed_until": t.snoozed_until,
+            "comments": [{"author": c.author.full_name if c.author_id else None, "body": c.body, "at": c.created_at} for c in t.comments.select_related("author")[:20]]}
 
 
 class TasksView(OSView):
@@ -349,6 +356,24 @@ class TaskDetailView(OSView):
             t.priority = d["priority"]
         if "due_at" in d:
             t.due_at = parse_datetime(str(d["due_at"])) if d["due_at"] else None
+        if "snooze_hours" in d:
+            hrs = int(d["snooze_hours"] or 0)
+            t.snoozed_until = timezone.now() + timedelta(hours=min(max(hrs, 0), 24 * 14)) if hrs else None
+        if "assignee_id" in d and str(d["assignee_id"]) != str(t.assignee_id):
+            if t.created_by_id != request.user.pk and not self.authz.has("workflows.task.assign"):
+                raise DomainError("Only the creator or someone who can assign tasks can reassign this.", code="permission_denied", status_code=403)
+            new = User.objects.filter(pk=d["assignee_id"], os_account__organization=self.authz.organization, os_account__status="active").first()
+            if new is None:
+                raise DomainError("Choose someone in your organization.", code="validation_error")
+            if new.pk != request.user.pk:
+                emp = getattr(new, "employee", None)
+                self.authz.require("workflows.task.assign", owner=new.pk, **({"unit": emp.org_unit_id} if emp and emp.org_unit_id else {}))
+                notify(new, "task_assigned", f"Task reassigned to you: {t.title}", body=f"From {request.user.full_name}", link=f"/tasks?open={t.pk}")
+            t.assignee = new
+        if d.get("comment"):
+            from .models import TaskComment
+
+            TaskComment.objects.create(task=t, author=request.user, body=str(d["comment"])[:2000])
         t.save()
         return Response(task_payload(t, request.user))
 

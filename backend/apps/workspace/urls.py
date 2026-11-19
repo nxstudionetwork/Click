@@ -3,7 +3,7 @@
 authentication, permission engine, error envelope and pagination (see apps/access/api.py).
 """
 
-from django.urls import path
+from django.urls import include, path
 
 from apps.access import admin_views as adm
 from apps.access import auth_views as auth
@@ -11,6 +11,10 @@ from apps.audit import views as audit_views
 from apps.organization import views as org
 from apps.workflows import views as wf
 
+from apps.documents import views as docs
+from apps.people.urls import urlpatterns as people_urls
+
+from . import home_views as home
 from . import views as ws
 
 urlpatterns = [
@@ -38,19 +42,40 @@ urlpatterns = [
     path("me/sessions/<uuid:pk>", ws.SessionDetailView.as_view(), name="os-me-session"),
     path("me/activity", ws.MyActivityView.as_view(), name="os-me-activity"),
     # Workspace
-    path("home", ws.HomeView.as_view(), name="os-home"),
-    path("home/widgets/<slug:key>", ws.WidgetView.as_view(), name="os-home-widget"),
+    path("home", home.HomeView.as_view(), name="os-home"),
+    path("home/widgets/<slug:key>", home.WidgetView.as_view(), name="os-home-widget"),
+    path("home/layout", home.LayoutView.as_view(), name="os-home-layout"),
+    path("home/layout/reset", home.LayoutResetView.as_view(), name="os-home-layout-reset"),
+    path("home/views", home.ViewsView.as_view(), name="os-home-views"),
+    path("home/views/<str:view_id>", home.ViewDetailView.as_view(), name="os-home-view"),
+    path("home/context", home.ContextView.as_view(), name="os-home-context"),
+    path("home/pulse", home.PulseView.as_view(), name="os-home-pulse"),
+    path("home/quick-actions", home.QuickActionsView.as_view(), name="os-home-quick-actions"),
+    path("home/quick-actions/<slug:key>/used", home.QuickActionUsedView.as_view(), name="os-home-quick-action-used"),
+    path("alerts", home.AlertsView.as_view(), name="os-alerts"),
+    path("alerts/<uuid:pk>/<slug:action>", home.AlertActionView.as_view(), name="os-alert-action"),
+    path("announcements", home.AnnouncementsView.as_view(), name="os-announcements"),
+    path("announcements/<uuid:pk>", home.AnnouncementDetailView.as_view(), name="os-announcement"),
+    path("announcements/<uuid:pk>/<slug:action>", home.AnnouncementActionView.as_view(), name="os-announcement-action"),
+    path("help/report", home.ReportProblemView.as_view(), name="os-help-report"),
+    path("documents", docs.DocumentsView.as_view(), name="os-documents"),
+    path("documents/<uuid:pk>", docs.DocumentDetailView.as_view(), name="os-document"),
+    path("documents/<uuid:pk>/download", docs.DocumentDownloadView.as_view(), name="os-document-download"),
+    path("documents/<uuid:pk>/versions", docs.DocumentVersionView.as_view(), name="os-document-versions"),
+    path("documents/<uuid:pk>/<slug:action>", docs.DocumentActionView.as_view(), name="os-document-action"),
     path("notifications", ws.NotificationsView.as_view(), name="os-notifications"),
     path("notifications/summary", ws.NotificationSummaryView.as_view(), name="os-notifications-summary"),
     path("notifications/read-all", ws.NotificationReadView.as_view(), name="os-notifications-read-all"),
+    path("notifications/clear-read", ws.NotificationClearReadView.as_view(), name="os-notifications-clear-read"),
     path("notifications/<uuid:pk>/read", ws.NotificationReadView.as_view(), name="os-notification-read"),
+    path("notifications/<uuid:pk>/<slug:action>", ws.NotificationActionView.as_view(), name="os-notification-action"),
     path("search", ws.SearchView.as_view(), name="os-search"),
     path("calendar", ws.CalendarView.as_view(), name="os-calendar"),
     path("modules", ws.ModulesView.as_view(), name="os-modules"),
     path("modules/<slug:key>", ws.ModuleDetailView.as_view(), name="os-module"),
     path("ai", ws.AIView.as_view(), name="os-ai"),
     path("people/picker", wf.PeoplePickerView.as_view(), name="os-people-picker"),
-    path("people/<uuid:pk>", ws.EmployeeView.as_view(), name="os-employee"),
+    path("people/", include(people_urls)),
     # Approvals & tasks
     path("approvals", wf.ApprovalsView.as_view(), name="os-approvals"),
     path("approvals/policies", wf.SubmittablePoliciesView.as_view(), name="os-approval-policies"),

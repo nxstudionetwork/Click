@@ -44,9 +44,9 @@ def test_identify_same_answer_for_unknown(os_seed):
 
 
 def test_login_by_employee_id_and_context(os_seed):
-    c = signed_in("CLK-E-0009")
+    c = signed_in("EMP-000009")
     ctx = c.get("/api/v1/os/me/context").json()
-    assert ctx["employee"]["employeeId"] == "CLK-E-0009"
+    assert ctx["employee"]["employeeId"] == "EMP-000009"
     assert [u["code"] for u in ctx["orgContext"]["units"]] == ["IN", "SOUTH", "TG", "HYD", "HYD-BR"]
     assert ctx["account"]["onboardingRequired"] is True
     assert c.cookies.get("click_os_refresh")

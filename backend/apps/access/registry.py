@@ -20,9 +20,9 @@ ACTIONS = ("view", "create", "edit", "delete", "approve", "reject", "export", "i
 
 # Narrowest → broadest. A role grants each permission at one of these levels, resolved from the
 # assignee's anchor (assignment's unit / department / team, else the employee record).
-SCOPES = ("own", "team", "department", "branch", "city", "state", "region", "business_unit", "organization")
+SCOPES = ("own", "reports", "team", "department", "branch", "city", "state", "region", "business_unit", "organization")
 SCOPE_LABELS = {
-    "own": "Own records", "team": "Team", "department": "Department", "branch": "Branch / site", "city": "City",
+    "own": "Own records", "reports": "My reports (reporting line)", "team": "Team", "department": "Department", "branch": "Branch / site", "city": "City",
     "state": "State", "region": "Region", "business_unit": "Business unit", "organization": "Entire organization",
 }
 
@@ -75,14 +75,39 @@ MODULES: tuple[Module, ...] = (
     Module("calendar", "Calendar", "core", "calendar", "Deadlines from your tasks and approvals.", "live", path="/calendar", always_visible=True),
 
     # ---- BUSINESS ----
-    Module("people", "People & HR", "business", "team", "The authoritative employee record and the employee lifecycle.", "foundation",
-           resources=(R("directory", "Employee directory", VIEW), R("employee", "Employee records", CRUD + ("export", "import")),
-                      R("attendance", "Attendance", ("view", "manage")), R("leave", "Leave", APPROVE),
-                      R("payroll", "Payroll & salary", ("view", "manage", "approve", "export"), sensitive=True),
-                      R("recruitment", "Recruitment", CRUD + ("approve",)), R("performance", "Performance", ("view", "manage"))),
-           submodules=("Employees", "Employee Profiles", "Departments", "Designations", "Organization Structure", "Recruitment", "Onboarding",
-                       "Attendance", "Leave", "Payroll", "Benefits", "Performance", "Training", "Documents", "Employee Lifecycle",
-                       "Offboarding", "Workforce Planning")),
+    Module("people", "People & HR", "business", "team", "The employee lifecycle: directory, talent, workforce, performance, learning, pay and exits.",
+           "live", path="/people",
+           resources=(R("directory", "Employee directory", VIEW),
+                      R("employee", "Employee records", CRUD + ("export", "import")),
+                      R("personal", "Personal & contact details", ("view", "edit"), sensitive=True),
+                      R("position", "Positions & headcount", CRUD + ("approve",)),
+                      R("workforce", "Workforce planning", ("view", "manage")),
+                      R("recruitment", "Recruitment (openings & pipeline)", ("view", "create", "edit", "manage")),
+                      R("candidate", "Candidate profiles", ("view", "edit"), sensitive=False),
+                      R("offer", "Offers", ("view", "create", "approve")),
+                      R("onboarding", "Onboarding", ("view", "manage")),
+                      R("attendance", "Attendance", ("view", "create", "manage", "approve")),
+                      R("leave", "Leave", ("view", "create", "approve", "manage")),
+                      R("schedule", "Schedules, shifts & holidays", ("view", "manage")),
+                      R("performance", "Performance reviews", ("view", "review", "manage")),
+                      R("goal", "Goals & OKRs", ("view", "create", "edit")),
+                      R("feedback", "Feedback & recognition", ("view", "create")),
+                      R("learning", "Learning, skills & certifications", ("view", "assign", "manage", "verify")),
+                      R("payroll", "Compensation & payroll", ("view", "manage", "approve", "export"), sensitive=True),
+                      R("benefit", "Benefits", ("view", "manage")),
+                      R("engagement", "Surveys & engagement", ("view", "manage")),
+                      R("request", "HR requests", ("view", "create", "manage")),
+                      R("case", "Employee relations cases", ("view", "manage"), sensitive=True),
+                      R("lifecycle", "Promotions & transfers", ("view", "create", "approve")),
+                      R("offboarding", "Offboarding & exits", ("view", "manage", "approve")),
+                      R("document", "Employee documents", ("view", "create", "verify")),
+                      R("document_restricted", "Restricted documents (ID, tax, medical)", ("view", "create"), sensitive=True),
+                      R("analytics", "HR analytics", ("view", "export")),
+                      R("settings", "HR settings & policies", ("view", "configure"))),
+           submodules=("Employee Directory", "People 360", "Org Chart", "Positions", "Workforce Planning", "Recruitment", "Candidates",
+                       "Interviews", "Offers", "Onboarding", "Attendance", "Leave", "Shifts & Holidays", "Goals", "Reviews", "Feedback",
+                       "Learning", "Skills", "Certifications", "Compensation", "Benefits", "Payroll Integration", "Self Service", "HR Requests",
+                       "Recognition", "Engagement", "Promotions & Transfers", "Offboarding", "Exit Interviews", "HR Analytics")),
     Module("finance", "Finance", "business", "receipt", "Accounting, receivables, payables, cash, expenses, budgets, tax and assets.", "foundation",
            resources=(R("overview", "Finance overview", VIEW), R("ledger", "General ledger & journals", CRUD + ("approve",)),
                       R("invoice", "Invoices", APPROVE + ("delete",)), R("expense", "Expenses", APPROVE + ("delete",)),

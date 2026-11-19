@@ -13,13 +13,23 @@ from apps.access.authz import AuthContext
 from apps.access.serializers import avatar_url, dept_brief, team_brief, unit_brief
 
 QUICK_ACTIONS = (
-    # key, label, icon, path, permission (None = every account)
+    # key, label, icon, path, permission (None = every staff account)
     ("create_task", "Create task", "plus", "/tasks?new=1", None),
     ("start_approval", "Start approval", "check", "/approvals/new", "workflows.request.create"),
     ("submit_expense", "Submit expense", "receipt", "/approvals/new?policy=finance.expense", "finance.expense.create"),
-    ("search_employee", "Find employee", "team", "/search?type=employee", "people.directory.view"),
+    ("purchase_request", "Create purchase request", "bag", "/approvals/new?policy=procurement.request", "procurement.request.create"),
+    ("request_leave", "Request leave", "calendar", "/people/leave?new=1", "people.leave.create"),
+    ("check_in", "Check in / out", "clock", "/people/attendance", "people.attendance.create"),
+    ("add_employee", "Add employee", "team", "/people/directory?new=1", "people.employee.create"),
+    ("open_position", "Open a position", "briefcase", "/people/positions?new=1", "people.position.create"),
+    ("hr_request", "Raise HR request", "help", "/people/requests?new=1", "people.request.create"),
+    ("search_employee", "Find employee", "search", "/search?type=employee", "people.directory.view"),
     ("search_partner", "Find partner", "store", "/search?type=partner", "partners.partner.view"),
-    ("open_reports", "Open reports", "chart", "/m/analytics", "analytics.report.view"),
+    ("upload_document", "Upload document", "book", "/people/me?tab=documents", "people.document.create"),
+    ("create_announcement", "Post announcement", "send", "/announcements?new=1", "communications.announcement.create"),
+    ("create_project", "Create project", "target", "/m/projects", "projects.project.create"),
+    ("create_campaign", "Create campaign", "tag", "/m/marketing", "marketing.campaign.create"),
+    ("open_reports", "Generate report", "chart", "/m/analytics", "analytics.report.create"),
     ("invite_user", "Invite user", "user", "/settings/users?invite=1", "identity.user.create"),
     ("view_audit", "Audit trail", "history", "/settings/audit", "audit.event.view"),
 )
@@ -47,8 +57,43 @@ def navigation(ctx: AuthContext) -> list[dict]:
 
 
 def quick_actions(ctx: AuthContext) -> list[dict]:
+    if ctx.kind == "partner":
+        return [{"key": k, "label": label, "icon": icon, "path": path} for k, label, icon, path, perm in QUICK_ACTIONS
+                if perm is not None and ctx.has(perm)]
     return [{"key": k, "label": label, "icon": icon, "path": path}
             for k, label, icon, path, perm in QUICK_ACTIONS if perm is None or ctx.has(perm)]
+
+
+AMBIENT_VIEW_CODES = {"people.directory.view", "documents.document.view", "analytics.kpi.view"}
+
+
+def context_options(ctx: AuthContext) -> dict:
+    """Locations the person may switch Home to: everything under the broadest of their *view* grants. One option or
+    none means no selector is shown."""
+    from apps.organization.models import OrgUnit
+
+    org_wide, paths = False, set()
+    for code in ctx.permission_codes:
+        # Ambient grants everyone has (company directory, shared documents) don't make someone a multi-location viewer.
+        if not code.endswith(".view") or code in AMBIENT_VIEW_CODES:
+            continue
+        sc = ctx.scope(code)
+        org_wide = org_wide or sc.org_wide
+        paths |= sc.unit_paths
+    qs = OrgUnit.objects.filter(organization=ctx.organization, is_active=True)
+    if not org_wide:
+        from django.db.models import Q
+
+        cond = Q(pk__in=[])
+        for p in paths:
+            cond |= Q(path__startswith=p)
+        qs = qs.filter(cond)
+    units = [unit_brief(u) | {"depth": u.depth, "parent_id": str(u.parent_id) if u.parent_id else None} for u in qs.order_by("path")[:300]]
+    prefs = ((ctx.account.preferences or {}).get("home") or {}) if ctx.account else {}
+    selected = prefs.get("context_unit")
+    if selected and selected not in {u["id"] for u in units}:
+        selected = None
+    return {"org_wide": org_wide, "units": units, "selected": selected, "switchable": len(units) > 1 or (org_wide and len(units) > 0)}
 
 
 def build_context(ctx: AuthContext, request) -> dict:
@@ -81,6 +126,9 @@ def build_context(ctx: AuthContext, request) -> dict:
         "approval_authority": limits,
         "navigation": navigation(ctx),
         "quick_actions": quick_actions(ctx),
+        "context_options": context_options(ctx),
+        "is_manager": ctx.is_manager,
+        "direct_reports": len(ctx.direct_report_ids),
         "session": {"id": str(session.pk), "expires_at": session.expires_at, "mfa_verified": session.mfa_verified} if session else None,
         "security": {"sensitive_requires_mfa": settings.CLICK_OS_SENSITIVE_REQUIRES_MFA,
                      "idle_minutes": settings.CLICK_OS_IDLE_MINUTES},

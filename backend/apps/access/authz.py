@@ -31,9 +31,11 @@ from apps.core.api.exceptions import DomainError
 from apps.organization.models import Department, OrgUnit
 
 from . import registry
-from .models import AccountKind, OSAccount, RoleApprovalLimit, RoleAssignment, RolePermission
+from .models import AccountKind, OSAccount, Role, RoleApprovalLimit, RoleAssignment, RolePermission
 
 UNIT_LEVELS = {"business_unit", "region", "state", "city"}
+MANAGER_ROLE_KEY = "people-manager"
+ACTIVE_EMPLOYEE_STATES = ("pre_onboarding", "active", "probation", "confirmed", "on_leave", "notice", "suspended")
 
 
 def _id(v):
@@ -50,10 +52,15 @@ class ScopeSet:
     own: bool = False
     partner_ids: set = field(default_factory=set)
     user_id: Any = None
+    # "reports" scope: everyone below the person in the reporting line (direct and indirect), from HR data
+    report_employee_ids: set = field(default_factory=set)
+    report_user_ids: set = field(default_factory=set)
+    self_employee_id: Any = None
 
     @property
     def is_empty(self) -> bool:
-        return not (self.org_wide or self.unit_paths or self.department_ids or self.team_ids or self.own or self.partner_ids)
+        return not (self.org_wide or self.unit_paths or self.department_ids or self.team_ids or self.own or self.partner_ids
+                    or self.report_employee_ids)
 
     @property
     def level(self) -> str:
@@ -66,11 +73,13 @@ class ScopeSet:
             return "department"
         if self.team_ids:
             return "team"
+        if self.report_employee_ids:
+            return "reports"
         if self.partner_ids:
             return "partner"
         return "own" if self.own else "none"
 
-    def covers(self, *, unit=None, department=None, team=None, owner=None, partner=None, organization=None) -> bool:
+    def covers(self, *, unit=None, department=None, team=None, owner=None, partner=None, organization=None, employee=None) -> bool:
         """May the holder act on a record with these attributes? Unknown attributes simply don't match."""
         if self.is_empty:
             return False
@@ -88,10 +97,17 @@ class ScopeSet:
             return True
         if partner is not None and _id(partner) in self.partner_ids:
             return True
+        if employee is not None and _id(employee) in self.report_employee_ids:
+            return True
+        if owner is not None and _id(owner) in self.report_user_ids:
+            return True
+        if self.own and employee is not None and self.self_employee_id and _id(employee) == self.self_employee_id:
+            return True
         return bool(self.own and owner is not None and _id(owner) == self.user_id)
 
     def q(self, *, unit: str | None = "org_unit", department: str | None = None, team: str | None = None,
-          owner: str | None = None, partner: str | None = None, organization: str | None = "organization") -> Q:
+          owner: str | None = None, partner: str | None = None, organization: str | None = "organization",
+          employee: str | None = None) -> Q:
         """A filter for querysets. Pass the field names the model has; fields set to None are not applicable."""
         if self.is_empty:
             return Q(pk__in=[])
@@ -110,6 +126,12 @@ class ScopeSet:
             parts |= Q(**{f"{partner}__in": self.partner_ids})
         if owner and self.own:
             parts |= Q(**{owner: self.user_id})
+        if employee and self.report_employee_ids:
+            parts |= Q(**{f"{employee}__in": self.report_employee_ids})
+        elif owner and self.report_user_ids:
+            parts |= Q(**{f"{owner}__in": self.report_user_ids})
+        if employee and self.own and self.self_employee_id:
+            parts |= Q(**{employee: self.self_employee_id})
         return base & parts
 
     def filter(self, qs, **fields):
@@ -155,6 +177,12 @@ class AuthContext:
             .select_related("role", "role__parent", "org_unit", "department", "team")
         )
         emp = self.employee
+        if emp is not None and self.kind == AccountKind.EMPLOYEE and self.is_manager:
+            # Managers are recognised from the reporting line (HR data), never from a checkbox: anyone with active
+            # reports gets the organization's "people-manager" role template at their own anchor.
+            mgr_role = Role.objects.filter(organization=self.organization, key=MANAGER_ROLE_KEY, is_active=True).select_related("parent").first()
+            if mgr_role and all(a.role_id != mgr_role.pk for a in assignments):
+                assignments.append(RoleAssignment(user=self.user, role=mgr_role, note="implicit: has reports"))
         role_ids: dict = {}
         for a in assignments:
             if not self._audience_ok(a.role):
@@ -202,10 +230,45 @@ class AuthContext:
                 return u
         return None
 
+    @cached_property
+    def report_ids(self) -> tuple[set, set]:
+        """(employee ids, user ids) of everyone reporting to this person, directly or indirectly."""
+        if self.employee is None:
+            return set(), set()
+        from apps.people.models import Employee
+
+        rows = list(Employee.objects.filter(organization=self.organization, status__in=ACTIVE_EMPLOYEE_STATES)
+                    .values_list("id", "manager_id", "user_id"))
+        children: dict = {}
+        for pk, mgr, _uid in rows:
+            children.setdefault(mgr, []).append(pk)
+        users = {pk: uid for pk, _m, uid in rows}
+        out, stack = set(), list(children.get(self.employee.pk, []))
+        while stack:
+            pk = stack.pop()
+            if pk in out or pk == self.employee.pk:
+                continue
+            out.add(pk)
+            stack.extend(children.get(pk, []))
+        return out, {users[x] for x in out if users.get(x)}
+
+    @cached_property
+    def direct_report_ids(self) -> set:
+        if self.employee is None:
+            return set()
+        from apps.people.models import Employee
+
+        return set(Employee.objects.filter(manager=self.employee, status__in=ACTIVE_EMPLOYEE_STATES).values_list("id", flat=True))
+
+    @property
+    def is_manager(self) -> bool:
+        return bool(self.direct_report_ids)
+
     def scope(self, code: str) -> ScopeSet:
         if code in self._scopes:
             return self._scopes[code]
-        s = ScopeSet(organization_id=self.organization.pk if self.organization else None, user_id=self.user.pk)
+        s = ScopeSet(organization_id=self.organization.pk if self.organization else None, user_id=self.user.pk,
+                     self_employee_id=self.employee.pk if self.employee else None)
         for g in self.grants.get(code, ()):
             if g.level == "organization":
                 s.org_wide = True
@@ -223,6 +286,11 @@ class AuthContext:
                 s.team_ids.add(g.team_id)
             elif g.level == "own":
                 s.own = True
+            elif g.level == "reports":
+                emp_ids, user_ids = self.report_ids
+                s.report_employee_ids |= emp_ids
+                s.report_user_ids |= user_ids
+                s.own = True  # managers always also cover their own records
         if self.kind == AccountKind.PARTNER:  # partners never see beyond their own business
             broad = s.org_wide or s.unit_paths or s.department_ids or s.team_ids
             s = ScopeSet(organization_id=s.organization_id, user_id=s.user_id, own=s.own,

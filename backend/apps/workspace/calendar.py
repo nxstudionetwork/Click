@@ -26,7 +26,7 @@ def _approvals(ctx, start, end):
                    "priority": "high", "path": f"/approvals/{r.pk}"}
 
 
-SOURCES = (_tasks, _approvals)
+SOURCES: list = [_tasks, _approvals]  # modules append their own sources (People & HR: leave, reviews, holidays …)
 
 
 def upcoming(ctx: AuthContext, *, days: int = 14, start=None) -> list[dict]:

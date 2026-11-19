@@ -260,36 +260,27 @@ class MyActivityView(OSView):
                                       "metadata": e.metadata, "created_at": e.created_at} for e in qs]})
 
 
-# --- Home ------------------------------------------------------------------------
-class HomeView(OSView):
-    def get(self, request):
-        ctx = self.authz
-        keys = widgets.layout_for(ctx)
-        hidden = [k for k in widgets.available(ctx) if k not in keys]
-        return Response({"widgets": widgets.render(ctx, keys),
-                         "available": [{"key": k, "title": widgets.WIDGETS[k].title, "visible": k in keys} for k in keys + hidden],
-                         "generated_at": timezone.now()})
-
-
-class WidgetView(OSView):
-    def get(self, request, key):
-        ctx = self.authz
-        if key not in widgets.WIDGETS or key not in widgets.available(ctx):
-            raise DomainError("Not found.", code="not_found", status_code=404)
-        return Response(widgets.render(ctx, [key])[0])
-
-
 # --- Notifications -----------------------------------------------------------------
 def _notif(n: WorkNotification) -> dict:
     return {"id": str(n.pk), "type": n.type, "type_label": n.get_type_display(), "module": n.module, "title": n.title, "body": n.body,
-            "path": n.link_path, "priority": n.priority, "read": n.read_at is not None, "created_at": n.created_at, "channels": n.channels}
+            "path": n.link_path, "priority": n.priority, "read": n.read_at is not None, "created_at": n.created_at, "channels": n.channels,
+            "archived": n.archived_at is not None, "essential": n.type in WorkNotification.ESSENTIAL}
+
+
+NOTIFICATION_CATEGORIES = {
+    "approvals": ["approval_request", "approval_result"], "tasks": ["task_assigned", "deadline", "workflow"],
+    "security": ["security"], "business": ["business", "partner", "announcement"], "system": ["system"],
+}
 
 
 class NotificationsView(OSView):
     def get(self, request):
-        qs = WorkNotification.objects.filter(recipient=request.user)
+        base = WorkNotification.objects.filter(recipient=request.user)
+        qs = base.filter(archived_at__isnull=True) if request.query_params.get("archived") != "true" else base.filter(archived_at__isnull=False)
         if request.query_params.get("unread") == "true":
             qs = qs.filter(read_at__isnull=True)
+        if (cat := request.query_params.get("category")) in NOTIFICATION_CATEGORIES:
+            qs = qs.filter(type__in=NOTIFICATION_CATEGORIES[cat])
         if t := request.query_params.get("type"):
             qs = qs.filter(type=t)
         from apps.core.api.pagination import DefaultPagination
@@ -297,14 +288,16 @@ class NotificationsView(OSView):
         paginator = DefaultPagination()
         page = paginator.paginate_queryset(qs, request, view=self)
         resp = paginator.get_paginated_response([_notif(n) for n in page])
-        resp.data["unread"] = WorkNotification.objects.filter(recipient=request.user, read_at__isnull=True).count()
+        unread = base.filter(read_at__isnull=True, archived_at__isnull=True)
+        resp.data["unread"] = unread.count()
+        resp.data["category_counts"] = {k: unread.filter(type__in=v).count() for k, v in NOTIFICATION_CATEGORIES.items()}
         resp.data["types"] = [{"value": v, "label": label, "essential": v in WorkNotification.ESSENTIAL} for v, label in WorkNotification.Type.choices]
         return resp
 
 
 class NotificationSummaryView(OSView):
     def get(self, request):
-        qs = WorkNotification.objects.filter(recipient=request.user, read_at__isnull=True)
+        qs = WorkNotification.objects.filter(recipient=request.user, read_at__isnull=True, archived_at__isnull=True)
         return Response({"unread": qs.count(), "critical": qs.filter(priority="critical").count()})
 
 
@@ -315,6 +308,34 @@ class NotificationReadView(OSView):
             qs = qs.filter(pk=pk)
         n = qs.update(read_at=timezone.now())
         return Response({"updated": n})
+
+
+class NotificationActionView(OSView):
+    """unread · archive (clear) · restore. Essential notifications that are still unread can't be cleared."""
+
+    def post(self, request, pk, action):
+        n = WorkNotification.objects.filter(recipient=request.user, pk=pk).first()
+        if n is None:
+            raise DomainError("Not found.", code="not_found", status_code=404)
+        if action == "unread":
+            n.read_at = None
+        elif action == "archive":
+            if n.type in WorkNotification.ESSENTIAL and n.read_at is None:
+                raise DomainError("Read this notification before clearing it.", code="essential_unread", status_code=409)
+            n.archived_at = timezone.now()
+            n.read_at = n.read_at or timezone.now()
+        elif action == "restore":
+            n.archived_at = None
+        else:
+            raise DomainError("Not found.", code="not_found", status_code=404)
+        n.save(update_fields=["read_at", "archived_at", "updated_at"])
+        return Response(_notif(n))
+
+
+class NotificationClearReadView(OSView):
+    def post(self, request):
+        n = WorkNotification.objects.filter(recipient=request.user, read_at__isnull=False, archived_at__isnull=True).update(archived_at=timezone.now())
+        return Response({"cleared": n})
 
 
 # --- Search / calendar / modules / AI --------------------------------------------------
@@ -404,38 +425,44 @@ class EmployeeView(OSView):
         return Response(data)
 
 
+def health_checks() -> list[dict]:
+    from django.db import connection
+    from django.db.migrations.executor import MigrationExecutor
+
+    checks = []
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT 1")
+        checks.append({"key": "database", "label": "Database", "status": "ok", "detail": connection.vendor})
+        ex = MigrationExecutor(connection)
+        plan = ex.migration_plan(ex.loader.graph.leaf_nodes())
+        checks.append({"key": "migrations", "label": "Migrations", "status": "ok" if not plan else "warning",
+                       "detail": "Up to date" if not plan else f"{len(plan)} pending"})
+    except Exception as e:  # pragma: no cover - reported, not raised
+        checks.append({"key": "database", "label": "Database", "status": "error", "detail": type(e).__name__})
+    conf = lambda v: "ok" if v else "not_configured"  # noqa: E731
+    checks += [
+        {"key": "api", "label": "Business OS API", "status": "ok", "detail": "Responding"},
+        {"key": "sms", "label": "SMS provider", "status": conf(settings.CLICK_SMS_PROVIDER and settings.CLICK_SMS_PROVIDER != "console"),
+         "detail": settings.CLICK_SMS_PROVIDER or "None"},
+        {"key": "email", "label": "Email notifications", "status": conf("apps.workspace.notify.EmailChannel" in settings.CLICK_OS_NOTIFICATION_CHANNELS),
+         "detail": settings.EMAIL_BACKEND.rsplit(".", 1)[-1]},
+        {"key": "payments", "label": "Payment provider", "status": conf(settings.CLICK_PAYMENT_PROVIDER or settings.CLICK_PAYMENT_SANDBOX),
+         "detail": settings.CLICK_PAYMENT_PROVIDER or ("Sandbox (test mode)" if settings.CLICK_PAYMENT_SANDBOX else "None")},
+        {"key": "ai", "label": "Business AI", "status": conf(settings.CLICK_OS_AI_PROVIDER), "detail": settings.CLICK_OS_AI_PROVIDER.rsplit(".", 1)[-1] or "Off"},
+        {"key": "mfa_policy", "label": "MFA for sensitive access", "status": "ok" if settings.CLICK_OS_SENSITIVE_REQUIRES_MFA else "warning",
+         "detail": "Enforced" if settings.CLICK_OS_SENSITIVE_REQUIRES_MFA else "Not enforced (development)"},
+        {"key": "debug", "label": "Debug mode", "status": "warning" if settings.DEBUG else "ok", "detail": "On" if settings.DEBUG else "Off"},
+    ]
+    return checks
+
+
 class SystemHealthView(OSView):
     permissions = {"GET": "system.health.view"}
 
     def get(self, request):
-        from django.db import connection
-        from django.db.migrations.executor import MigrationExecutor
-
-        checks = []
-        try:
-            with connection.cursor() as c:
-                c.execute("SELECT 1")
-            checks.append({"key": "database", "label": "Database", "status": "ok", "detail": connection.vendor})
-            plan = MigrationExecutor(connection).migration_plan(MigrationExecutor(connection).loader.graph.leaf_nodes())
-            checks.append({"key": "migrations", "label": "Migrations", "status": "ok" if not plan else "warning",
-                           "detail": "Up to date" if not plan else f"{len(plan)} pending"})
-        except Exception as e:  # pragma: no cover - reported, not raised
-            checks.append({"key": "database", "label": "Database", "status": "error", "detail": type(e).__name__})
-        conf = lambda v: "ok" if v else "not_configured"  # noqa: E731
-        checks += [
-            {"key": "sms", "label": "SMS provider", "status": conf(settings.CLICK_SMS_PROVIDER and settings.CLICK_SMS_PROVIDER != "console"),
-             "detail": settings.CLICK_SMS_PROVIDER or "None"},
-            {"key": "email", "label": "Email delivery", "status": conf("apps.workspace.notify.EmailChannel" in settings.CLICK_OS_NOTIFICATION_CHANNELS),
-             "detail": settings.EMAIL_BACKEND.rsplit(".", 1)[-1]},
-            {"key": "payments", "label": "Payment provider", "status": conf(settings.CLICK_PAYMENT_PROVIDER),
-             "detail": settings.CLICK_PAYMENT_PROVIDER or ("Sandbox (test mode)" if settings.CLICK_PAYMENT_SANDBOX else "None")},
-            {"key": "ai", "label": "Business AI", "status": conf(settings.CLICK_OS_AI_PROVIDER), "detail": settings.CLICK_OS_AI_PROVIDER.rsplit(".", 1)[-1] or "Off"},
-            {"key": "mfa_policy", "label": "MFA for sensitive access", "status": "ok" if settings.CLICK_OS_SENSITIVE_REQUIRES_MFA else "warning",
-             "detail": "Enforced" if settings.CLICK_OS_SENSITIVE_REQUIRES_MFA else "Not enforced (development)"},
-            {"key": "debug", "label": "Debug mode", "status": "warning" if settings.DEBUG else "ok", "detail": "On" if settings.DEBUG else "Off"},
-        ]
         live = OSSession.objects.filter(revoked_at__isnull=True, expires_at__gt=timezone.now()).count()
-        return Response({"checks": checks, "active_sessions": live, "checked_at": timezone.now(),
+        return Response({"checks": health_checks(), "active_sessions": live, "checked_at": timezone.now(),
                          "session_policy": {"idle_minutes": settings.CLICK_OS_IDLE_MINUTES, "max_hours": settings.CLICK_OS_SESSION_MAX_HOURS,
                                             "max_failed_logins": settings.CLICK_OS_MAX_FAILED_LOGINS, "lockout_minutes": settings.CLICK_OS_LOCKOUT_MINUTES}})
 

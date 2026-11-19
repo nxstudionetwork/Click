@@ -149,6 +149,7 @@ class Role(BaseModel):
     is_system = models.BooleanField(default=False, help_text="Built-in template: read-only, duplicate it to customise.")
     requires_mfa = models.BooleanField(default=False, help_text="Holders must have MFA enabled for this role to take effect.")
     home_widgets = models.JSONField(default=list, blank=True, help_text="Ordered Home widget keys this role brings.")
+    home_config = models.JSONField(default=dict, blank=True, help_text='Home defaults, e.g. {"pulse": ["gmv", "orders"]}.')
     priority = models.PositiveSmallIntegerField(default=100, help_text="Lower comes first when composing Home.")
     is_active = models.BooleanField(default=True)
 

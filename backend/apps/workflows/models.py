@@ -30,6 +30,11 @@ class ApprovalPolicy(BaseModel):
     submit_permission = models.CharField(max_length=100, help_text="Permission needed to raise a request.")
     currency = models.CharField(max_length=3, default="INR")
     requires_amount = models.BooleanField(default=False)
+    amount_unit = models.CharField(max_length=10, default="currency",
+                                   help_text="What `amount` measures: currency (money), days (leave) or count.")
+    high_value_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True,
+                                            help_text="Requests at or above this are flagged high value.")
+    allow_request_changes = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -61,6 +66,13 @@ class ApprovalRequest(BaseModel):
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
         CANCELLED = "cancelled", "Cancelled"
+        CHANGES_REQUESTED = "changes_requested", "Changes requested"
+
+    class Priority(models.TextChoices):
+        LOW = "low", "Low"
+        NORMAL = "normal", "Normal"
+        HIGH = "high", "High"
+        CRITICAL = "critical", "Critical"
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
     policy = models.ForeignKey(ApprovalPolicy, on_delete=models.PROTECT, related_name="requests")
@@ -74,7 +86,9 @@ class ApprovalRequest(BaseModel):
     org_unit = models.ForeignKey(OrgUnit, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="approval_requests")
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.NORMAL)
+    blocking = models.BooleanField(default=False, help_text="Other work waits on this decision (set by the module).")
     current_sequence = models.PositiveSmallIntegerField(null=True, blank=True)
     due_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -121,7 +135,7 @@ class ApprovalComment(BaseModel):
 
     request = models.ForeignKey(ApprovalRequest, on_delete=models.CASCADE, related_name="history")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
-    kind = models.CharField(max_length=16)  # submitted | approved | rejected | cancelled | comment | escalated | completed
+    kind = models.CharField(max_length=24)  # submitted | approved | rejected | changes_requested | resubmitted | cancelled | comment | escalated
     body = models.TextField(blank=True, max_length=2000)
 
     class Meta:
@@ -153,9 +167,9 @@ class Task(BaseModel):
 
     class Priority(models.TextChoices):
         LOW = "low", "Low"
-        NORMAL = "normal", "Normal"
+        NORMAL = "normal", "Medium"
         HIGH = "high", "High"
-        URGENT = "urgent", "Urgent"
+        URGENT = "urgent", "Critical"
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
     title = models.CharField(max_length=160)
@@ -169,6 +183,9 @@ class Task(BaseModel):
     module = models.CharField(max_length=40, blank=True)
     link_path = models.CharField(max_length=200, blank=True)
     org_unit = models.ForeignKey(OrgUnit, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    source_type = models.CharField(max_length=60, blank=True, help_text="Module record this task belongs to, e.g. people.onboarding.")
+    source_id = models.CharField(max_length=64, blank=True)
+    snoozed_until = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["status", "due_at", "-created_at"]
@@ -176,3 +193,12 @@ class Task(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+class TaskComment(BaseModel):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    body = models.TextField(max_length=2000)
+
+    class Meta:
+        ordering = ["created_at"]
