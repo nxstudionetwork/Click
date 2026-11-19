@@ -1,10 +1,11 @@
 """
 Route estimate and upfront fare. Everything here runs on the server; clients never send prices.
 
-Route: no road-routing provider is connected yet, so distance is the straight-line (haversine) path through
-pickup → stops → drop multiplied by ROAD_FACTOR, and duration uses each ride type's city average speed. The API
-labels this `estimate_basis = "straight_line"` so the app never presents it as a road route or live traffic. A
-routing provider plugs in behind `estimate_route` without changing callers.
+Route: when a routing server is configured (apps.geo, CLICK_ROUTER_URL) the distance is the real road distance
+through pickup → stops → drop and the API returns the road line to draw (`estimate_basis = "road"`). Without one,
+distance is the straight-line (haversine) path multiplied by ROAD_FACTOR and labelled `"straight_line"`, so the app
+never presents it as a road route. Duration uses each ride type's city average speed either way (bikes and cars move
+differently and the routing server knows no live traffic).
 """
 
 import math
@@ -34,11 +35,19 @@ class RouteEstimate:
     straight_km: float
     stops: int
     basis: str = "straight_line"
+    geometry: tuple = ()  # ((lat, lng), ...) of the road route when basis == "road"
 
 
 def estimate_route(points: list[tuple[float, float]]) -> RouteEstimate:
+    from apps.geo.providers import road_route
+
     straight = sum(haversine_km(points[i], points[i + 1]) for i in range(len(points) - 1))
-    return RouteEstimate(Decimal(str(round(straight * ROAD_FACTOR, 2))), straight, max(0, len(points) - 2))
+    stops = max(0, len(points) - 2)
+    road = road_route(points) if straight >= MIN_TRIP_KM / 2 else None
+    # A road route far longer than the straight line means the router snapped to the wrong road; don't bill that.
+    if road and straight * 0.9 <= road.distance_km <= max(straight * 3.5, straight + 3):
+        return RouteEstimate(Decimal(str(road.distance_km)), straight, stops, "road", tuple(tuple(p) for p in road.geometry))
+    return RouteEstimate(Decimal(str(round(straight * ROAD_FACTOR, 2))), straight, stops)
 
 
 def duration_minutes(route: RouteEstimate, ride_type: RideType) -> int:

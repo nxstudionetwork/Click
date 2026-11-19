@@ -21,7 +21,7 @@ from apps.core.api.exceptions import DomainError
 from apps.customers.models import MAX_ADDRESSES
 from apps.users.views import AuthView, _session_response
 
-from . import services
+from . import services, signins
 from .providers import IdentityError, get_verifier
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,19 @@ class OtpRequestView(AuthView):
         s = OtpRequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         ch = otp.request_code(s.validated_data["phone"], request.META.get("REMOTE_ADDR"))
+        signins.record(request, "code_requested", phone=ch.phone)
         return Response({"challenge_id": str(ch.id), "phone_number": ch.phone, "expires_in": settings.CLICK_OTP_TTL_SECONDS,
                          "resend_in": settings.CLICK_OTP_RESEND_SECONDS, "length": 6}, status=status.HTTP_201_CREATED)
+
+
+def _challenge_phone(token: str) -> str:
+    """The phone a failed code was for (from the challenge id in the token), for the security log."""
+    from .models import OtpChallenge
+
+    try:
+        return OtpChallenge.objects.filter(pk=token.split(".", 1)[0]).values_list("phone", flat=True).first() or ""
+    except Exception:  # noqa: BLE001 — malformed token
+        return ""
 
 
 class ExchangeSerializer(serializers.Serializer):
@@ -78,11 +89,13 @@ class IdentityExchangeView(AuthView):
             identity = get_verifier(s.validated_data["provider"]).verify(s.validated_data["token"])
         except IdentityError as e:
             logger.info("identity exchange rejected: %s", e.reason)
+            signins.record(request, "failed", phone=_challenge_phone(s.validated_data["token"]))
             if e.public_code in OTP_MESSAGES:
                 raise DomainError(OTP_MESSAGES[e.public_code], code=e.public_code, status_code=401)
             raise DomainError("We couldn’t verify your phone. Please try again.", code="identity_invalid", status_code=401)
         user = services.resolve_user(identity)
         if user:
+            signins.record(request, "signed_in", user=user, phone=identity.phone_number, method=identity.provider)
             if hasattr(user, "customer_profile"):
                 record(user.customer_profile, "account.login", {"provider": identity.provider})
             response = _session_response(user)
@@ -99,6 +112,7 @@ class IdentitySignupView(AuthView):
         identity = services.read_signup_token(s.validated_data["signup_token"])
         user, created = services.complete_signup(identity, full_name=s.validated_data["full_name"], email=s.validated_data["email"],
                                                  addresses=s.validated_data["addresses"])
+        signins.record(request, "signed_up" if created else "signed_in", user=user, phone=identity.phone_number, method=identity.provider)
         if created and s.validated_data["referral_code"]:
             from apps.referrals.services import attach
 

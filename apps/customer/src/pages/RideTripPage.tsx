@@ -33,6 +33,9 @@ export function RideTripPage() {
     queryKey: key, queryFn: () => api.customer.rides.get(id),
     refetchInterval: (q) => (q.state.data && (ACTIVE.includes(q.state.data.status) || q.state.data.status === 'scheduled') ? 5_000 : false),
   });
+  // Road line for the trip (drawn under the markers); the map falls back to a dashed preview without it.
+  const tripPts = ride.data ? [ride.data.pickup, ...ride.data.stops, ride.data.drop].map((p) => [p.lat, p.lng] as [number, number]) : [];
+  const road = useQuery({ queryKey: ['geo', 'route', tripPts], queryFn: () => api.money.geo.route(tripPts), enabled: tripPts.length > 1, staleTime: Infinity, retry: false });
   const cancel = useMutation({
     mutationFn: () => api.customer.rides.cancel(id),
     onSuccess: (r) => { qc.setQueryData(key, r); qc.invalidateQueries({ queryKey: walletKey }); toast('Ride cancelled'); },
@@ -55,7 +58,7 @@ export function RideTripPage() {
     <div className="ride ride-trip">
       <div className="ride__grid">
         <div className="ride__map-wrap">
-          <RideMap pickup={r.pickup} drop={r.drop} stops={r.stops} driver={r.driver?.location ?? null} className="ride__map" />
+          <RideMap pickup={r.pickup} drop={r.drop} stops={r.stops} driver={r.driver?.location ?? null} route={road.data?.route?.geometry} className="ride__map" />
           {r.driver?.location && (
             <span className="ride__estimate">{r.driver.location.live ? 'Driver location · live' : `Driver location from ${formatTime(r.driver.location.reportedAt)}`}</span>
           )}

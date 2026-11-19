@@ -154,7 +154,8 @@ export const customerApi = (http: HttpClient) => ({
   },
   wallet: () => http.request<Wallet>('/customer/wallet'),
   rides: {
-    places: (q: string) => http.request<{ results: RidePlaceResult[] }>('/customer/rides/places', { query: { q } }),
+    places: (q: string, near?: { lat: number; lng: number } | null) =>
+      http.request<{ results: RidePlaceResult[] }>('/customer/rides/places', { query: { q, lat: near?.lat, lng: near?.lng } }),
     quote: (input: RideTripInput) => http.request<RideQuote>('/customer/rides/quote', { method: 'POST', body: input }),
     request: (input: RideRequestInput) => http.request<Ride>('/customer/rides', { method: 'POST', body: input }),
     list: (page?: number) => http.request<Paginated<RideSummary>>('/customer/rides', { query: { page } }),

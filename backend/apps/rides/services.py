@@ -289,9 +289,9 @@ def safety_event(ride: Ride, kind: str, note: str = "") -> RideSafetyEvent:
     return event
 
 
-def search_places(customer, q: str, limit: int = 12) -> list[dict]:
-    """Places the customer can pick: saved addresses, places from their past rides, and Click places with coordinates.
-    No external geocoder is called; every result has real coordinates from Click's database."""
+def search_places(customer, q: str, limit: int = 12, near: tuple[float, float] | None = None) -> list[dict]:
+    """Places the customer can pick: saved addresses, places from their past rides, Click places with coordinates,
+    then any address in India from the maps search (apps.geo, when configured), nearest to `near` first."""
     from apps.stores.models import Store
 
     q = q.strip()[:80]
@@ -323,4 +323,12 @@ def search_places(customer, q: str, limit: int = 12) -> list[dict]:
 
         for v in Venue.objects.filter(latitude__isnull=False).filter(Q(name__icontains=q) | Q(locality__icontains=q))[:5]:
             add("place", v.name, ", ".join(filter(None, [v.address, v.locality, v.city])), v.latitude, v.longitude)
+    if q and len(q) >= 3:
+        from apps.geo.providers import search
+
+        if near is None:
+            home = customer.addresses.filter(latitude__isnull=False).order_by("-is_default").first()
+            near = (float(home.latitude), float(home.longitude)) if home else None
+        for p in search(q, near, limit=8):
+            add("search", p.label, p.address, p.lat, p.lng)
     return out[:limit]

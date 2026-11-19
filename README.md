@@ -14,7 +14,7 @@
    - The first run installs everything and asks once for your PostgreSQL password.
    - Click opens in your browser at http://localhost:5173.
    - Two windows stay open (the API and the App). Close them to stop Click.
-3. To sign in quickly while testing, use **Login as Test Customer** on the sign-in screen.
+3. To sign in while testing, enter `90000 00101` and type the 6-digit code printed in the API window.
 
 Click is a platform that brings everyday services (food, groceries, rides, deliveries and more) into one ecosystem.
 
@@ -114,8 +114,8 @@ session). In development the code is printed in the API terminal. Adding the SMS
 
 ## Development test login
 
-After `seed_dev_data`, use **Login as Test Customer** on the sign-in screen (development builds only), or sign in
-with `+1 650 555 0101` and the code printed in the API terminal. Details: [docs/development-data.md](docs/development-data.md).
+After `seed_dev_data`, sign in with `90000 00101` (the test customer, `+91 90000 00101`) and the code printed in
+the API terminal. The sign-in screen shows no development panels or banners. Details: [docs/development-data.md](docs/development-data.md).
 
 ## Temporary mock data
 

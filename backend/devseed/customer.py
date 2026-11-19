@@ -20,6 +20,7 @@ from apps.carts import services as cart_services
 from apps.catalog.models import Product
 from apps.core.api.exceptions import DomainError
 from apps.customers.models import Address, CustomerProfile
+from apps.identity.models import ExternalIdentity
 from apps.notifications.models import Notification
 from apps.orders import services as order_services
 from apps.orders.models import Order, OrderStatus, OrderStatusEvent
@@ -36,7 +37,7 @@ TEST_CUSTOMER = {
     "full_name": "Click Test User",
     # US 555-01xx numbers are reserved for fiction. In development, request a code for this number on the
     # sign-in screen; the code is printed in the API terminal (CLICK_SMS_PROVIDER=console).
-    "phone": "+16505550101",
+    "phone": "+919000000101",
     "customer_code": "CLK-CS-TEST001",
     "password": "ClickDev@2026",  # development-only password; also usable via the normal login form
 }
@@ -139,6 +140,8 @@ def ensure_test_customer(log) -> CustomerProfile:
         user.full_name, user.phone, user.phone_verified, user.is_active = TEST_CUSTOMER["full_name"], TEST_CUSTOMER["phone"], True, True
         user.set_password(TEST_CUSTOMER["password"])
         user.save()
+    # Phone sign-in follows the current number (older seeds used a non-Indian test number).
+    ExternalIdentity.objects.filter(user=user, provider="phone_otp").exclude(subject=TEST_CUSTOMER["phone"]).delete()
     profile, _ = CustomerProfile.objects.get_or_create(user=user)
     if profile.customer_code != TEST_CUSTOMER["customer_code"]:
         CustomerProfile.objects.filter(pk=profile.pk).update(customer_code=TEST_CUSTOMER["customer_code"])

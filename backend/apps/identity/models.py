@@ -41,3 +41,30 @@ class OtpChallenge(BaseModel):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["phone", "-created_at"], name="otp_phone_recent_idx"), models.Index(fields=["ip", "-created_at"], name="otp_ip_recent_idx")]
+
+
+class SignInEvent(BaseModel):
+    """
+    Account security log: every code request, sign-in, failed code, new account and sign-out, with where it came from.
+    Customers see their recent sign-ins in Safety Center; support uses it to investigate account takeovers.
+    Never stores codes or tokens.
+    """
+
+    EVENTS = [("code_requested", "Code requested"), ("signed_in", "Signed in"), ("signed_up", "Account created"),
+              ("failed", "Wrong or expired code"), ("signed_out", "Signed out"), ("signed_out_others", "Signed out other devices")]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="sign_in_events")
+    event = models.CharField(max_length=20, choices=EVENTS)
+    method = models.CharField(max_length=20, default="phone_otp", help_text="phone_otp, password (dev/test), dev_login (development only).")
+    phone = models.CharField(max_length=16, blank=True, help_text="E.164 (+91…) the attempt was for.")
+    app = models.CharField(max_length=16, blank=True, help_text="customer / partner, from the X-Click-Client header.")
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    device = models.CharField(max_length=80, blank=True, help_text="Readable device summary, e.g. 'Chrome on Android'.")
+    user_agent = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "-created_at"], name="signin_user_recent_idx"),
+                   models.Index(fields=["phone", "-created_at"], name="signin_phone_recent_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.event} {self.phone or self.user_id}"

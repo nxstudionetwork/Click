@@ -23,7 +23,6 @@ from . import sms
 from .models import OtpChallenge
 from .providers import IdentityError, VerifiedIdentity
 
-E164 = re.compile(r"^\+[1-9]\d{7,14}$")
 PROVIDER = "phone_otp"
 
 
@@ -32,9 +31,9 @@ def _hash(challenge_id, code: str) -> str:
 
 
 def request_code(phone: str, ip: str | None) -> OtpChallenge:
-    phone = (phone or "").replace(" ", "")
-    if not E164.match(phone):
-        raise DomainError("That phone number doesn’t look right.", code="invalid_phone")
+    from .phone import normalize_indian_mobile
+
+    phone = normalize_indian_mobile(phone)  # Click serves India: +91 mobile numbers only
     sender = sms.current()
     if sender is None:
         raise DomainError("Phone sign-in is temporarily unavailable. Please try again shortly.", code="otp_unavailable", status_code=503)

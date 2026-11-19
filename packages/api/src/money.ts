@@ -1,5 +1,5 @@
 import type { HttpClient } from './http';
-import type { ISODateTime, Money, UUID } from './types';
+import type { GeoPlace, GeoRoute, ISODateTime, Money, UUID } from './types';
 
 /**
  * Click. Wallet, Payments, Rewards, Offers, Notifications, Activity and Help & Support. Every balance, status and
@@ -229,7 +229,7 @@ export interface SafetyState {
     stays: { id: UUID; title: string; status: string; link: string }[];
   };
   reports: { id: UUID; reference: string; subject: string; status: string; statusLabel: string; priority: string; createdAt: ISODateTime }[];
-  sessions: { active: number };
+  sessions: { active: number; recent: { id: string; event: 'signed_in' | 'signed_up' | 'signed_out_others'; label: string; device: string; app: string; method: string; at: string }[] };
 }
 
 // --- Discover --------------------------------------------------------------------------------------------------
@@ -275,6 +275,13 @@ export const moneyApi = (http: HttpClient) => ({
       http.request<{ accepted: number }>('/analytics/events', { method: 'POST', body }),
   },
   homeLayout: () => http.request<{ sections: string[]; managed: boolean }>('/home/layout', { auth: false }),
+  /** Maps (apps.geo): place search in India, current-location address, road route preview. */
+  geo: {
+    search: (q: string, near?: { lat: number; lng: number } | null) =>
+      http.request<{ results: GeoPlace[]; enabled: boolean }>('/geo/search', { query: { q, lat: near?.lat, lng: near?.lng } }),
+    reverse: (p: { lat: number; lng: number }) => http.request<{ place: GeoPlace | null; enabled: boolean }>('/geo/reverse', { query: { lat: p.lat, lng: p.lng } }),
+    route: (points: [number, number][]) => http.request<{ route: GeoRoute | null; enabled: boolean }>('/geo/route', { method: 'POST', body: { points } }),
+  },
   account: {
     deletion: () => http.request<{ blockers: { code: string; message: string; link: string }[]; phone: string; keeps: string }>('/me/delete'),
     delete: (token: string, reason: string) => http.request<{ deleted: boolean }>('/me/delete', { method: 'POST', body: { token, reason } }),

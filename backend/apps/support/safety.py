@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.api.permissions import IsCustomer
+from apps.identity.signins import recent_for
 
 from .models import SupportTicket
 
@@ -61,7 +62,7 @@ class SafetyView(APIView):
                         "phone_callable": settings.CLICK_SUPPORT_PHONE.replace("+", "").isdigit()},
             "active": {"rides": rides, "parcels": parcels, "services": services, "trips": trips, "stays": stays},
             "reports": reports,
-            "sessions": {"active": _sessions(request.user).count()},
+            "sessions": {"active": _sessions(request.user).count(), "recent": recent_for(request.user)},
         })
 
 
@@ -89,4 +90,7 @@ class SignOutOthersView(APIView):
         from apps.activity.services import record
 
         record(request.user.customer_profile, "account.signed_out_others", {"sessions": n})
+        from apps.identity.signins import record as record_sign_in
+
+        record_sign_in(request, "signed_out_others", user=request.user)
         return Response({"signed_out": n, "active": _sessions(request.user).count()})

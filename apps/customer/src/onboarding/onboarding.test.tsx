@@ -18,7 +18,7 @@ vi.mock('../lib/api', () => ({ api: { auth: {
   exchangeIdentity: (...a: unknown[]) => exchange(...a), completeSignup: (...a: unknown[]) => completeSignup(...a),
   uploadAvatar: vi.fn(), devLoginInfo: vi.fn().mockResolvedValue({ enabled: false }),
 } } }));
-vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ status: 'anonymous', user: null, startSession, refreshUser: vi.fn(), devLogin: vi.fn() }) }));
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ status: 'anonymous', user: null, startSession, refreshUser: vi.fn() }) }));
 
 const { LoginPage } = await import('./LoginPage');
 const { VerifyPage } = await import('./VerifyPage');
@@ -55,7 +55,11 @@ describe('Login', () => {
     flow('/login');
     await userEvent.type(screen.getByLabelText('Mobile number'), '12345');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Enter a valid India mobile number');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter your 10-digit mobile number.');
+    await userEvent.clear(screen.getByLabelText('Mobile number'));
+    await userEvent.type(screen.getByLabelText('Mobile number'), '5876543210');
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Indian mobile numbers start with 6, 7, 8 or 9.');
     expect(start).not.toHaveBeenCalled();
   });
 

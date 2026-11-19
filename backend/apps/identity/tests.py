@@ -188,3 +188,44 @@ def test_account_deletion_needs_fresh_otp_and_no_blockers(api):
     u.refresh_from_db()
     assert not u.is_active and u.email is None and u.phone == "" and u.full_name == "Deleted customer"
     assert CustomerProfile.objects.filter(pk=c.pk).exists()  # records are kept, anonymised
+
+
+def test_only_indian_mobile_numbers_are_accepted_and_normalised(api):
+    for bad in ["+16505550101", "+447400123456", "12345", "5876543210", "+91 5876543210"]:
+        r = api.post("/api/v1/auth/otp/request", {"phone": bad})
+        assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_phone", bad
+    for typed in ["98765 43210", "098765-43210", "+91 98765 43210", "919876543211"]:
+        r = api.post("/api/v1/auth/otp/request", {"phone": typed})
+        assert r.status_code == 201, (typed, r.content)
+        assert r.json()["phoneNumber"] in ("+919876543210", "+919876543211")
+
+
+def test_every_sign_in_step_is_logged_without_secrets(api):
+    from apps.identity.models import SignInEvent
+
+    phone = "+919811100001"
+    api.post("/api/v1/auth/identity/exchange", {"provider": "phone_otp", "token": otp_credential(api, phone, wrong=True)})
+    r = api.post("/api/v1/auth/identity/exchange", {"provider": "phone_otp", "token": otp_credential(api, phone)},
+                 HTTP_USER_AGENT="Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36")
+    r = api.post("/api/v1/auth/identity/signup", {"signupToken": r.json()["signupToken"], "fullName": "Log Test", "email": "log@example.com",
+                                                   "addresses": [{"label": "home", "recipientName": "Log Test", "phone": "98111 00001", "line1": "1 Road",
+                                                                  "city": "Bengaluru", "state": "Karnataka", "postalCode": "560001"}]},
+                 format="json", HTTP_USER_AGENT="Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36")
+    assert r.status_code == 201
+    user = User.objects.get(phone=phone)
+    assert user.customer_profile.addresses.get().phone == phone  # saved in E.164
+    events = list(SignInEvent.objects.filter(phone=phone).order_by("created_at").values_list("event", flat=True))
+    assert events == ["code_requested", "failed", "code_requested", "signed_up"]
+    latest = SignInEvent.objects.filter(user=user).latest("created_at")
+    assert latest.device == "Chrome on Android" and latest.ip
+    api.cookies = r.cookies
+    assert api.post("/api/v1/auth/logout", HTTP_X_CLICK_CLIENT="customer").status_code == 204
+    assert SignInEvent.objects.filter(user=user, event="signed_out", app="customer").exists()
+
+
+def test_safety_center_lists_recent_sign_ins(auth_api, customer):
+    from apps.identity.models import SignInEvent
+
+    SignInEvent.objects.create(user=customer, event="signed_in", device="Safari on iPhone", app="customer")
+    recent = auth_api.get("/api/v1/customer/safety").json()["sessions"]["recent"]
+    assert recent[0]["device"] == "Safari on iPhone" and recent[0]["label"] == "Signed in"

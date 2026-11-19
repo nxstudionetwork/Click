@@ -43,5 +43,5 @@ class Command(BaseCommand):
                 seed_test_customer(log)
             self.stdout.write(self.style.SUCCESS(
                 f"Test customer: {TEST_CUSTOMER['full_name']} · {TEST_CUSTOMER['customer_code']} · {TEST_CUSTOMER['email']} · "
-                f"password {TEST_CUSTOMER['password']} (dev only) · or use “Login as Test Customer” on the login screen."))
+                f"password {TEST_CUSTOMER['password']} (dev only) · sign in with 90000 00101 and the code printed in the API terminal."))
         self.stdout.write(self.style.SUCCESS("Done."))

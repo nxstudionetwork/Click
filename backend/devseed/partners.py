@@ -11,6 +11,7 @@ partners show the honest "not live yet" Home. Nothing here creates orders, booki
 from django.db import connection
 
 from apps.bookings.models import Venue
+from apps.identity.models import ExternalIdentity
 from apps.partners.models import (
     Partner, PartnerAddress, PartnerAvailabilityEvent, PartnerCategory, PartnerMembership, PartnerProfile, PartnerStore,
     PartnerVenue,
@@ -51,8 +52,12 @@ def seed_partners(log) -> None:
     for i, (slug, category_slug, contact, details, locality, link_kind, link_slug, status) in enumerate(PARTNERS):
         category = PartnerCategory.objects.select_related("partner_type").get(slug=category_slug)
         email = f"partner.{slug}{TEST_PARTNER_EMAIL_DOMAIN}"
+        phone = f"+9190000001{20 + i:02d}"  # fictional development numbers in the Indian mobile format
         user = User.objects.filter(email=email).first() or User.objects.create_user(
-            email, None, full_name=contact, phone=f"+1 650 555 01{20 + i:02d}", phone_verified=True)
+            email, None, full_name=contact, phone=phone, phone_verified=True)
+        if user.phone != phone:  # older seeds used non-Indian test numbers
+            User.objects.filter(pk=user.pk).update(phone=phone)
+            ExternalIdentity.objects.filter(user=user, provider="phone_otp").exclude(subject=phone).delete()
         membership = PartnerMembership.objects.filter(user=user, role="owner").select_related("partner").first()
         linked = None
         if link_kind == "store":

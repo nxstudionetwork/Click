@@ -31,7 +31,13 @@ class Command(BaseCommand):
         if r is None:
             raise CommandError("Ride not found.")
         if action == "accept":
-            offer = r.driver_offers.filter(response="pending").order_by("distance_km").select_related("driver").first()
+            from django.utils import timezone
+
+            from apps.rides.driver import expire_stale_offers
+
+            expire_stale_offers(r.id)
+            offer = (r.driver_offers.filter(response="pending", expires_at__gt=timezone.now()).order_by("distance_km")
+                     .select_related("driver").first())
             if offer is None:
                 raise CommandError(f"{r.number} has no pending driver offers (status: {r.status}).")
             r = services.driver_accept(r, offer.driver)

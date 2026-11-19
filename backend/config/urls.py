@@ -187,6 +187,7 @@ api_v1 = [
     path("partner/pharma/prescriptions/<uuid:pk>/review", pharma_views.PartnerReviewView.as_view(), name="pharma-rx-review"),
     path("discover/events", discover_views.EventView.as_view(), name="discover-events"),
     path("home/layout", discover_views.HomeLayoutView.as_view(), name="home-layout"),
+    path("", include("apps.geo.urls")),
     path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),

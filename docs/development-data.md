@@ -27,14 +27,14 @@ python manage.py seed_dev_data --catalog-only
 | Name | Click Test User |
 | Click Customer ID | `CLK-CS-TEST001` (seeded before the `CL-CU-` format; new sign-ups get `CL-CU-…`) |
 | Email | `test.customer@click.local` (the reserved `.local` domain can't be a real inbox) |
-| Phone (verified) | `+1 650-555-0101` (US 555-01xx numbers are reserved for fiction) |
+| Phone (verified) | `+91 90000 00101` (fictional development number; seeded partners use `+91 90000 0012x`) |
 | Password (dev only) | `ClickDev@2026` |
 
 **Ways to sign in:**
-1. **Phone OTP (the real flow):** choose the US code and enter `650 555 0101`. With `CLICK_SMS_PROVIDER=console`
-   (the development default) the 6-digit code is printed in the API terminal.
-2. **One click (development builds only):** on the sign-in screen, the dashed **Development mode** box has
-   **Login as Test Customer**.
+1. **Phone OTP (the real flow):** enter `90000 00101`. With `CLICK_SMS_PROVIDER=console` (the development default)
+   the 6-digit code is printed in the API terminal.
+2. **Scripts and automated checks only:** `POST /api/v1/auth/dev-login` signs in the test customer (development
+   only). The sign-in screen itself has no development panel.
 
 **Safety:**
 - **Backend:** `POST /api/v1/auth/dev-login` exists only when `DEBUG` is on (`CLICK_DEV_LOGIN_ENABLED` is forced off

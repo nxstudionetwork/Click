@@ -8,6 +8,7 @@
 
   /* Brand: glossy blue tile, white C, amber dot, navy wordmark */
   --c-brand: #2f3cff;
+  --click-line: linear-gradient(90deg, #2f3cff 0%, #6d4bff 38%, #a855f7 62%, #2f3cff 86%, #fbbf24 100%);
   --c-brand-solid: #2f3cff;
   --c-brand-strong: #1f29b8;
   --c-brand-soft: rgb(47 60 255 / 9%);

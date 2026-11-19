@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Ride } from '@click/api';
 
 vi.mock('../features/ride/RideMap', () => ({ RideMap: () => <div data-testid="map" /> }));
-const api = vi.hoisted(() => ({ customer: { rides: { get: vi.fn(), cancel: vi.fn(), rate: vi.fn(), safety: vi.fn() } } }));
+const api = vi.hoisted(() => ({ customer: { rides: { get: vi.fn(), cancel: vi.fn(), rate: vi.fn(), safety: vi.fn() } }, money: { geo: { route: vi.fn().mockResolvedValue({ route: null, enabled: false }) } } }));
 vi.mock('../lib/api', () => ({ api }));
 const { RideTripPage } = await import('./RideTripPage');
 

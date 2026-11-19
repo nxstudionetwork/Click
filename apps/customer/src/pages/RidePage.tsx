@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type RidePlace, type RideQuoteOption } from '@click/api';
+import { formatIndianMobile, INDIA, nationalDigits } from '@click/phone-auth';
 import { useAuth } from '../auth/AuthProvider';
 import { useThemeOverride } from '../components/layout/AppShell';
 import { Button, Icon, type IconName } from '../components/ui';
@@ -69,12 +70,22 @@ export function RidePage() {
     mutationFn: () => api.customer.rides.request({
       pickup: pickup!, drop: drop!, stops: validStops, rideType: chosen!.rideType.code, paymentMethod: payment, offerId,
       idempotencyKey: idempotencyKey.current, scheduledFor: schedule ? new Date(schedule).toISOString() : null,
-      passengerName: passenger?.name ?? '', passengerPhone: passenger?.phone ?? '',
+      passengerName: passenger?.name.trim() ?? '', passengerPhone: passenger ? `+91${passenger.phone}` : '',
     }),
     onSuccess: (ride) => { qc.invalidateQueries({ queryKey: walletKey }); qc.invalidateQueries({ queryKey: ['customer', 'rides'] }); navigate(`/rides/${ride.id}`); },
     onError: (e) => { if (e instanceof ApiError && e.status !== 0) idempotencyKey.current = crypto.randomUUID(); },
   });
   const err = book.error instanceof ApiError ? book.error : book.error ? new Error('Couldn’t book. Check your connection and try again.') : null;
+
+  // The spot under the centre pin, resolved to a readable address (no raw coordinates shown to customers).
+  const pinned = mapPick?.point ?? null;
+  const pinAddress = useQuery({
+    queryKey: ['geo', 'reverse', pinned && pinned.lat.toFixed(5), pinned && pinned.lng.toFixed(5)],
+    queryFn: () => api.money.geo.reverse(pinned!), enabled: !!pinned, staleTime: 10 * 60_000, placeholderData: (prev) => prev,
+  });
+  const pinPlace = (): RidePlace | null => pinned && {
+    label: pinAddress.data?.place?.label ?? 'Pinned spot', address: pinAddress.data?.place?.address ?? 'Exact spot chosen on the map', ...pinned,
+  };
 
   const setTarget = (t: Target, p: RidePlace) => {
     if (t === 'pickup') setPickup(p); else if (t === 'drop') setDrop(p); else setStops((s) => s.map((x, i) => (i === t ? p : x)));
@@ -99,21 +110,25 @@ export function RidePage() {
       <RideIntro />
       <div className="ride__grid">
         <div className="ride__map-wrap">
-          <RideMap pickup={pickup} drop={drop} stops={validStops} center={point} className="ride__map"
-            onPick={mapPick ? (p) => setMapPick({ ...mapPick, point: p }) : undefined} />
+          <RideMap pickup={mapPick ? null : pickup} drop={mapPick ? null : drop} stops={mapPick ? [] : validStops} center={point} className="ride__map"
+            route={mapPick ? null : quote.data?.route} onPick={mapPick ? (p) => setMapPick((m) => (m ? { ...m, point: p } : m)) : undefined} />
           {mapPick ? (
             <div className="ride__pickbar" role="status">
-              <span>{mapPick.point ? 'Spot selected. Confirm it or tap again.' : `Tap the map to set the ${mapPick.target === 'pickup' ? 'pickup' : mapPick.target === 'drop' ? 'drop' : 'stop'}`}</span>
+              <span className="ride__pickbar-text">
+                <small>Move the map to place the pin at the {mapPick.target === 'pickup' ? 'pickup' : mapPick.target === 'drop' ? 'drop' : 'stop'}</small>
+                <strong>{!pinned ? 'Finding the spot…' : pinAddress.isFetching && !pinAddress.data ? 'Getting the address…' : pinPlace()?.label}</strong>
+                {pinned && pinAddress.data?.place?.address && <span>{pinAddress.data.place.address}</span>}
+              </span>
               <div className="row">
                 <button className="btn btn--ghost btn--sm" onClick={() => setMapPick(null)}>Cancel</button>
-                <button className="btn btn--primary btn--sm" disabled={!mapPick.point}
-                  onClick={() => mapPick.point && setTarget(mapPick.target, { label: 'Pinned location', address: `${mapPick.point.lat.toFixed(5)}, ${mapPick.point.lng.toFixed(5)}`, ...mapPick.point })}>
-                  Confirm spot
-                </button>
+                <button className="btn btn--primary btn--sm" disabled={!pinned} onClick={() => { const pl = pinPlace(); if (pl && mapPick) setTarget(mapPick.target, pl); }}>Confirm</button>
               </div>
             </div>
           ) : quote.data && (
-            <span className="ride__estimate">{quote.data.distanceKm} km · estimated from your points (no live traffic)</span>
+            <span className="ride__estimate">
+              <Icon name={quote.data.estimateBasis === 'road' ? 'route' : 'pin'} size={13} />
+              {quote.data.distanceKm} km {quote.data.estimateBasis === 'road' ? 'by road' : '· estimated, no road route'}
+            </span>
           )}
         </div>
 
@@ -126,6 +141,12 @@ export function RidePage() {
                 onRemove={() => setStops((x) => x.filter((_, j) => j !== i))} />
             ))}
             <RouteRow kind="drop" title="Drop" place={drop} placeholder="Enter destination" onClick={() => setPicker('drop')} />
+            {pickup && drop && (
+              <button type="button" className="route-box__swap" aria-label="Swap pickup and drop" title="Swap pickup and drop"
+                onClick={() => { setPickup(drop); setDrop(pickup); setStops((s) => [...s].reverse()); book.reset(); }}>
+                <Icon name="swap" size={18} />
+              </button>
+            )}
             {stops.length < MAX_STOPS && drop && (
               <button type="button" className="route-box__add" onClick={() => { setStops((s) => [...s, { label: '', address: '', lat: 0, lng: 0 }]); setPicker(stops.length); }}>
                 <Icon name="plus" size={16} /> Add stop
@@ -136,7 +157,7 @@ export function RidePage() {
           <div className="ride-quick" role="group" aria-label="Quick actions">
             {home && <button className="ride-chip" onClick={() => setDrop(toPlace(home))}><Icon name="home" size={16} />Home</button>}
             {work && <button className="ride-chip" onClick={() => setDrop(toPlace(work))}><Icon name="briefcase" size={16} />Work</button>}
-            <button className="ride-chip" onClick={() => setPicker('drop')}><Icon name="history" size={16} />Recent</button>
+
             <button className={`ride-chip ${schedule !== null ? 'is-on' : ''}`} aria-pressed={schedule !== null} onClick={() => setSchedule((s) => (s === null ? defaultSchedule() : null))}><Icon name="clock" size={16} />Schedule</button>
             <button className={`ride-chip ${passenger ? 'is-on' : ''}`} aria-pressed={!!passenger} onClick={() => setPassenger((p) => (p ? null : { name: '', phone: '' }))}><Icon name="user" size={16} />For someone</button>
           </div>
@@ -152,7 +173,10 @@ export function RidePage() {
             <div className="ride-field ride-field--pair">
               <span>Passenger</span>
               <input placeholder="Name" value={passenger.name} onChange={(e) => setPassenger({ ...passenger, name: e.target.value })} maxLength={120} aria-label="Passenger name" />
-              <input placeholder="Phone" type="tel" value={passenger.phone} onChange={(e) => setPassenger({ ...passenger, phone: e.target.value })} maxLength={20} aria-label="Passenger phone" />
+              <div className="ride-field__phone"><span>+91</span><input placeholder={INDIA.example} type="tel" inputMode="numeric" value={formatIndianMobile(passenger.phone)}
+                onChange={(e) => setPassenger({ ...passenger, phone: nationalDigits(e.target.value) })} maxLength={11} aria-label="Passenger mobile number" /></div>
+              {passenger.phone.length === 10 && !INDIA.pattern.test(passenger.phone) && <small className="ride-field__err">Indian mobile numbers start with 6, 7, 8 or 9.</small>}
+              <small>We’ll text the driver details and live trip link to this number.</small>
             </div>
           )}
 
@@ -231,7 +255,7 @@ export function RidePage() {
                 <span>{chosen.rideType.name} · {payment === 'cash' ? 'Cash' : 'Wallet'}{schedule ? ` · ${new Date(schedule).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}</span>
                 <strong>{formatMoney(chosen.fare.total, 'INR')}</strong>
               </div>
-              <Button block loading={book.isPending} disabled={!!walletShort || (passenger !== null && (!passenger.name.trim() || !passenger.phone.trim()))} onClick={() => book.mutate()}>
+              <Button block loading={book.isPending} disabled={!!walletShort || (passenger !== null && (!passenger.name.trim() || !INDIA.pattern.test(passenger.phone)))} onClick={() => book.mutate()}>
                 {schedule ? 'Confirm schedule' : 'Confirm Ride'}
               </Button>
               <small className="ride-confirm__note">Upfront fare, calculated by Click. before you confirm.</small>
@@ -244,6 +268,7 @@ export function RidePage() {
         open={picker !== null && !mapPick}
         title={picker === 'pickup' ? 'Choose pickup location' : picker === 'drop' ? 'Where are you going?' : 'Choose a stop'}
         allowCurrent={picker === 'pickup'}
+        near={pickup ?? point}
         initialQuery={picker === 'drop' ? toQuery ?? '' : ''}
         onClose={() => { if (typeof picker === 'number' && !stops[picker]?.label) setStops((s) => s.filter((_, i) => i !== picker)); setPicker(null); }}
         onSelect={(p) => picker !== null && setTarget(picker, p)}

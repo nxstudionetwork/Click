@@ -86,6 +86,16 @@ export function SafetyPage() {
         <div className="sf-live"><strong>{s.sessions.active} active sign-in{s.sessions.active === 1 ? '' : 's'}</strong>
           <span className="small">Signed in somewhere you don’t recognise? Sign out everywhere else.</span>
           <Button size="sm" variant="secondary" loading={signOut.isPending} onClick={async () => { if (await confirm({ title: 'Sign out of other devices?', message: 'You stay signed in here.', confirmLabel: 'Sign out others' })) signOut.mutate(); }}>Sign out other devices</Button></div>
+        {s.sessions.recent.length > 0 && (
+          <div className="sf-signins">
+            <h3 className="small">Recent sign-ins</h3>
+            <ul className="mn-list">{s.sessions.recent.map((e) => (
+              <li key={e.id} className="mn-row mn-row--static">
+                <span className="mn-row__icon"><Icon name={e.event === 'signed_out_others' ? 'logout' : 'shield'} size={18} /></span>
+                <span className="mn-row__text"><strong>{e.label}</strong><span className="small mn-muted">{e.device}{e.app === 'partner' ? ' · Click Partner' : ''} · {new Date(e.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span></span>
+              </li>))}</ul>
+          </div>
+        )}
         <ul className="mn-bullets small sf-tips"><li>Click. never asks for your OTP, UPI PIN, card number or password — not even Support.</li>
           <li>Links asking you to “verify” your account outside the app aren’t from Click.</li><li>Your card details are never stored by Click.</li></ul>
       </section>

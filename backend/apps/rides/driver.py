@@ -59,10 +59,15 @@ def offer_expiry():
     return timezone.now() + OFFER_TTL
 
 
-def expire_stale_offers() -> int:
-    """Unanswered requests pass on to the next nearest drivers (or end as no driver found). Idempotent."""
+def expire_stale_offers(ride_id=None) -> int:
+    """Unanswered requests pass on to the next nearest drivers (or end as no driver found). Idempotent.
+    Runs from the scheduled job and, for one ride, whenever its rider's app checks the ride, so a request never waits
+    on a driver who didn't answer."""
     n = 0
-    stale = RideDriverOffer.objects.filter(response="pending", expires_at__lte=timezone.now()).values_list("ride_id", flat=True).distinct()
+    stale = RideDriverOffer.objects.filter(response="pending", expires_at__lte=timezone.now())
+    if ride_id is not None:
+        stale = stale.filter(ride_id=ride_id)
+    stale = stale.values_list("ride_id", flat=True).distinct()
     for ride_id in list(stale):
         with transaction.atomic():
             ride = Ride.objects.select_for_update().get(pk=ride_id)

@@ -890,7 +890,10 @@ export interface PartnerLocationInput {
 
 // --- Rides ------------------------------------------------------------------
 export interface RidePlace { label: string; address: string; lat: number; lng: number }
-export interface RidePlaceResult extends RidePlace { kind: 'saved' | 'recent' | 'place' }
+export interface RidePlaceResult extends RidePlace { kind: 'saved' | 'recent' | 'place' | 'search' }
+/** A place from the maps search or current-location lookup (apps.geo). */
+export interface GeoPlace extends RidePlace { kind: 'search' | 'reverse' }
+export interface GeoRoute { distanceKm: number; durationMin: number; geometry: [number, number][] }
 export interface RideTypeInfo { code: string; name: string; description: string; icon: string; seats: number }
 export interface RideFare { base: Money; distance: Money; time: Money; fees: Money; subtotal: Money; discount: Money; total: Money; minimumApplied?: boolean }
 export interface RideOfferInfo {
@@ -908,8 +911,10 @@ export interface RideQuoteOption {
 }
 export interface RideQuote {
   distanceKm: string;
-  /** "straight_line": estimated from coordinates (no road-routing or traffic provider connected). */
+  /** "road": real road distance from the routing server; "straight_line": estimated from coordinates (no routing). */
   estimateBasis: 'straight_line' | 'road';
+  /** Road route to draw, as [lat, lng] pairs (empty when estimateBasis is "straight_line"). */
+  route: [number, number][];
   options: RideQuoteOption[];
   offers: RideOfferInfo[];
 }

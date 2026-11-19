@@ -28,7 +28,17 @@ class RequestRideSerializer(TripSerializer):
     idempotency_key = serializers.UUIDField()
     scheduled_for = serializers.DateTimeField(required=False, allow_null=True)
     passenger_name = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
-    passenger_phone = serializers.RegexField(r"^\+?[\d\s-]{8,20}$", required=False, allow_blank=True, default="")
+    passenger_phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
+
+    def validate_passenger_phone(self, value):
+        if not value:
+            return ""
+        from apps.identity.phone import MESSAGE, parse_indian_mobile
+
+        phone = parse_indian_mobile(value)
+        if not phone:
+            raise serializers.ValidationError(MESSAGE)
+        return phone
 
 
 class RideTypeSerializer(serializers.ModelSerializer):

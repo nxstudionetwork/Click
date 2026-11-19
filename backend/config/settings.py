@@ -102,6 +102,7 @@ INSTALLED_APPS = [
     "apps.pharma",
     "apps.referrals",
     "apps.analytics",
+    "apps.geo",
     # Business OS foundation
     "apps.organization",
     "apps.people",
@@ -202,6 +203,7 @@ REST_FRAMEWORK = {
         "reviews": os.environ.get("THROTTLE_REVIEWS", "20/min"),  # writing / reporting reviews  # Shopping search
         "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
         "buzz": os.environ.get("THROTTLE_BUZZ", "120/min"),  # Buzz likes, saves, views, reports
+        "geo": os.environ.get("THROTTLE_GEO", "90/min"),  # place search, current-location address, route preview
         "os_auth": os.environ.get("THROTTLE_OS_AUTH", "20/min"),  # Business OS sign-in steps
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
@@ -308,6 +310,12 @@ CLICK_REFERRAL_REFERRER_POINTS = int(os.environ.get("CLICK_REFERRAL_REFERRER_POI
 CLICK_REFERRAL_REFEREE_POINTS = int(os.environ.get("CLICK_REFERRAL_REFEREE_POINTS", "100"))
 CLICK_REFERRAL_MONTHLY_CAP = int(os.environ.get("CLICK_REFERRAL_MONTHLY_CAP", "10"))
 CLICK_EMERGENCY_NUMBER = os.environ.get("CLICK_EMERGENCY_NUMBER", "112")
+# Maps (apps.geo). Open-source OpenStreetMap engines, no Google. Development uses the public Photon and OSRM servers
+# (fair use); production must set self-hosted or contracted URLs, otherwise search uses Click's own places and fares use
+# the labelled straight-line estimate. Tests never call out.
+_DEV_MAPS = DEBUG and not TESTING
+CLICK_GEOCODER_URL = os.environ.get("CLICK_GEOCODER_URL", "https://photon.komoot.io" if _DEV_MAPS else "")
+CLICK_ROUTER_URL = os.environ.get("CLICK_ROUTER_URL", "https://router.project-osrm.org" if _DEV_MAPS else "")
 CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
 CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
 CLICK_SUPPORT_HOURS = os.environ.get("CLICK_SUPPORT_HOURS", "")

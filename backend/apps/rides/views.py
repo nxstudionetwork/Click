@@ -35,7 +35,10 @@ class PlacesView(APIView):
     permission_classes = [IsCustomer]
 
     def get(self, request):
-        return Response({"results": services.search_places(request.user.customer_profile, request.query_params.get("q", ""))})
+        from apps.geo.views import _point
+
+        return Response({"results": services.search_places(request.user.customer_profile, request.query_params.get("q", ""),
+                                                           near=_point(request.query_params))})
 
 
 class QuoteView(APIView):
@@ -52,6 +55,7 @@ class QuoteView(APIView):
         return Response({
             "distance_km": f"{q['route'].distance_km:.1f}",
             "estimate_basis": q["route"].basis,
+            "route": [list(p) for p in q["route"].geometry],
             "options": [{
                 "ride_type": {"code": o["ride_type"].code, "name": o["ride_type"].name, "description": o["ride_type"].description,
                               "icon": o["ride_type"].icon, "seats": o["ride_type"].seats},
@@ -91,6 +95,15 @@ class RideDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return customer_rides(self.request)
+
+    def get_object(self):
+        ride = super().get_object()
+        if ride.status == "searching":
+            from .driver import expire_stale_offers
+
+            if expire_stale_offers(ride.id):
+                ride = self.get_queryset().get(pk=ride.pk)
+        return ride
 
 
 class RideCancelView(APIView):

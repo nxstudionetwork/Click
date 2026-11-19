@@ -131,8 +131,13 @@ class LogoutView(AuthView):
         raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE["name"])
         if raw:
             try:
-                RefreshToken(raw).blacklist()
-            except TokenError:
+                token = RefreshToken(raw)
+                user = User.objects.filter(id=token["user_id"]).first()
+                token.blacklist()
+                from apps.identity.signins import record
+
+                record(request, "signed_out", user=user)
+            except (TokenError, KeyError):
                 pass
         response = Response(status=status.HTTP_204_NO_CONTENT)
         _clear_refresh_cookie(response)
@@ -176,6 +181,9 @@ class DevLoginView(AuthView):
         if not user:
             raise DomainError("Test customer not found. Run `python manage.py seed_dev_data`.", code="dev_customer_missing", status_code=409)
         audit.warning("auth.dev_login", extra={"user_id": str(user.id)})
+        from apps.identity.signins import record
+
+        record(request, "signed_in", user=user, method="dev_login")
         return _session_response(user)
 
 

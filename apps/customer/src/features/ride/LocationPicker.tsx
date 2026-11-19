@@ -5,17 +5,20 @@ import { Icon, Sheet, type IconName } from '../../components/ui';
 import { api } from '../../lib/api';
 
 const KIND: Record<RidePlaceResult['kind'], { icon: IconName; label: string }> = {
-  saved: { icon: 'pin', label: 'Saved' }, recent: { icon: 'history', label: 'Recent' }, place: { icon: 'store', label: 'Place on Click.' },
+  saved: { icon: 'pin', label: 'Saved' }, recent: { icon: 'history', label: 'Recent' }, place: { icon: 'store', label: 'On Click.' },
+  search: { icon: 'compass', label: '' },
 };
 
 type Geo = 'idle' | 'locating' | 'denied' | 'unavailable';
 
 /**
- * Pickup / drop / stop chooser: current location (real device position), search over saved addresses, recent ride
- * places and Click places (all with real coordinates), or pick a point on the map.
+ * Pickup / drop / stop chooser: current location (real device position, turned into a street address), search over
+ * saved addresses, recent ride places, Click places and every address in India (maps search, nearest first), or a pin
+ * placed on the map.
  */
-export function LocationPicker({ open, title, allowCurrent, initialQuery = '', onClose, onSelect, onPickOnMap }: {
-  open: boolean; title: string; allowCurrent: boolean; initialQuery?: string; onClose: () => void; onSelect: (p: RidePlace) => void; onPickOnMap: () => void;
+export function LocationPicker({ open, title, allowCurrent, initialQuery = '', near, onClose, onSelect, onPickOnMap }: {
+  open: boolean; title: string; allowCurrent: boolean; initialQuery?: string; near?: { lat: number; lng: number } | null;
+  onClose: () => void; onSelect: (p: RidePlace) => void; onPickOnMap: () => void;
 }) {
   const [q, setQ] = useState('');
   useEffect(() => { if (open && initialQuery) setQ(initialQuery); }, [open, initialQuery]);
@@ -23,13 +26,21 @@ export function LocationPicker({ open, title, allowCurrent, initialQuery = '', o
   const [geo, setGeo] = useState<Geo>('idle');
   useEffect(() => { const t = setTimeout(() => setDebounced(q.trim()), 250); return () => clearTimeout(t); }, [q]);
   useEffect(() => { if (!open) { setQ(''); setGeo('idle'); } }, [open]);
-  const places = useQuery({ queryKey: ['rides', 'places', debounced], queryFn: () => api.customer.rides.places(debounced), enabled: open, staleTime: 30_000 });
+  const nearKey = near ? `${near.lat.toFixed(2)},${near.lng.toFixed(2)}` : '';
+  const places = useQuery({ queryKey: ['rides', 'places', debounced, nearKey], queryFn: () => api.customer.rides.places(debounced, near), enabled: open, staleTime: 30_000,
+    placeholderData: (prev) => prev });
 
   function current() {
     if (!('geolocation' in navigator)) { setGeo('unavailable'); return; }
     setGeo('locating');
     navigator.geolocation.getCurrentPosition(
-      (p) => { setGeo('idle'); onSelect({ label: 'Current location', address: `Within about ${Math.round(p.coords.accuracy)} m`, lat: p.coords.latitude, lng: p.coords.longitude }); },
+      async (p) => {
+        const at = { lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6) };
+        // Turn the position into a street address the driver can read; the exact coordinates are kept either way.
+        const found = await api.money.geo.reverse(at).then((r) => r.place).catch(() => null);
+        setGeo('idle');
+        onSelect({ label: found?.label ?? 'Current location', address: found?.address ?? `Your location (within about ${Math.round(p.coords.accuracy)} m)`, ...at });
+      },
       (e) => setGeo(e.code === e.PERMISSION_DENIED ? 'denied' : 'unavailable'),
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 },
     );
@@ -54,7 +65,7 @@ export function LocationPicker({ open, title, allowCurrent, initialQuery = '', o
           )}
           <button type="button" className="lpick__action" onClick={onPickOnMap}>
             <span className="lpick__icon"><Icon name="pin" size={18} /></span>
-            <span><strong>Choose on map</strong><span>Tap the exact spot</span></span>
+            <span><strong>Pin on map</strong><span>Move the map to the exact spot</span></span>
           </button>
         </div>
         {geo === 'denied' && <p className="loc-warn" role="alert">Location access is blocked. Search for the place or choose it on the map instead.</p>}
@@ -63,14 +74,14 @@ export function LocationPicker({ open, title, allowCurrent, initialQuery = '', o
           {places.isPending && Array.from({ length: 3 }, (_, i) => <li key={i}><span className="skeleton" style={{ display: 'block', height: 52, borderRadius: 12 }} /></li>)}
           {places.isError && <li className="muted small">Couldn’t load places. <button className="btn btn--ghost btn--sm" onClick={() => places.refetch()}>Retry</button></li>}
           {places.isSuccess && results.length === 0 && (
-            <li className="muted small">{debounced ? 'No matching places on Click. yet. Try another name, or choose it on the map.' : 'Saved addresses with a pinned location and your recent ride places appear here.'}</li>
+            <li className="muted small">{debounced ? (debounced.length < 3 ? 'Keep typing to search every address in India.' : 'No matching places. Try another spelling, a nearby landmark, or place a pin on the map.') : 'Your saved addresses and recent ride places appear here. Type to search any address, landmark or area.'}</li>
           )}
           {results.map((r) => (
             <li key={`${r.kind}-${r.lat}-${r.lng}`}>
               <button type="button" className="lpick__result" onClick={() => onSelect({ label: r.label, address: r.address, lat: r.lat, lng: r.lng })}>
                 <span className="lpick__icon"><Icon name={KIND[r.kind].icon} size={16} /></span>
                 <span className="lpick__text"><strong>{r.label}</strong><span>{r.address}</span></span>
-                <span className="lpick__kind">{KIND[r.kind].label}</span>
+                {KIND[r.kind].label && <span className="lpick__kind">{KIND[r.kind].label}</span>}
               </button>
             </li>
           ))}

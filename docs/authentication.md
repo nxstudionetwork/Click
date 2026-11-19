@@ -26,7 +26,7 @@ App ──POST /api/v1/auth/identity/signup {signupToken, fullName, email, addre
 - **Sending the code:** `apps/identity/sms.py`. `CLICK_SMS_PROVIDER` is
   - `""` in production until you configure a provider: requesting a code returns "Phone sign-in is temporarily
     unavailable" (nothing is faked);
-  - `console` in development: the code is printed in the API terminal (`[development SMS] to +1650…: 123456 is your
+  - `console` in development: the code is printed in the API terminal (`[development SMS] to +91900…: 123456 is your
     Click. verification code…`); it is forced off when `DEBUG` is off;
   - a dotted path to your SMS sender class with `send(phone_e164, text)`. Its credentials go in `backend/.env`.
 - **Identity model:**
@@ -49,7 +49,8 @@ No app, screen, session or data-model change is needed.
 
 ## Development-only sign-in
 
-- **Login as Test Customer** on the sign-in screen (development builds only; the backend endpoint returns 404 unless `DEBUG`).
+- `POST /api/v1/auth/dev-login` signs in the seeded test customer for scripts and automated checks (404 unless `DEBUG`).
+  Nothing development-only is shown on the sign-in screen.
 - **Email/password** endpoints exist only for development and tests (`CLICK_PASSWORD_AUTH`, off in production).
 
 ## Click Partner
@@ -60,3 +61,15 @@ password) linked by `ExternalIdentity`. Business details are collected during pa
 `Partner` (`apps/partners`). A phone already verified on a customer account resolves to that same user, so one
 person can be both a customer and a partner. Partner data is always resolved from the signed-in user's
 `PartnerMembership`, never from client input.
+
+## Phone numbers
+
+Click serves India. Sign-in codes, verified phones and saved delivery contacts accept Indian mobile numbers only
+(10 digits starting 6-9; typed with or without `+91`, `91`, `0` or spaces) and are stored in E.164 form,
+`+91XXXXXXXXXX` (`apps/identity/phone.py`, `@click/phone-auth` `nationalDigits` / `formatIndianMobile`).
+
+## Sign-in log
+
+`identity.SignInEvent` records every code request, sign-in, wrong or expired code, new account, sign-out and
+"sign out other devices", with app, IP and a readable device ("Chrome on Android"). Codes and tokens are never stored.
+Customers see recent sign-ins in Safety Center; staff can read the log (read-only) in Django admin.
