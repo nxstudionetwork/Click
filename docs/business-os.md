@@ -150,6 +150,33 @@ partner sessions: staff sign in to Business OS with their own account and audien
   by the module.
 - Jobs: `python manage.py os_people_jobs` daily (apply effective-dated changes, probation and document reminders).
 
+## Identity & Access (module 3)
+
+`backend/apps/access/` (`governance.py`, `governance_views.py`; API `/api/v1/os/access/*`), UI at `/access`.
+It extends the foundation — accounts, sessions, scoped roles, approval limits, delegation, service accounts — and adds
+no second permission system.
+
+- **One grant path.** Admin assignment, access packages, approved access requests and emergency access all go
+  through `governance.provision()`: anti-escalation (you grant only what you hold), segregation of duties, audit and
+  notification are applied identically.
+- **Access requests** use the approval engine (`access.request`: manager, then access administrator). The grant only
+  happens if one of the approvers holds the permissions (usually the business owner at level 1); otherwise the request
+  is "approved but not granted" with the reason.
+- **Access reviews**: periodic, privileged-only and event-triggered (People & HR transfers create one automatically).
+  The person's manager reviews; nobody certifies their own access; "remove" takes effect immediately.
+- **Segregation of duties**: rules are data (`warning` / `exception` / `block`), checked on every grant. Exceptions
+  need `access.sod.approve` and someone other than the person.
+- **Emergency (break-glass) access**: only roles marked eligible, at most 8 hours, two-step required, security
+  administrators notified, ends automatically, reviewed afterwards by someone else.
+- **Analysis**: effective access (direct, inherited, automatic, temporary, delegated, MFA-blocked, conflicts),
+  who-has-access, permission simulator (scope + approval limit), role comparison and matrix, role version history with
+  diffs, privileged access, orphaned / unused access, an internal access-risk indicator (not a certification).
+- Requesting access is everyday work: `access.request.*` never makes someone an administrator.
+- **Not provided on purpose:** impersonation ("act as"). Use the permission simulator and effective-access view to
+  debug access without ever acting as another person.
+- Job: `python manage.py os_access_jobs` every 15 minutes (ends temporary / emergency access, warns 3 days before,
+  expires accounts, lapses SoD exceptions).
+
 ## Business AI
 
 `backend/apps/workspace/ai.py`. The AI can only call tools; each tool declares a permission and runs as the asking
@@ -169,7 +196,8 @@ npm run dev -w @click/business-os      # http://localhost:5177 (proxies /api to 
 Sign in with **Development personas** on the login screen (DEBUG only) or any persona email with the development
 password printed by the seed. Personas: CEO, System Administrator, Finance Head, Finance Manager (South region),
 HR Manager, Operations Manager, Partner Manager, Branch Manager (Hyderabad), Recruiter, HR Business Partner
-(South), employees (one on probation), Internal Auditor. Employee numbers run EMP-000001 to EMP-000014.
+(South), employees (one on probation), Internal Auditor. Employee numbers run
+EMP-000001 upwards.
 
 Production bootstrap (no default passwords):
 
@@ -181,7 +209,7 @@ It installs the role templates and policies and prints a one-time invitation lin
 
 ## Not built yet (by design)
 
-Business module screens other than People & HR (Finance ledger, Procurement, Inventory, …) show an honest
+Business module screens other than People & HR, Identity & Access, Finance and Procurement (Inventory, Sales, Operations, …) show an honest
 "coming in a later phase" page listing their planned areas and the permissions the person already holds. Email /
 SMS / push delivery, SSO, phone-OTP sign-in for staff, meeting calendars and the payroll provider
 (`CLICK_PAYROLL_PROVIDER`) are extension points with no provider configured.
