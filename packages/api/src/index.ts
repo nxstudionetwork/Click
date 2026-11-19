@@ -21,3 +21,5 @@ export * from './partner-restaurant';
 export * from './partner-driver';
 export * from './partner-buzz';
 export * from './os';
+export * from './os-home';
+export * from './people';

@@ -1,13 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Button, Icon } from '@click/ui';
+import { Button, Icon, useToast } from '@click/ui';
 import type { OSAIAnswer } from '@click/api';
 import { api, apiMessage } from '../lib/api';
 import { Drawer } from './ui';
 
 type Msg = { role: 'me' | 'ai'; text: string; answer?: OSAIAnswer };
-const SUGGESTIONS = ['What’s waiting for my approval?', 'Show my overdue tasks', 'How is the business doing?', 'Find Priya'];
+const SUGGESTIONS = ['What’s waiting for my approval?', 'Show my overdue tasks', 'Summarize today’s operations', 'Show partner issues requiring attention',
+  'Create a task to follow up with finance', 'Find Priya'];
+
+/** The AI never writes data. It proposes; the person confirms and the normal Tasks API (with its checks) does the work. */
+function ConfirmTask({ title }: { title: string }) {
+  const toast = useToast();
+  const [done, setDone] = useState(false);
+  const create = useMutation({ mutationFn: () => api.tasks.create({ title }), onSuccess: () => { setDone(true); toast('Task created'); } });
+  if (done) return <p className="xs" style={{ marginTop: 6 }}>✓ Task created. <Link to="/tasks">Open tasks</Link></p>;
+  return (
+    <div className="row" style={{ marginTop: 8 }}>
+      <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}>Create task</Button>
+      <span className="xs muted">Nothing is created until you confirm.</span>
+      {create.error && <span className="xs" style={{ color: 'var(--c-danger)' }}>{apiMessage(create.error)}</span>}
+    </div>
+  );
+}
 
 /** Click Business AI. Answers only through tools that run with the signed-in person’s own permissions. */
 export function AIPanel({ onClose }: { onClose: () => void }) {
@@ -59,6 +75,7 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
               </ul>
             )}
             {m.answer?.note && <p className="xs muted" style={{ marginTop: 6 }}>{m.answer.note}</p>}
+            {m.answer?.proposedAction?.type === 'create_task' && <ConfirmTask title={m.answer.proposedAction.title} />}
           </div>
         ))}
         {ask.isPending && <div className="ai-msg ai-msg--ai muted">Looking that up…</div>}

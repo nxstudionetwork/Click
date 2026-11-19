@@ -330,3 +330,13 @@ def test_performance_cycle_reviews(os_seed):
                                  "/api/v1/os/people/cases", "/api/v1/os/people/settings/leave-types"])
 def test_employee_cannot_reach_hr_admin_apis(os_seed, url):
     assert signed_in("divya.patel@click.dev").get(url).status_code == 403
+
+
+@pytest.mark.parametrize("res", ["job-levels", "designations", "schedules", "leave-types", "holiday-calendars", "checklists"])
+def test_hr_settings_lists_work_for_scoped_and_org_holders(os_seed, res):
+    # Regression: unscoped config models (no location field) used to 500 when listed.
+    for who in ("sneha.iyer@click.dev", "imran.sheikh@click.dev"):
+        c = signed_in(who)
+        r = c.get(f"/api/v1/os/people/settings/{res}")
+        assert r.status_code in (200, 403), (who, res, r.status_code)
+    assert signed_in("divya.patel@click.dev").get(f"/api/v1/os/people/settings/{res}").status_code == 403

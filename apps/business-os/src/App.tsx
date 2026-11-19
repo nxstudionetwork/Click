@@ -24,7 +24,35 @@ const NotificationsPage = lazyPage(() => import('./pages/NotificationsPage'), 'N
 const CalendarPage = lazyPage(() => import('./pages/CalendarPage'), 'CalendarPage');
 const SearchPage = lazyPage(() => import('./pages/SearchPage'), 'SearchPage');
 const ProfilePage = lazyPage(() => import('./pages/ProfilePage'), 'ProfilePage');
-const EmployeePage = lazyPage(() => import('./pages/EmployeePage'), 'EmployeePage');
+const AlertsPage = lazyPage(() => import('./pages/AlertsPage'), 'AlertsPage');
+const AnnouncementsPage = lazyPage(() => import('./pages/AnnouncementsPage'), 'AnnouncementsPage');
+const PeopleLayout = lazyPage(() => import('./pages/people/common'), 'PeopleLayout');
+const pCore = () => import('./pages/people/core');
+const pTalent = () => import('./pages/people/talent');
+const pWork = () => import('./pages/people/workforce');
+const pGrowth = () => import('./pages/people/growth');
+const pCare = () => import('./pages/people/care');
+const HRHome = lazyPage(pCore, 'HRHome');
+const Directory = lazyPage(pCore, 'Directory');
+const Profile360 = lazyPage(pCore, 'Profile');
+const OrgChart = lazyPage(pCore, 'OrgChart');
+const MyHR = lazyPage(pCore, 'MyHR');
+const Positions = lazyPage(pTalent, 'Positions');
+const Recruitment = lazyPage(pTalent, 'Recruitment');
+const Candidates = lazyPage(pTalent, 'Candidates');
+const Interviews = lazyPage(pTalent, 'Interviews');
+const PeopleOnboarding = lazyPage(pTalent, 'Onboarding');
+const Attendance = lazyPage(pWork, 'Attendance');
+const Leave = lazyPage(pWork, 'Leave');
+const Performance = lazyPage(pGrowth, 'Performance');
+const Learning = lazyPage(pGrowth, 'Learning');
+const Compensation = lazyPage(pGrowth, 'Compensation');
+const Engagement = lazyPage(pGrowth, 'Engagement');
+const HRRequests = lazyPage(pCare, 'Requests');
+const HRCases = lazyPage(pCare, 'Cases');
+const Lifecycle = lazyPage(pCare, 'Lifecycle');
+const HRAnalytics = lazyPage(pCare, 'Analytics');
+const HRSettings = lazyPage(pCare, 'HRSettings');
 const ModulePage = lazyPage(() => import('./pages/ModulePage'), 'ModulePage');
 const HelpPage = lazyPage(() => import('./pages/HelpPage'), 'HelpPage');
 const SettingsLayout = lazyPage(() => import('./pages/settings/SettingsLayout'), 'SettingsLayout');
@@ -118,7 +146,31 @@ export function App() {
         <Route path="/calendar" element={<InShell><CalendarPage /></InShell>} />
         <Route path="/search" element={<InShell><SearchPage /></InShell>} />
         <Route path="/profile" element={<InShell><ProfilePage /></InShell>} />
-        <Route path="/people/:id" element={<InShell><EmployeePage /></InShell>} />
+        <Route path="/alerts" element={<InShell><AlertsPage /></InShell>} />
+        <Route path="/announcements" element={<InShell><AnnouncementsPage /></InShell>} />
+        <Route path="/people" element={<InShell><PeopleLayout /></InShell>}>
+          <Route index element={<HRHome />} />
+          <Route path="me" element={<MyHR />} />
+          <Route path="directory" element={<RequirePerm any={['people.directory.view']}><Directory /></RequirePerm>} />
+          <Route path="org-chart" element={<RequirePerm any={['people.directory.view']}><OrgChart /></RequirePerm>} />
+          <Route path="positions" element={<RequirePerm any={['people.position.view']}><Positions /></RequirePerm>} />
+          <Route path="recruitment" element={<RequirePerm any={['people.recruitment.view']}><Recruitment /></RequirePerm>} />
+          <Route path="candidates" element={<RequirePerm any={['people.candidate.view']}><Candidates /></RequirePerm>} />
+          <Route path="interviews" element={<Interviews />} />
+          <Route path="onboarding" element={<RequirePerm any={['people.onboarding.view']}><PeopleOnboarding /></RequirePerm>} />
+          <Route path="attendance" element={<Attendance />} />
+          <Route path="leave" element={<Leave />} />
+          <Route path="performance" element={<Performance />} />
+          <Route path="learning" element={<Learning />} />
+          <Route path="compensation" element={<RequirePerm any={['people.payroll.view', 'people.benefit.view']}><Compensation /></RequirePerm>} />
+          <Route path="engagement" element={<Engagement />} />
+          <Route path="requests" element={<HRRequests />} />
+          <Route path="cases" element={<RequirePerm any={['people.case.view']}><HRCases /></RequirePerm>} />
+          <Route path="lifecycle" element={<RequirePerm any={['people.lifecycle.view', 'people.offboarding.view']}><Lifecycle /></RequirePerm>} />
+          <Route path="analytics" element={<RequirePerm any={['people.analytics.view']}><HRAnalytics /></RequirePerm>} />
+          <Route path="settings" element={<RequirePerm any={['people.settings.view', 'people.settings.configure']}><HRSettings /></RequirePerm>} />
+          <Route path=":id" element={<Profile360 />} />
+        </Route>
         <Route path="/m/:key" element={<InShell><ModulePage /></InShell>} />
         <Route path="/help" element={<InShell><HelpPage /></InShell>} />
 

@@ -99,10 +99,56 @@ steps. All amounts are data, none are hard-coded.
 
 ## Home / Command Center
 
-Composed from a widget registry + each role's `home_widgets` + the person's own hide/reorder preference, filtered
-by permission. Each widget loads independently. Business figures (GMV, orders, partners, customers, support,
-payments) come from the live platform tables; platform-wide numbers need organization-wide scope, otherwise the
-widget says so instead of showing partial or unauthorized data.
+`backend/apps/workspace/widgets.py` (registry), `home_views.py` (API), `pulse.py`, `alerts.py`, `announcements.py`.
+
+- Widgets are registered with a permission and an audience; Home = the role's preset (`Role.home_config`) + the
+  person's own layout and saved views (`account.preferences.home`), filtered by permission and scope on every load.
+  Each widget is fetched on its own (`/os/home/widgets/<key>`), so one slow or failing source never blanks Home.
+- Mandatory: open alerts and critical announcements (critical ones can't be dismissed; some need acknowledgement).
+- Business pulse figures come from live platform tables. GMV is labelled *gross transaction value* — it is never
+  presented as Click revenue. Platform-wide numbers need organization-wide scope; otherwise the widget says so.
+- Alerts are detected from live data by `alerts.DETECTORS`, auto-resolve when the condition clears, and are shown
+  only to people allowed to see the source data. Run `python manage.py os_detect_alerts` every few minutes
+  (Home also triggers detection at most every 120 s).
+- Modules plug in through registries instead of editing Home: `PRIORITY_SOURCES`, `MY_WORK_SOURCES`,
+  `BRIEFING_SOURCES`, `TEAM_SOURCES`, `INSIGHT_SOURCES`, `calendar.SOURCES`, `search.PROVIDERS`, `ai.EXTRA_TOOLS`,
+  `alerts.DETECTORS`, `documents.access.register`, and workflow hooks via `@on_decision(policy_key)`.
+
+## IDs: the OS namespace is separate from the apps
+
+| Record | Format | Where |
+|---|---|---|
+| Employee | `EMP-000001` (`CLICK_OS_EMPLOYEE_ID_PREFIX`) | Business OS only |
+| Position / candidate | `POS-…` / `CAN-…` | Business OS only |
+| Customer | `CL-CU-…` (older `CLK-CS-…` kept) | Customer app |
+| Partner | `CLK-PT-…` | Partner app |
+| Order | `CLK-…` | Customer & partner apps |
+
+Employee IDs come from `people.models.next_id`, which skips values already taken, so explicit or imported IDs never
+collide. Old `CLK-E-` employee numbers were migrated to `EMP-`. An OS session is also separate from customer and
+partner sessions: staff sign in to Business OS with their own account and audience.
+
+## People & HR (module 2)
+
+`backend/apps/people/` (API at `/api/v1/os/people/*`), `apps/business-os/src/pages/people/` (UI at `/people`).
+
+- Directory vs record: everyone with directory access sees names, roles, teams and work contact details; the
+  employment record, personal details, compensation, cases and restricted documents need their own permissions.
+  Personal and pay data never reach search, AI, notifications, analytics or exports that the reader can't see.
+- New scope `reports`: managers see their reporting line (from `Employee.manager`); anyone with direct reports gets
+  the implicit `people-manager` role.
+- People 360 profile tabs are chosen by the server per viewer. Compensation and payroll need MFA outside
+  development, and every view of pay, cases and restricted documents is audited.
+- Everything that changes employment goes through the approval engine: leave (manager, plus HR from 6 days),
+  attendance corrections, positions, offers (hiring limits apply), promotions, transfers, salary revisions and exits.
+  Approved changes apply on the effective date and trigger an access review; completing an exit revokes OS access.
+- Analytics are aggregates only; groups smaller than 3 are hidden. Anonymous surveys show results only once the
+  minimum group has answered.
+- Payroll: Business OS produces payroll *inputs* (attendance, paid/unpaid leave, current pay). It does not calculate
+  pay; the payroll provider / Finance stays the record of payments.
+- Documents use the central store (`apps/documents`): versioned, file type checked by content, access rules owned
+  by the module.
+- Jobs: `python manage.py os_people_jobs` daily (apply effective-dated changes, probation and document reminders).
 
 ## Business AI
 
@@ -122,7 +168,8 @@ npm run dev -w @click/business-os      # http://localhost:5177 (proxies /api to 
 
 Sign in with **Development personas** on the login screen (DEBUG only) or any persona email with the development
 password printed by the seed. Personas: CEO, System Administrator, Finance Head, Finance Manager (South region),
-HR Manager, Operations Manager, Partner Manager, Branch Manager (Hyderabad), two employees, Internal Auditor.
+HR Manager, Operations Manager, Partner Manager, Branch Manager (Hyderabad), Recruiter, HR Business Partner
+(South), employees (one on probation), Internal Auditor. Employee numbers run EMP-000001 to EMP-000014.
 
 Production bootstrap (no default passwords):
 
@@ -134,7 +181,7 @@ It installs the role templates and policies and prints a one-time invitation lin
 
 ## Not built yet (by design)
 
-Business module screens (Finance ledger, HR attendance/payroll, Procurement, Inventory, …) show an honest
+Business module screens other than People & HR (Finance ledger, Procurement, Inventory, …) show an honest
 "coming in a later phase" page listing their planned areas and the permissions the person already holds. Email /
-SMS / push delivery, SSO, phone-OTP sign-in for staff and meeting calendars are extension points with no provider
-configured.
+SMS / push delivery, SSO, phone-OTP sign-in for staff, meeting calendars and the payroll provider
+(`CLICK_PAYROLL_PROVIDER`) are extension points with no provider configured.

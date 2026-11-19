@@ -17,6 +17,9 @@ function ctx(over: Partial<OSContext> = {}): OSContext {
     employee: null,
     organization: { id: 'o1', name: 'Click', code: 'click', currency: 'INR', timezone: 'Asia/Kolkata' },
     orgContext: { units: [], location: null, department: null, team: null },
+    contextOptions: { orgWide: false, units: [], selected: null, switchable: false },
+    isManager: false,
+    directReports: 0,
     roles: [{ id: 'r1', key: 'employee', name: 'Employee' }],
     permissions: [{ code: 'finance.expense.create', scope: 'own' }],
     mfaBlocked: [],
@@ -87,4 +90,19 @@ test('login asks how you are accessing, then the identifier, then the password',
   await user.type(screen.getByLabelText(/Work email or employee ID/), 'CLK-E-0002');
   await user.click(screen.getByRole('button', { name: 'Continue' }));
   expect(await screen.findByLabelText('Password')).toBeInTheDocument();
+});
+
+test('People & HR navigation shows only the sections the server returns', async () => {
+  const { PeopleLayout } = await import('../pages/people/common');
+  vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+    const url = String(input);
+    const body = url.includes('/os/people/nav')
+      ? { sections: [{ key: 'experience', label: 'Employee experience', items: [{ key: 'me', label: 'My HR', path: '/people/me' }] }], hasEmployeeRecord: true, isManager: false }
+      : {};
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  });
+  wrap(<Routes><Route path="/people" element={<PeopleLayout />} /></Routes>, ctx(), '/people');
+  expect(await screen.findByRole('link', { name: 'My HR' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Compensation/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Employee relations/ })).not.toBeInTheDocument();
 });

@@ -7,6 +7,20 @@ import { useOS } from '../session/OSSession';
 
 interface Item { key: string; group: string; title: string; subtitle?: string; icon: IconName; path: string }
 
+const SUPER: Record<string, string> = {
+  employee: 'People', candidate: 'People', partner: 'People', user: 'People', approval: 'Business', task: 'Business', position: 'Business',
+  opening: 'Business', hr_request: 'Business', document: 'Content', role: 'System', unit: 'System', department: 'System',
+};
+const COMMANDS: { title: string; path: string; icon: IconName; perm?: string }[] = [
+  { title: 'View pending approvals', path: '/approvals', icon: 'check' }, { title: 'Create task', path: '/tasks?new=1', icon: 'plus' },
+  { title: 'Open my work', path: '/my-work', icon: 'inbox' }, { title: 'Open notifications', path: '/notifications', icon: 'bell' },
+  { title: 'Open alerts', path: '/alerts', icon: 'alert' }, { title: 'Open announcements', path: '/announcements', icon: 'send' },
+  { title: 'Request leave', path: '/people/leave?new=1', icon: 'calendar', perm: 'people.leave.create' },
+  { title: 'Check in / out', path: '/people/attendance', icon: 'clock', perm: 'people.attendance.create' },
+  { title: 'Open my HR', path: '/people/me', icon: 'user' }, { title: 'Open settings', path: '/settings/preferences', icon: 'settings' },
+  { title: 'Security & sessions', path: '/settings/security', icon: 'shield' },
+];
+
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => { const t = setTimeout(() => setV(value), ms); return () => clearTimeout(t); }, [value, ms]);
@@ -16,6 +30,7 @@ function useDebounced<T>(value: T, ms: number): T {
 /** Global search + jump-to. Results come from the server's permission-filtered search: nothing restricted can appear. */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
   const ctx = useOS();
+  const perms = new Set(ctx.permissions.map((p) => p.code));
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
@@ -27,14 +42,17 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
 
   const items = useMemo<Item[]>(() => {
     const lower = term.toLowerCase();
-    const pages: Item[] = ctx.navigation.flatMap((g) => g.items).filter((i) => !lower || i.label.toLowerCase().includes(lower))
-      .slice(0, lower ? 5 : 8).map((i) => ({ key: `nav:${i.key}`, group: 'Go to', title: i.label, icon: i.icon as IconName, path: i.path }));
+    const pages: Item[] = ctx.navigation.flatMap((g) => g.items).filter((i) => !lower || `open ${i.label}`.toLowerCase().includes(lower))
+      .slice(0, lower ? 5 : 8).map((i) => ({ key: `nav:${i.key}`, group: 'Go to', title: `Open ${i.label}`, icon: i.icon as IconName, path: i.path }));
+    const cmds: Item[] = COMMANDS.filter((c) => (!c.perm || perms.has(c.perm)) && (!lower || c.title.toLowerCase().includes(lower)))
+      .slice(0, lower ? 5 : 4).map((c) => ({ key: `cmd:${c.path}`, group: 'Commands', title: c.title, icon: c.icon, path: c.path }));
     const actions: Item[] = ctx.quickActions.filter((a) => !lower || a.label.toLowerCase().includes(lower))
       .slice(0, 4).map((a) => ({ key: `qa:${a.key}`, group: 'Actions', title: a.label, icon: a.icon as IconName, path: a.path }));
     const results: Item[] = term.length >= 2 ? (search.data?.groups ?? []).flatMap((g) =>
-      g.results.map((r) => ({ key: `${g.type}:${r.id}`, group: g.label, title: r.title, subtitle: r.subtitle, icon: 'search' as IconName, path: r.path }))) : [];
-    return [...results, ...actions, ...pages];
-  }, [ctx, term, search.data]);
+      g.results.map((r) => ({ key: `${g.type}:${r.id}`, group: `${SUPER[g.type] ?? 'Other'} · ${g.label}`, title: r.title, subtitle: r.subtitle,
+        icon: 'search' as IconName, path: r.path }))).sort((a, b) => a.group.localeCompare(b.group)) : [];
+    return [...results, ...cmds, ...actions, ...pages];
+  }, [ctx, term, search.data, perms]);
 
   useEffect(() => setActive(0), [term]);
 

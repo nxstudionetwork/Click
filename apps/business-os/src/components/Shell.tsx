@@ -7,6 +7,7 @@ import { relative } from '../lib/format';
 import { useOS, useOSSession } from '../session/OSSession';
 import { AIPanel } from './AIPanel';
 import { CommandPalette } from './CommandPalette';
+import { ContextSwitcher, HelpMenu, useShortcuts } from './HeaderExtras';
 import { Avatar } from './ui';
 
 const COLLAPSE_KEY = 'click-os:sidebar-collapsed';
@@ -24,6 +25,12 @@ export function Shell({ children }: { children: ReactNode }) {
   const [ai, setAi] = useState(false);
 
   useEffect(() => { setNavOpen(false); }, [location.pathname]);
+  useShortcuts();
+  useEffect(() => {
+    const h = () => setPalette(true);
+    window.addEventListener('os:palette', h);
+    return () => window.removeEventListener('os:palette', h);
+  }, []);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true); }
@@ -110,10 +117,7 @@ function Header({ unread, critical, onMenu, onSearch, onAI }: { unread: number; 
   return (
     <header className="header">
       <button className="icon-btn header__menu" onClick={onMenu} aria-label="Open navigation"><Icon name="menu" size={20} /></button>
-      <span className="header__org" title="Organization">
-        <Icon name="building" size={16} />{ctx.organization.name}
-        {ctx.orgContext.location && <span className="muted">· {ctx.orgContext.location.name}</span>}
-      </span>
+      <ContextSwitcher />
       <button className="header__search" onClick={onSearch} aria-label="Search Business OS">
         <Icon name="search" size={16} /><span>Search people, approvals, tasks…</span><kbd>Ctrl K</kbd>
       </button>
@@ -129,7 +133,7 @@ function Header({ unread, critical, onMenu, onSearch, onAI }: { unread: number; 
           </button>
           {menu === 'notif' && <NotificationsPopover onClose={close} />}
         </div>
-        <Link to="/help" className="icon-btn" aria-label="Help" title="Help"><Icon name="help" size={19} /></Link>
+        <HelpMenu />
         <div style={{ position: 'relative' }} ref={userRef}>
           <button className="user-btn" onClick={() => setMenu(menu === 'user' ? 'none' : 'user')} aria-haspopup="menu" aria-expanded={menu === 'user'}>
             <Avatar name={ctx.user.fullName} src={ctx.user.avatarUrl} />
@@ -157,11 +161,17 @@ function Header({ unread, critical, onMenu, onSearch, onAI }: { unread: number; 
   );
 }
 
+const CATS = [['', 'All'], ['approvals', 'Approvals'], ['tasks', 'Tasks'], ['security', 'Security'], ['business', 'Business'], ['system', 'System']] as const;
+
 function NotificationsPopover({ onClose }: { onClose: () => void }) {
-  const q = useQuery({ queryKey: ['os', 'notifications', 'peek'], queryFn: () => api.notifications.list({ page_size: 6 }) });
+  const [cat, setCat] = useState('');
+  const q = useQuery({ queryKey: ['os', 'notifications', 'peek', cat], queryFn: () => api.notifications.list({ page_size: 8, category: cat || undefined }) });
   return (
     <div className="popover" style={{ width: 360, padding: 0 }} role="dialog" aria-label="Recent notifications">
-      <div className="card__head"><h2>Notifications</h2><Link to="/notifications" onClick={onClose} className="small">View all</Link></div>
+      <div className="card__head"><h2>Notifications</h2><div className="row"><Link to="/settings/preferences" onClick={onClose} className="xs">Preferences</Link><Link to="/notifications" onClick={onClose} className="small">View all</Link></div></div>
+      <div className="tabs" style={{ margin: 0, padding: '0 8px' }} role="tablist">
+        {CATS.map(([k, l]) => <button key={k} role="tab" aria-selected={cat === k} className="tab" style={{ height: 32, padding: '0 8px' }} onClick={() => setCat(k)}>{l}</button>)}
+      </div>
       {q.isPending ? <div className="loader"><span className="muted small">Loading…</span></div> : q.data?.results.length ? (
         <ul className="list">
           {q.data.results.map((n) => (

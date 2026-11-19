@@ -12,8 +12,10 @@ export function ApprovalDetailPage() {
   const toast = useToast();
   const q = useQuery({ queryKey: ['os', 'approval', id], queryFn: () => api.approvals.get(id) });
   const [comment, setComment] = useState('');
+  const [amount, setAmount] = useState('');
   const act = useMutation({
-    mutationFn: (action: 'approve' | 'reject' | 'cancel' | 'comment') => api.approvals.act(id, action, comment),
+    mutationFn: (action: 'approve' | 'reject' | 'cancel' | 'comment' | 'request_changes' | 'resubmit') =>
+      action === 'resubmit' ? api.approvals.resubmit(id, { comment, amount: amount || undefined }) : api.approvals.act(id, action, comment),
     onSuccess: (data, action) => {
       qc.setQueryData(['os', 'approval', id], data);
       void qc.invalidateQueries({ queryKey: ['os', 'approvals'] });
@@ -68,17 +70,28 @@ export function ApprovalDetailPage() {
               {r.decidedAt && <><dt>Decided</dt><dd>{fmtDateTime(r.decidedAt)}</dd></>}
             </dl>
           </Card>
-          {(r.canDecide || r.canCancel || r.status === 'pending') && (
+          {(r.canDecide || r.canCancel || r.status === 'pending' || r.status === 'changes_requested') && (
             <Card title={r.canDecide ? 'Your decision' : 'Comment'}>
               <div className="stack">
                 {r.decidingOnBehalfOf && <Alert tone="info">You’re deciding on behalf of {r.decidingOnBehalfOf.fullName}.</Alert>}
                 {act.error && <Alert tone="error">{apiMessage(act.error)}</Alert>}
                 <TextArea label={r.canDecide ? 'Comment (required to reject)' : 'Comment'} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={2000} />
+                {r.status === 'changes_requested' && <Alert tone="warning">Sent back for changes. {r.canResubmit ? 'Update and resubmit when ready.' : 'Waiting for the requester.'}</Alert>}
+                {r.canResubmit && (
+                  <div className="stack" style={{ gap: 8 }}>
+                    {r.amount && <label className="field"><span className="field__label">Amount (optional change)</span>
+                      <input className="field__input" type="number" min="1" value={amount} placeholder={r.amount} onChange={(e) => setAmount(e.target.value)} /></label>}
+                    <Button loading={act.isPending && act.variables === 'resubmit'} onClick={() => act.mutate('resubmit')}>Resubmit</Button>
+                  </div>
+                )}
                 {r.canDecide && (
                   <div className="row">
                     <Button className="grow" loading={act.isPending && act.variables === 'approve'} disabled={act.isPending} onClick={() => act.mutate('approve')}>Approve</Button>
                     <Button className="grow" variant="danger" loading={act.isPending && act.variables === 'reject'} disabled={act.isPending || !comment.trim()} onClick={() => act.mutate('reject')}>Reject</Button>
                   </div>
+                )}
+                {r.canRequestChanges && (
+                  <Button variant="outline" size="sm" disabled={act.isPending || !comment.trim()} onClick={() => act.mutate('request_changes')}>Request changes (uses your comment)</Button>
                 )}
                 <div className="row">
                   {r.status === 'pending' && <Button variant="outline" size="sm" disabled={!comment.trim() || act.isPending} onClick={() => act.mutate('comment')}>Add comment</Button>}

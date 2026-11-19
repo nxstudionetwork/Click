@@ -49,6 +49,9 @@ export interface OSContext {
   approvalAuthority: { type: string; label: string; maxAmount: string | null; currency: string }[];
   navigation: OSNavGroup[];
   quickActions: OSQuickAction[];
+  contextOptions: { orgWide: boolean; units: { id: UUID; name: string; code: string; type: string; typeLabel: string; depth: number }[]; selected: UUID | null; switchable: boolean };
+  isManager: boolean;
+  directReports: number;
   session: { id: UUID; expiresAt: ISO; mfaVerified: boolean } | null;
   security: { sensitiveRequiresMfa: boolean; idleMinutes: number };
 }
@@ -68,18 +71,19 @@ export interface OSNotification {
 }
 
 // --- approvals & tasks ---------------------------------------------------------------------------
-export type OSApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type OSApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'changes_requested';
 export interface OSPersonRef { id: UUID; fullName: string }
 export interface OSApprovalBrief {
   id: UUID; reference: string; title: string; status: OSApprovalStatus; amount: string | null; currency: string;
   policy: { key: string; name: string; module: string }; requestedBy: OSPersonRef; orgUnit: string | null;
   currentSequence: number | null; dueAt: ISO | null; createdAt: ISO; decidedAt: ISO | null;
+  priority?: string; flags?: string[]; amountUnit?: 'currency' | 'days' | 'count';
 }
 export interface OSApprovalDetail extends OSApprovalBrief {
   description: string; department: string | null;
   steps: { sequence: number; name: string; status: string; decidedBy: OSPersonRef | null; onBehalfOf: OSPersonRef | null; decidedAt: ISO | null; comment: string; dueAt: ISO | null }[];
   history: { kind: string; author: OSPersonRef | null; body: string; at: ISO }[];
-  canDecide: boolean; decidingOnBehalfOf: OSPersonRef | null; canCancel: boolean;
+  canDecide: boolean; decidingOnBehalfOf: OSPersonRef | null; canCancel: boolean; canResubmit?: boolean; canRequestChanges?: boolean;
 }
 export interface OSPolicyOption { key: string; name: string; description: string; module: string; currency: string; requiresAmount: boolean; levels: { name: string; minAmount: string }[] }
 export interface OSDelegation { id: UUID; person: OSPersonRef; policy: string; startsAt: ISO; endsAt: ISO; reason: string }
@@ -103,6 +107,7 @@ export interface OSModule {
 export interface OSAIAnswer {
   answer: string; available: boolean; denied?: boolean; tool?: string | null; provider?: string; note?: string;
   items?: { title: string; subtitle: string; path: string }[];
+  proposedAction?: { type: 'create_task'; title: string; assignee: 'me' };
 }
 
 // --- security ---------------------------------------------------------------------------------
@@ -228,15 +233,16 @@ export const osApi = (http: HttpClient) => ({
     ask: (question: string) => http.request<OSAIAnswer>('/os/ai', { method: 'POST', body: { question } }),
   },
   people: {
-    get: (id: string) => http.request<OSEmployee>(`/os/people/${enc(id)}`),
     picker: (q: string) => http.request<{ results: { id: UUID; fullName: string; designation: string | null }[] }>('/os/people/picker', { query: { q } }),
   },
   approvals: {
     list: (box: 'inbox' | 'mine' | 'decided' | 'all', status?: string) =>
       http.request<{ results: OSApprovalBrief[]; box: string; counts: { inbox: number; minePending: number } }>('/os/approvals', { query: { box, status } }),
     get: (id: string) => http.request<OSApprovalDetail>(`/os/approvals/${enc(id)}`),
-    act: (id: string, action: 'approve' | 'reject' | 'cancel' | 'comment', comment = '') =>
+    act: (id: string, action: 'approve' | 'reject' | 'cancel' | 'comment' | 'request_changes', comment = '') =>
       http.request<OSApprovalDetail>(`/os/approvals/${enc(id)}/${action}`, { method: 'POST', body: { comment } }),
+    resubmit: (id: string, input: { comment?: string; title?: string; description?: string; amount?: string }) =>
+      http.request<OSApprovalDetail>(`/os/approvals/${enc(id)}/resubmit`, { method: 'POST', body: input }),
     submit: (input: { policyKey: string; title: string; amount?: string; description?: string }) =>
       http.request<OSApprovalBrief>('/os/approvals', { method: 'POST', body: input }),
     policies: () => http.request<{ results: OSPolicyOption[] }>('/os/approvals/policies'),

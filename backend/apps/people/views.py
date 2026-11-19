@@ -696,11 +696,23 @@ class ImportView(OSView):
 def _settings(model, ser, search=("name",)):
     perms = {"view": "people.settings.view", "create": "people.settings.configure", "edit": "people.settings.configure", "delete": "people.settings.configure"}
 
+    # HR configuration is organisation-wide reference data: holding the permission at any scope is enough
+    # (several of these models have no location to scope by).
     class L(ScopedList):
-        pass
+        def get_queryset(self):
+            self.authz.require(self.perms["view"])
+            return self.base_queryset()
+
+        def require_on(self, code, obj):
+            self.authz.require(code)
 
     class D(ScopedDetail):
-        pass
+        def get_queryset(self):
+            self.authz.require(self.perms["view"])
+            return self.base_queryset()
+
+        def require_on(self, code, obj):
+            self.authz.require(code)
 
     for cls in (L, D):
         cls.model, cls.serializer_class, cls.perms, cls.scope_fields = model, ser, perms, {}

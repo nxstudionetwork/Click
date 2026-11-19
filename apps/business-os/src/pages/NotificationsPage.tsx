@@ -1,25 +1,38 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@click/ui';
-import { api } from '../lib/api';
+import { Button, Icon, useToast } from '@click/ui';
+import { api, apiMessage, home } from '../lib/api';
 import { fmtDateTime, relative } from '../lib/format';
-import { Card, Empty, LoadingRows, PageHeader, Pager, QueryError, Status } from '../components/ui';
+import { Card, Empty, LoadingRows, PageHeader, Pager, QueryError, Status, Tabs } from '../components/ui';
 
 export function NotificationsPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [unread, setUnread] = useState(false);
   const [type, setType] = useState('');
+  const [cat, setCat] = useState('');
   const [page, setPage] = useState(1);
-  const q = useQuery({ queryKey: ['os', 'notifications', unread, type, page], queryFn: () => api.notifications.list({ unread: unread ? 'true' : undefined, type: type || undefined, page }) });
+  const q = useQuery({ queryKey: ['os', 'notifications', unread, type, cat, page], queryFn: () => api.notifications.list({ unread: unread ? 'true' : undefined, type: type || undefined, category: cat || undefined, page }) });
+  const act = useMutation({ mutationFn: ({ id, a }: { id: string; a: 'unread' | 'archive' }) => home.notificationAction(id, a), onSuccess: refreshAll,
+    onError: (e) => toast(apiMessage(e), 'error') });
+  const clear = useMutation({ mutationFn: home.clearRead, onSuccess: (r) => { toast(`${r.cleared} cleared`); refreshAll(); } });
   const refresh = () => { void qc.invalidateQueries({ queryKey: ['os', 'notifications'] }); };
+  function refreshAll() { refresh(); }
   const readAll = useMutation({ mutationFn: api.notifications.readAll, onSuccess: refresh });
   const readOne = useMutation({ mutationFn: api.notifications.read, onSuccess: refresh });
 
   return (
     <>
       <PageHeader title="Notifications" description="Approvals, tasks, security and business alerts. Choose what reaches you in Settings → Preferences."
-        actions={<Button variant="outline" loading={readAll.isPending} disabled={!q.data?.unread} onClick={() => readAll.mutate()}>Mark all as read</Button>} />
+        actions={<>
+          <Link to="/settings/preferences" className="btn btn--ghost" style={{ textDecoration: 'none' }}>Preferences</Link>
+          <Button variant="outline" loading={clear.isPending} onClick={() => clear.mutate()}>Clear read</Button>
+          <Button variant="outline" loading={readAll.isPending} disabled={!q.data?.unread} onClick={() => readAll.mutate()}>Mark all as read</Button>
+        </>} />
+      <Tabs value={cat} onChange={(v) => { setCat(v); setPage(1); }} items={[{ value: '', label: 'All' }, { value: 'approvals', label: 'Approvals' },
+        { value: 'tasks', label: 'Tasks' }, { value: 'security', label: 'Security' }, { value: 'business', label: 'Business' }, { value: 'system', label: 'System' }]
+        .map((t) => ({ ...t, count: t.value ? (q.data as never as { categoryCounts?: Record<string, number> })?.categoryCounts?.[t.value] || undefined : q.data?.unread || undefined }))} />
       <Card flush>
         <div className="toolbar">
           <label className="row small"><input type="checkbox" checked={unread} onChange={(e) => { setUnread(e.target.checked); setPage(1); }} />Unread only</label>
@@ -44,7 +57,9 @@ export function NotificationsPage() {
                     <span className="xs muted" title={fmtDateTime(n.createdAt)}>{n.typeLabel} · {relative(n.createdAt)}</span>
                   </div>
                   {n.priority !== 'normal' && <Status value={n.priority} tone={n.priority === 'critical' ? 'danger' : 'warning'} />}
-                  {!n.read && <Button size="sm" variant="ghost" onClick={() => readOne.mutate(n.id)}>Mark read</Button>}
+                  {!n.read ? <Button size="sm" variant="ghost" onClick={() => readOne.mutate(n.id)}>Mark read</Button>
+                    : <Button size="sm" variant="ghost" onClick={() => act.mutate({ id: n.id, a: 'unread' })}>Mark unread</Button>}
+                  <button className="icon-btn" aria-label={`Clear ${n.title}`} title="Clear" onClick={() => act.mutate({ id: n.id, a: 'archive' })}><Icon name="close" size={15} /></button>
                 </li>
               ))}
             </ul>
