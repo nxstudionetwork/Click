@@ -54,9 +54,15 @@ class GeoPlace:
     lat: float
     lng: float
     kind: str = "search"  # search | reverse
+    street: str = ""
+    locality: str = ""
+    city: str = ""
+    state: str = ""
+    postal_code: str = ""
 
     def as_dict(self) -> dict:
-        return {"kind": self.kind, "label": self.label, "address": self.address, "lat": self.lat, "lng": self.lng}
+        return {"kind": self.kind, "label": self.label, "address": self.address, "lat": self.lat, "lng": self.lng,
+                "parts": {"street": self.street, "locality": self.locality, "city": self.city, "state": self.state, "postal_code": self.postal_code}}
 
 
 def _photon_place(feature: dict, kind: str) -> GeoPlace | None:
@@ -74,7 +80,10 @@ def _photon_place(feature: dict, kind: str) -> GeoPlace | None:
         if part and part != name and part not in seen:
             seen.add(part)
             address.append(part)
-    return GeoPlace(name, ", ".join(address[:4]), round(float(coords[1]), 6), round(float(coords[0]), 6), kind)
+    postcode = (p.get("postcode") or "").replace(" ", "")
+    return GeoPlace(name, ", ".join(address[:4]), round(float(coords[1]), 6), round(float(coords[0]), 6), kind,
+                    street=street, locality=p.get("locality") or p.get("district") or "", city=p.get("city") or p.get("county") or "",
+                    state=p.get("state") or "", postal_code=postcode if postcode.isdigit() and len(postcode) == 6 else "")
 
 
 def geocoder_enabled() -> bool:
@@ -106,7 +115,11 @@ def reverse(lat: float, lng: float) -> GeoPlace | None:
                      ttl=60 * 60 * 24 * 7)
     features = (data or {}).get("features", []) if isinstance(data, dict) else []
     place = _photon_place(features[0], "reverse") if features else None
-    return GeoPlace(place.label, place.address, lat, lng, "reverse") if place else None
+    if not place:
+        return None
+    from dataclasses import replace
+
+    return replace(place, lat=lat, lng=lng, kind="reverse")
 
 
 @dataclass(frozen=True)

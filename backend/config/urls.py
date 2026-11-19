@@ -51,6 +51,7 @@ from apps.offers import views as offer_views
 from apps.rewards import views as reward_views
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
+from apps.catalog import facets as catalog_facets
 from apps.catalog.views import ProductDetailView, StoreMenuView
 from apps.notifications import views as notification_views
 from apps.support import views as support_views
@@ -175,6 +176,8 @@ api_v1 = [
     path("stores/<slug:slug>/menu", StoreMenuView.as_view(), name="store-menu"),
     path("products/<uuid:pk>", ProductDetailView.as_view(), name="product-detail"),
     path("search", SearchView.as_view(), name="search"),
+    path("catalog/facets", catalog_facets.FacetsView.as_view(), name="catalog-facets"),
+    path("catalog/dishes", catalog_facets.DishesView.as_view(), name="catalog-dishes"),
     path("search/global", search_views.GlobalSearchView.as_view(), name="search-global"),
     path("gift-cards", giftcard_views.DesignsView.as_view(), name="gift-card-designs"),
     path("discover", discover_views.FeedView.as_view(), name="discover"),
@@ -224,6 +227,8 @@ api_v1 = [
     path("buzz/posts/<uuid:pk>/save", buzz_views.ReactionView.as_view(), {"kind": "save"}, name="buzz-save"),
     path("buzz/posts/<uuid:pk>/event", buzz_views.EventView.as_view(), name="buzz-event"),
     path("buzz/posts/<uuid:pk>/report", buzz_views.ReportView.as_view(), name="buzz-report"),
+    path("buzz/items/<str:key>/like", buzz_views.ItemReactionView.as_view(), {"kind": "like"}, name="buzz-item-like"),
+    path("buzz/items/<str:key>/save", buzz_views.ItemReactionView.as_view(), {"kind": "save"}, name="buzz-item-save"),
     path("store-categories", store_views.StoreCategoryListView.as_view(), name="store-categories"),
     path("customer/", include(customer_urls)),
     path("partner/", include(ride_partner_urls)),

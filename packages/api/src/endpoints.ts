@@ -4,7 +4,7 @@ import type {
   DevLoginInfo, IdentityExchangeResult, SignupInput,
   Address, AddressInput, AssistantCapabilities, AssistantMessage, BuzzItem, ProfileSummary, Ride, RidePlaceResult, RideQuote, RideRequestInput, RideSummary, RideTripInput, Booking, BuddyReply, ClickEvent, EventDetail, Cart, Notification, NotificationCategory, OfferWithStore, OrderDetail,
   OrderSummary, Paginated, PartnerAvailability, PartnerEarnings, PartnerHome, PartnerLocationInput, PartnerNotification, PartnerProfileInput, PartnerState, PartnerType, PartnerWork, WorkItem, PlaceOrderInput, ProductDetail, ReorderResult, RewardsSummary, SearchResults, SearchScope,
-  CheckoutResult, ReturnRequestInput, CreateBookingInput,
+  CheckoutResult, ReturnRequestInput, CreateBookingInput, CatalogFacets, ProductWithStore,
   Session, Store, StoreCategory, StoreMenu, StoreQuery, StoreRecommendation, StoreType, SupportCategory, SupportTicket, User, WishlistItem,
 } from './types';
 import type { ShowtimeSeatMap } from './showtime';
@@ -44,6 +44,11 @@ export const catalogApi = (http: HttpClient) => ({
   search: (q: string, scope: SearchScope = 'all', signal?: AbortSignal) =>
     http.request<SearchResults>('/search', { query: { q, scope }, auth: false, signal }),
   offers: (type?: StoreType) => http.request<Paginated<OfferWithStore>>('/offers', { query: { type }, auth: false }),
+  /** Filters that fit the chosen category, from the live menus of its stores (dish types, real price bands, veg). */
+  facets: (type: StoreType, category: string) =>
+    http.request<CatalogFacets>('/catalog/facets', { query: { type, category }, auth: false }),
+  dishes: (q: { type: StoreType; category: string; section?: string; maxPrice?: number; veg?: boolean }) =>
+    http.request<{ results: ProductWithStore[] }>('/catalog/dishes', { query: { type: q.type, category: q.category, section: q.section, max_price: q.maxPrice, veg: q.veg ? 1 : undefined }, auth: false }),
   /** Click. Buzz: actionable instants from real offers, shows and stores. */
   /** Signed-in viewers also get their likes and saves on partner posts. */
   buzz: (limit = 12) => http.request<{ results: BuzzItem[] }>('/buzz', { query: { limit } }),

@@ -40,7 +40,7 @@ export function useShopActions() {
       }
       const ok = await confirm({
         title: 'Start a new cart?',
-        message: `${(e as ApiError).message.replace(/ Clear it to add this (item|product)\.$/, '')} Shopping is checked out separately. Clear the cart and add ${p.name}?`,
+        message: `${(e as ApiError).message.replace(/ Clear it to add this (item|product)\.$/, '')} Shop orders are checked out separately. Clear the cart and add ${p.name}?`,
         confirmLabel: 'Clear cart and add', cancelLabel: 'Keep my cart',
       });
       if (!ok) return false;

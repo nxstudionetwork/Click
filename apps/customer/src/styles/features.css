@@ -259,3 +259,10 @@ details.faq p { margin-top: var(--s-2); color: var(--c-ink-2); font-size: var(--
 .ticket__body .badge { justify-self: start; }
 
 /* ---- Development-only UI ---- */
+
+/* Category-aware filters (service pages) */
+.svc-facets { display: flex; flex-direction: column; gap: 6px; }
+.svc-facets__label { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--c-theme-strong, var(--c-ink-3)); }
+.svc-facets__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.svc-facets__n { margin-left: 4px; font-size: 11px; font-weight: 700; color: var(--c-ink-3); }
+.svc-dishes .rail__item { width: 200px; }

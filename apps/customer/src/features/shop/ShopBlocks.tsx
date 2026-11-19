@@ -26,7 +26,7 @@ export function CampaignHero({ campaigns }: { campaigns: ShopCampaign[] }) {
   if (!campaigns.length) return null;
   const go = (d: number) => setI((x) => (x + d + campaigns.length) % campaigns.length);
   return (
-    <section className="shop-hero" aria-roledescription="carousel" aria-label="Shopping campaigns">
+    <section className="shop-hero" aria-roledescription="carousel" aria-label="Shop campaigns">
       {campaigns.map((c, n) => (
         <div key={c.id} className={`shop-hero__slide ${n === i ? 'is-on' : ''}`} aria-hidden={n !== i} role="group" aria-roledescription="slide"
           aria-label={`${n + 1} of ${campaigns.length}`}>

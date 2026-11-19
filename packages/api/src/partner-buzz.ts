@@ -75,6 +75,9 @@ export const partnerBuzzApi = (http: HttpClient) => ({
 export const buzzEngageApi = (http: HttpClient) => ({
   like: (id: UUID) => http.request<{ on: boolean; count: number }>(`/buzz/posts/${id}/like`, { method: 'POST' }),
   save: (id: UUID) => http.request<{ on: boolean; count: number }>(`/buzz/posts/${id}/save`, { method: 'POST' }),
+  /** Like / save a Click-built item (offer, show, store…) by its feed id, e.g. "offer:<uuid>". */
+  itemReact: (key: string, kind: 'like' | 'save') =>
+    http.request<{ on: boolean; count: number }>(`/buzz/items/${encodeURIComponent(key)}/${kind}`, { method: 'POST' }),
   event: (id: UUID, kind: 'view' | 'click') =>
     http.request<{ counted: boolean }>(`/buzz/posts/${id}/event`, { method: 'POST', body: { kind } }),
   report: (id: UUID, reason: BuzzReportReason, note = '') =>

@@ -52,7 +52,10 @@ class SearchView(APIView):
             if scope in StoreType.values:
                 qs = qs.filter(store_type=scope)
             stores = StoreSerializer(qs.distinct().order_by("-is_accepting_orders", "-rating_average")[:LIMIT], many=True).data
-        product_qs = public_products().filter(Q(name__icontains=q) | Q(brand__icontains=q) | Q(category__name__icontains=q))
+        if q.isdigit() and 8 <= len(q) <= 14:  # a scanned barcode: exact product match only
+            product_qs = public_products().filter(barcode=q)
+        else:
+            product_qs = public_products().filter(Q(name__icontains=q) | Q(brand__icontains=q) | Q(category__name__icontains=q))
         if scope in StoreType.values:
             product_qs = product_qs.filter(store__store_type=scope)
         products = ProductWithStoreSerializer(product_qs.order_by("-is_featured", "name")[:LIMIT], many=True).data

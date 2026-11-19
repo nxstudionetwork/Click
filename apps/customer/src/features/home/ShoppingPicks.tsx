@@ -11,8 +11,8 @@ export function ShoppingPicks() {
   if (!section || section.kind !== 'products' || section.products.length === 0) return null;
   const deals = section.id === 'deals';
   return (
-    <HomeSection id="shop-picks" title={deals ? 'Shopping deals' : 'Popular in Shopping'} icon="shop" theme="shopping" to="/shopping"
-      subtitle={deals ? 'Limited-time prices from Click. sellers.' : 'Picked from Click. Shopping.'} linkLabel="Open Shopping">
+    <HomeSection id="shop-picks" title={deals ? 'Shop deals' : 'Popular in Shop'} icon="shop" theme="shopping" to="/shopping"
+      subtitle={deals ? 'Limited-time prices from Click. sellers.' : 'Picked from Click. Shop.'} linkLabel="Open Shop">
       <div className="shop-rail">{section.products.slice(0, 8).map((p) => <ShopCard key={p.id} p={p} />)}</div>
     </HomeSection>
   );

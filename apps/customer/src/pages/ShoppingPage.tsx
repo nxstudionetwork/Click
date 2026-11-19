@@ -25,7 +25,7 @@ export function ShoppingPage() {
     <div className="shop" data-theme="shopping">
       <div className="shop-top">
         <div className="shop-intro">
-          <h1>Shopping</h1>
+          <h1>Shop</h1>
           <p>Everything you want. One Click. away.</p>
         </div>
         {home.isPending ? <Skeleton height={190} radius={18} /> : <CampaignHero campaigns={home.data?.campaigns ?? []} />}
@@ -36,7 +36,7 @@ export function ShoppingPage() {
         <>
           <section className="shop-sec" aria-label="Shop by Category">
             <SectionHead title="Shop by Category" />
-            {home.isPending ? <div className="shop-cats">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} height={96} radius={18} />)}</div>
+            {home.isPending ? <div className="shop-cats">{Array.from({ length: 10 }, (_, i) => <Skeleton key={i} height={104} radius={18} />)}</div>
               : <CategoryTiles categories={home.data.categories} />}
           </section>
           {home.isPending ? <><RailSkeleton /><RailSkeleton /></> : home.data.sections.map((s) => <Section key={s.id} s={s} onCompare={onCompare} />)}
@@ -90,7 +90,7 @@ function DiscoveryFeed({ onCompare, personalHint }: { onCompare: (p: { id: strin
   return (
     <section className="shop-sec" aria-label="Product feed">
       <SectionHead title={personalHint ? 'More for You' : 'Discover More'}
-        subtitle={personalHint ? 'Ordered by what you browse, save and buy.' : 'Popular picks across Click. Shopping.'} />
+        subtitle={personalHint ? 'Ordered by what you browse, save and buy.' : 'Popular picks across Click. Shop.'} />
       {feed.isError ? <ErrorState error={feed.error} onRetry={() => feed.refetch()} /> : (
         <div className="shop-grid">
           {items.map((p) => <ShopCard key={p.id} p={p} onCompare={onCompare} />)}

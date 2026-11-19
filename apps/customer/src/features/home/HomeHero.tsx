@@ -6,7 +6,7 @@ import { greetingFor } from '../../config/home';
 const ORBIT: { icon: IconName; theme: string; label: string }[] = [
   { icon: 'food', theme: 'food', label: 'Food' },
   { icon: 'ride', theme: 'ride', label: 'Rides' },
-  { icon: 'shop', theme: 'shopping', label: 'Shopping' },
+  { icon: 'shop', theme: 'shopping', label: 'Shop' },
   { icon: 'ticket', theme: 'movies', label: 'Showtime' },
   { icon: 'grocery', theme: 'grocery', label: 'Groceries' },
 ];

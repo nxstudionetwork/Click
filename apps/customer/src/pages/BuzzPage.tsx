@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/ui';
 import { BuzzMedia, KIND_ICON } from '../features/buzz/BuzzCard';
@@ -17,6 +17,11 @@ export function BuzzPage() {
   const navigate = useNavigate();
   const feed = useRef<HTMLDivElement>(null);
   const start = params.get('item');
+  const [onlySaved, setOnlySaved] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  useEffect(() => { if (buzz.data) setSavedIds(new Set(buzz.data.results.filter((i) => i.engage?.saved).map((i) => i.id))); }, [buzz.data]);
+  const items = (buzz.data?.results ?? []).filter((i) => !onlySaved || savedIds.has(i.id));
+  const markSaved = (id: string, on: boolean) => setSavedIds((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
 
   useEffect(() => {
     if (!start || !buzz.data) return;
@@ -29,7 +34,9 @@ export function BuzzPage() {
       <header className="buzz-page__head">
         <button className="icon-btn icon-btn--glass" aria-label="Back" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}><Icon name="back" /></button>
         <h1><span>Click.</span> BUZZ</h1>
-        <Link to="/" className="icon-btn icon-btn--glass" aria-label="Click. home"><Icon name="home" /></Link>
+        <button type="button" className={`buzz-page__saved ${onlySaved ? 'is-on' : ''}`} aria-pressed={onlySaved} onClick={() => setOnlySaved((v) => !v)}>
+          <Icon name="bookmark" size={16} />{onlySaved ? 'All' : 'Saved'}{!onlySaved && savedIds.size > 0 && <b>{savedIds.size}</b>}
+        </button>
       </header>
 
       {buzz.isPending ? (
@@ -39,6 +46,11 @@ export function BuzzPage() {
           <h2>Something went wrong.</h2><p>We couldn’t load Buzz right now.</p>
           <button className="btn btn--buzz" onClick={() => buzz.refetch()}>Try again</button>
         </div>
+      ) : onlySaved && items.length === 0 ? (
+        <div className="buzz-page__state">
+          <h2>Nothing saved yet</h2><p>Tap Save on any instant to keep it here.</p>
+          <button className="btn btn--buzz" onClick={() => setOnlySaved(false)}>See all instants</button>
+        </div>
       ) : buzz.data.results.length === 0 ? (
         <div className="buzz-page__state">
           <h2>Nothing buzzing yet</h2><p>Offers, shows and new places will appear here.</p>
@@ -46,7 +58,7 @@ export function BuzzPage() {
         </div>
       ) : (
         <div className="buzz-feed" ref={feed} aria-label="Buzz instants">
-          {buzz.data.results.map((item, i) => <Slide key={item.id} item={item} index={i} total={buzz.data.results.length} />)}
+          {items.map((item, i) => <Slide key={item.id} item={item} index={i} total={items.length} onSavedChange={(on) => markSaved(item.id, on)} />)}
           <div className="buzz-slide buzz-slide--end">
             <p>You’re all caught up.</p>
             <Link to="/" className="btn btn--buzz">Back to Home</Link>
@@ -57,8 +69,8 @@ export function BuzzPage() {
   );
 }
 
-/** One instant. Partner posts also show the featured item, like/save/report, and count views and button taps. */
-function Slide({ item, index, total }: { item: BuzzItem; index: number; total: number }) {
+/** One instant: like, save and share on every item; partner posts also show the featured item, can be reported, and count views and taps. */
+function Slide({ item, index, total, onSavedChange }: { item: BuzzItem; index: number; total: number; onSavedChange: (saved: boolean) => void }) {
   const ref = useBuzzView(item);
   const id = postId(item);
   const it = item.post?.item;
@@ -68,7 +80,7 @@ function Slide({ item, index, total }: { item: BuzzItem; index: number; total: n
         <BuzzMedia item={item} eager={index < 2} />
         <span className="buzz-slide__shade" aria-hidden="true" />
         <span className="buzz-card__tag"><Icon name={KIND_ICON[item.kind]} size={12} />{item.tag}</span>
-        {item.post && <PostEngage item={item} />}
+        <PostEngage item={item} onSavedChange={onSavedChange} />
         <div className="buzz-slide__body">
           <span className="buzz-card__handle">@{item.source.handle}{item.kind === 'post' ? ` · ${item.source.name}` : ''}</span>
           <h2>{item.title}</h2>

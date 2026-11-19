@@ -9,7 +9,7 @@ export const hi: Partial<Record<Key, string>> = {
   'explore.title': 'एक्सप्लोर', 'explore.subtitle': 'Click. आपके लिए जो कुछ कर सकता है', 'explore.quick': 'जल्दी के काम',
   'explore.features': 'Click. सुविधाएँ', 'explore.yours': 'आपका Click.', 'explore.account': 'अकाउंट',
   'quick.offers': 'ऑफ़र', 'quick.orders': 'ऑर्डर', 'quick.rides': 'राइड्स', 'quick.bookings': 'बुकिंग', 'quick.parcels': 'पार्सल',
-  'quick.wishlist': 'विशलिस्ट', 'quick.rewards': 'रिवॉर्ड्स', 'quick.buzz': 'Click Buzz', 'quick.help': 'मदद और सहायता', 'quick.refer': 'दोस्त को बुलाएँ',
+  'quick.wishlist': 'विशलिस्ट', 'quick.rewards': 'रिवॉर्ड्स', 'quick.buzz': 'Click Buzz', 'quick.help': 'मदद और सहायता', 'quick.refer': 'दोस्त को बुलाएँ', 'quick.cart': 'कार्ट', 'quick.invoices': 'इनवॉइस', 'quick.reviews': 'रिव्यू',
   'account.profile': 'प्रोफ़ाइल', 'account.addresses': 'सेव की गई जगहें', 'account.payments': 'भुगतान', 'account.notifications': 'सूचनाएँ',
   'account.settings': 'सेटिंग्स और प्राइवेसी', 'account.security': 'सुरक्षा', 'account.about': 'Click. के बारे में', 'account.terms': 'उपयोग की शर्तें',
   'account.privacy': 'प्राइवेसी नीति', 'account.logout': 'लॉग आउट',

@@ -24,14 +24,14 @@ export function ShopComparePage() {
   };
   useEffect(() => { if (cmp.data) cmp.data.products.forEach((p) => compareStore.add({ id: p.id, name: p.name, categorySlug: p.categorySlug })); }, [cmp.data]);
 
-  if (ids.length < 2) return <EmptyState icon="compare" title="Choose products to compare" message="Tick “Compare” on two to four products in the same category." action={<Link to="/shopping" className="btn btn--primary">Go to Shopping</Link>} />;
+  if (ids.length < 2) return <EmptyState icon="compare" title="Choose products to compare" message="Tick “Compare” on two to four products in the same category." action={<Link to="/shopping" className="btn btn--primary">Go to Shop</Link>} />;
   if (cmp.isError) return <ErrorState error={cmp.error} onRetry={() => cmp.refetch()} />;
   if (cmp.isPending) return <Skeleton height={320} radius={18} />;
   const { products, rows } = cmp.data;
 
   return (
     <div className="stack" data-theme="shopping">
-      <Link to="/shopping" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', paddingLeft: 4 }}><Icon name="back" size={18} /> Shopping</Link>
+      <Link to="/shopping" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', paddingLeft: 4 }}><Icon name="back" size={18} /> Shop</Link>
       <h1>Compare products</h1>
       <p className="small muted">Rows that differ are highlighted. Missing details are shown as “—”; nothing is filled in for a seller.</p>
       <div className="ctable-wrap">

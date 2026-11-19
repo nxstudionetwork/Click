@@ -64,7 +64,7 @@ class DealInline(admin.TabularInline):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ["name", "store", "shop_category", "brand", "price", "rating_average", "units_sold", "is_available", "is_active"]
     list_filter = ["is_available", "is_active", "dietary", "store__store_type", "shop_category"]
-    search_fields = ["name", "store__name", "brand"]
+    search_fields = ["name", "store__name", "brand", "barcode"]
     autocomplete_fields = ["store", "brand_ref", "shop_category"]
     readonly_fields = ["rating_average", "rating_count", "units_sold"]
     inlines = [ProductImageInline, VariantInline, AttributeValueInline, DealInline]

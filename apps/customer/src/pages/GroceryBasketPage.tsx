@@ -34,7 +34,7 @@ export function GroceryBasketPage() {
   if (cart.mode !== 'basket' || cart.items.length === 0 || !g) {
     return (
       <div className="gr-page" data-theme="grocery">
-        <EmptyState icon="grocery" title="Your basket is waiting" message={cart.items.length ? 'Your cart has Food or Shopping items. They check out separately.' : 'Add groceries from stores near you.'}
+        <EmptyState icon="grocery" title="Your basket is waiting" message={cart.items.length ? 'Your cart has Food or Shop items. They check out separately.' : 'Add groceries from stores near you.'}
           action={<Link to={cart.items.length ? '/cart' : '/groceries'} className="btn btn--primary">{cart.items.length ? 'Open cart' : 'Browse Groceries'}</Link>} />
       </div>
     );

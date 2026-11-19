@@ -74,11 +74,11 @@ export function ShopSearchPanel({ open, onClose, initial = '' }: { open: boolean
     onError: (e) => setNote(e instanceof ApiError ? e.message : 'Image search didn’t work. Search by text instead.') });
 
   return (
-    <Sheet open={open} onClose={onClose} label="Search Shopping" variant="full">
+    <Sheet open={open} onClose={onClose} label="Search Shop" variant="full">
       <form className="ssearch" data-theme="shopping" onSubmit={(e) => { e.preventDefault(); go(q); }}>
         <div className="ssearch__bar">
           <Icon name="search" size={20} />
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products, brands & categories" aria-label="Search Shopping" enterKeyHint="search" />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products, brands & categories" aria-label="Search Shop" enterKeyHint="search" />
           {q && <button type="button" className="shop-search__tool" aria-label="Clear" onClick={() => setQ('')}><Icon name="close" size={16} /></button>}
           {voiceOn && (
             <button type="button" className="shop-search__tool" aria-label={rec.state === 'listening' ? 'Stop listening' : 'Search by voice'} aria-pressed={rec.state === 'listening'}

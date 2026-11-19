@@ -59,17 +59,22 @@
 .shop-sec--deals .pcard__ref { color: rgb(255 255 255 / 55%); }
 
 /* Category tiles (2-4 columns on phones, 3-5 tablets, up to 8 on desktop) */
-.shop-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 104px), 1fr)); gap: var(--s-3); }
-@media (min-width: 380px) { .shop-cats { grid-template-columns: repeat(4, 1fr); } }
-@media (min-width: 640px) { .shop-cats { grid-template-columns: repeat(5, 1fr); } }
-@media (min-width: 1024px) { .shop-cats { grid-template-columns: repeat(8, 1fr); } }
+/* Shop by category: exactly two rows that scroll sideways together (snap per column, edge fade hints at more). */
+.shop-cats { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: 96px; gap: 10px;
+  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; padding: 2px var(--s-4) 6px;
+  margin: 0 calc(-1 * var(--s-4));
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent); }
+.shop-cats::-webkit-scrollbar { display: none; }
+.shop-cats > * { scroll-snap-align: start; min-width: 0; }
+@media (min-width: 1024px) { .shop-cats { grid-auto-columns: 118px; margin: 0; padding: 2px 0 6px; } }
 .shop-cat { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 12px 6px 10px; border-radius: 18px;
   background: var(--c-surface); border: 1px solid var(--c-line); transition: transform .18s ease, border-color .18s, box-shadow .18s; }
 .shop-cat:hover, .shop-cat:focus-visible { transform: translateY(-2px); border-color: rgb(var(--c-theme-rgb) / 40%); box-shadow: 0 10px 22px -16px rgb(var(--c-theme-rgb) / 70%); }
 .shop-cat__art { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; color: var(--c-theme-solid);
   background: radial-gradient(80% 80% at 30% 20%, rgb(var(--c-theme-rgb) / 22%), rgb(var(--c-theme-rgb) / 7%)); overflow: hidden; }
 .shop-cat__art img { width: 100%; height: 100%; object-fit: cover; }
-.shop-cat__name { font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 1.2; color: var(--c-ink); }
+.shop-cat__name { font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 1.2; color: var(--c-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em; }
 .shop-cat[aria-current='page'] { border-color: var(--c-theme-solid); background: var(--c-theme-soft); }
 
 /* Rails and grids */

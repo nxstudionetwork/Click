@@ -26,8 +26,8 @@ export function CartPage() {
   if (c.mode === 'basket' && c.items.length > 0) return <Navigate to="/groceries/basket" replace />;
   if (c.items.length === 0) {
     return (
-      <EmptyState icon="bag" title="Your cart is waiting for something great." message="Add something from Food, Groceries or Shopping."
-        action={<div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}><Link to="/shopping" className="btn btn--primary">Browse Shopping</Link><Link to="/food" className="btn btn--outline">Order food</Link></div>} />
+      <EmptyState icon="bag" title="Your cart is waiting for something great." message="Add something from Food, Groceries or Shop."
+        action={<div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}><Link to="/shopping" className="btn btn--primary">Browse Shop</Link><Link to="/food" className="btn btn--outline">Order food</Link></div>} />
     );
   }
   const marketplace = c.mode === 'marketplace';

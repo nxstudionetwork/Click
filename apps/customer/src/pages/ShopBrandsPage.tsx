@@ -11,7 +11,7 @@ export function ShopBrandsPage() {
   const brands = useQuery({ queryKey: ['shop', 'brands'], queryFn: api.shop.brands });
   return (
     <div className="stack" data-theme="shopping">
-      <Link to="/shopping" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', paddingLeft: 4 }}><Icon name="back" size={18} /> Shopping</Link>
+      <Link to="/shopping" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', paddingLeft: 4 }}><Icon name="back" size={18} /> Shop</Link>
       <h1>Brands</h1>
       <p className="small muted">Brands sold by Click. sellers, most products first.</p>
       {brands.isError ? <ErrorState error={brands.error} onRetry={() => brands.refetch()} />

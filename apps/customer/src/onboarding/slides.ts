@@ -6,7 +6,7 @@ export interface Slide { key: string; title: string; caption: string; icon: Icon
 export const SLIDES: Slide[] = [
   { key: 'food', title: 'Food', caption: 'Favourite kitchens, delivered hot', icon: 'food', tile: 'food', alt: 'Plates of freshly cooked dishes on a table', tint: '#c2410c' },
   { key: 'groceries', title: 'Groceries', caption: 'Fresh produce in minutes', icon: 'grocery', tile: 'grocery', alt: 'Shelves stocked with fresh vegetables', tint: '#237a35' },
-  { key: 'shopping', title: 'Shopping', caption: 'Everything for you and your home', icon: 'shop', tile: 'shopping', alt: 'Shopper carrying shopping bags', tint: '#2b2ba8' },
+  { key: 'shopping', title: 'Shop', caption: 'Everything for you and your home', icon: 'shop', tile: 'shopping', alt: 'Shopper carrying shopping bags', tint: '#2b2ba8' },
   { key: 'rides', title: 'Rides', caption: 'Get around the city', icon: 'ride', tile: 'ride', alt: 'Driver at the wheel at sunset', tint: '#0b6b7a' },
   { key: 'parcels', title: 'Parcels', caption: 'Send and receive across town', icon: 'parcel', tile: 'parcel', alt: 'A parcel being handed over at the door', tint: '#b35c00' },
   { key: 'entertainment', title: 'Showtime', caption: 'Your seat is waiting', icon: 'ticket', tile: 'movies', alt: 'Audience watching a film in a cinema', tint: '#b4203f' },

@@ -8,6 +8,7 @@ import { SERVICE_PAGES, type ServiceSort } from '../config/servicePages';
 import { serviceForStoreType } from '../config/services';
 import { HomeSection } from '../features/home/HomeSection';
 import { FilterBar, HorizontalDiscovery, ServiceIntro, ServiceSearch, type ServiceFilters } from '../features/service/ServiceBlocks';
+import { CategoryFacets, FacetResults, useCategoryFacets } from '../features/service/CategoryFacets';
 import { ServiceExploreCategories, ServiceNearby, ServiceOffers, ServicePopular, ServiceRecommended } from '../features/service/ServiceSections';
 import { StoreFeed } from '../features/service/StoreFeed';
 import { useStoreCategories } from '../features/stores/hooks';
@@ -27,6 +28,8 @@ export function ServicePage({ storeType }: { storeType: StoreType }) {
   const [params, setParams] = useSearchParams();
   const { point } = useDeliveryLocation();
   const category = params.get('category') ?? '';
+  const section = params.get('section') ?? '';
+  const under = params.get('under') ?? '';
   const q = params.get('q') ?? '';
   const filters: ServiceFilters = {
     veg: params.get('veg') === '1', rating: params.get('rating') === '1', offers: params.get('offers') === '1',
@@ -61,14 +64,20 @@ export function ServicePage({ storeType }: { storeType: StoreType }) {
   const filtering = !!(category || FLAGS.some((f) => filters[f]) || filters.sort);
   const clearAll = () => { written.current = ''; setDraft(''); setParams({}, { replace: true }); };
   const selectedName = categories.data?.find((c) => c.slug === category)?.name;
+  // A diet filter only shows where the chosen category actually has vegetarian items.
+  const facets = useCategoryFacets(storeType, category);
+  const vegAvailable = config.vegFilter && (!category || facets.data?.veg !== false);
 
   return (
     <div className="svc" data-theme={serviceForStoreType(storeType).theme}>
       <ServiceIntro config={config} />
-      <HorizontalDiscovery config={config} categories={categories.data ?? []} loading={categories.isPending} selected={category} onSelect={(slug) => patch({ category: slug })} />
+      <HorizontalDiscovery config={config} categories={categories.data ?? []} loading={categories.isPending} selected={category}
+        onSelect={(slug) => patch({ category: slug, section: '', under: '', veg: slug && filters.veg && facets.data?.veg === false ? '' : (filters.veg ? '1' : '') })} />
       <ServiceSearch config={config} value={draft} onChange={setDraft} />
-      <FilterBar config={config} filters={filters} hasLocation={!!point}
+      <FilterBar config={{ ...config, vegFilter: vegAvailable }} filters={filters} hasLocation={!!point}
         onChange={(p) => patch(Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'boolean' ? (v ? '1' : '') : String(v ?? '')])))} />
+      <CategoryFacets type={storeType} category={category} categoryName={selectedName ?? 'this category'} section={section} under={under}
+        onChange={(next) => patch(Object.fromEntries(Object.entries(next).map(([k, v]) => [k, v ?? ''])))} />
 
       {q ? (
         <SearchResults config={config} q={q} query={query} onClear={clearAll} />
@@ -78,6 +87,8 @@ export function ServicePage({ storeType }: { storeType: StoreType }) {
             <h2 id="results-h">{selectedName ?? `All ${config.plural}`}</h2>
             <button className="btn btn--ghost btn--sm" onClick={clearAll}><Icon name="close" size={16} /> Clear</button>
           </div>
+          <FacetResults type={storeType} category={category} section={section} under={under} veg={filters.veg} label={selectedName ?? config.dishesLabel}
+            onClear={() => patch({ section: '', under: '' })} />
           <StoreFeed query={query} plural={config.plural}
             empty={{ title: `No ${config.plural} match`, message: 'Try removing a filter or choosing another category.', action: <button className="btn btn--outline" onClick={clearAll}>Clear filters</button> }} />
         </section>

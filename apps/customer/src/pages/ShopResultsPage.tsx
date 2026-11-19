@@ -65,7 +65,7 @@ export function ShopResultsPage({ mode }: { mode: 'search' | 'category' | 'brand
   return (
     <div className="shop-results" data-theme="shopping">
       <Link to={mode === 'category' && category.data?.parent ? `/shopping/c/${category.data.parent.slug}` : '/shopping'} className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', paddingLeft: 4 }}>
-        <Icon name="back" size={18} /> {mode === 'category' && category.data?.parent ? category.data.parent.name : 'Shopping'}
+        <Icon name="back" size={18} /> {mode === 'category' && category.data?.parent ? category.data.parent.name : 'Shop'}
       </Link>
 
       {mode === 'category' && (category.isPending ? <Skeleton height={88} radius={22} /> : category.data && (

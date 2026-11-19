@@ -25,9 +25,9 @@ export interface ExploreBanner {
 }
 
 export const EXPLORE_BANNERS: ExploreBanner[] = [
-  { id: 'everything', eyebrow: 'Click.', title: 'Everything you need.', titleAccent: 'One Click. away.', subtitle: 'Food. Rides. Shopping. Entertainment. Services. More.', theme: 'default', visual: 'brand', icons: ['food', 'ride', 'shop', 'film', 'wrench'] },
+  { id: 'everything', eyebrow: 'Click.', title: 'Everything you need.', titleAccent: 'One Click. away.', subtitle: 'Food. Rides. Shop. Entertainment. Services. More.', theme: 'default', visual: 'brand', icons: ['food', 'ride', 'shop', 'film', 'wrench'] },
   { id: 'discover', eyebrow: 'Food', title: 'Discover more.', titleAccent: 'Do more.', subtitle: 'Kitchens near you, from breakfast dosas to late-night desserts.', theme: 'food', visual: 'food', action: { label: 'Order food', to: '/food' } },
-  { id: 'everyday', eyebrow: 'Shopping', title: 'Food. Rides.', titleAccent: 'Shopping. More.', subtitle: 'Gadgets, fashion and home, delivered by Click.', theme: 'shopping', visual: 'shopping', action: { label: 'Start shopping', to: '/shopping' } },
+  { id: 'everyday', eyebrow: 'Shop', title: 'Food. Rides.', titleAccent: 'Shop. More.', subtitle: 'Gadgets, fashion and home, delivered by Click.', theme: 'shopping', visual: 'shopping', action: { label: 'Start shopping', to: '/shopping' } },
   { id: 'connected', eyebrow: 'Click. Buzz', title: 'Your world.', titleAccent: 'Connected by Click.', subtitle: 'Instants from places and shows near you, each one a tap from done.', theme: 'buzz', visual: 'market', action: { label: 'Watch Buzz', to: '/buzz' } },
   { id: 'new', eyebrow: 'Showtime', title: 'There’s always', titleAccent: 'something new on Click.', subtitle: 'Pick a show, choose your seats, and you’re in.', theme: 'movies', visual: 'entertainment', action: { label: 'Book a show', to: '/showtime' } },
   { id: 'possibilities', eyebrow: 'Offers', title: 'One app.', titleAccent: 'Countless possibilities.', subtitle: 'Live offers from stores and kitchens across Click.', theme: 'offers', visual: 'groceries', action: { label: 'See offers', to: '/offers' } },

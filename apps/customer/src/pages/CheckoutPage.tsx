@@ -80,7 +80,7 @@ export function CheckoutPage() {
   if (cart.isError) return <ErrorState error={cart.error} onRetry={() => cart.refetch()} />;
   if (cart.isPending || addresses.isPending) return <div className="stack"><Skeleton height={28} width="30%" /><Skeleton height={220} /></div>;
   if (!c || c.items.length === 0) {
-    return <EmptyState icon="bag" title="Nothing to check out" message="Your cart is empty." action={<Link to="/shopping" className="btn btn--primary">Browse Shopping</Link>} />;
+    return <EmptyState icon="bag" title="Nothing to check out" message="Your cart is empty." action={<Link to="/shopping" className="btn btn--primary">Browse Shop</Link>} />;
   }
   const currency = c.groups[0]?.store.currency ?? 'INR';
   const list = addresses.data ?? [];

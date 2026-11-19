@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ApiError, type ShopProductDetail, type ShopVariant } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, QuantityStepper, Skeleton, type IconName } from '../components/ui';
 import { useThemeOverride } from '../components/layout/AppShell';
+import { BackBar } from '../components/layout/BackBar';
 import { useDeliveryLocation } from '../location/LocationProvider';
 import { formatMoney } from '../lib/format';
 import { api } from '../lib/api';
@@ -25,7 +26,7 @@ export function ShopProductPage({ id }: { id: string }) {
 
   if (product.isError) {
     return product.error instanceof ApiError && product.error.status === 404
-      ? <EmptyState icon="alert" title="This product isn’t available" message="It may no longer be sold on Click." action={<Link to="/shopping" className="btn btn--outline">Back to Shopping</Link>} />
+      ? <EmptyState icon="alert" title="This product isn’t available" message="It may no longer be sold on Click." action={<Link to="/shopping" className="btn btn--outline">Back to Shop</Link>} />
       : <ErrorState error={product.error} onRetry={() => product.refetch()} />;
   }
   if (product.isPending) return <div className="spdp"><Skeleton height={360} radius={22} /><div className="stack"><Skeleton height={20} width="30%" /><Skeleton height={34} width="80%" /><Skeleton height={40} width="50%" /><Skeleton height={140} /></div></div>;
@@ -68,10 +69,12 @@ function Detail({ p, addressLabel }: { p: ShopProductDetail; addressLabel: strin
 
   return (
     <div className="stack" data-theme="shopping">
-      <nav className="small muted row" aria-label="Breadcrumb" style={{ flexWrap: 'wrap', gap: 4 }}>
-        <Link to="/shopping">Shopping</Link><span aria-hidden="true">›</span>
-        {p.categorySlug && <><Link to={`/shopping/c/${p.categorySlug}`}>{p.category}</Link></>}
-      </nav>
+      <BackBar fallback={p.categorySlug ? `/shopping/c/${p.categorySlug}` : '/shopping'}>
+        <nav className="row" aria-label="Breadcrumb" style={{ flexWrap: 'wrap', gap: 4 }}>
+          <Link to="/shopping">Shop</Link><span aria-hidden="true">›</span>
+          {p.categorySlug && <Link to={`/shopping/c/${p.categorySlug}`}>{p.category}</Link>}
+        </nav>
+      </BackBar>
       <div className="spdp">
         <div className="spdp__gallery">
           <div className="spdp__main">

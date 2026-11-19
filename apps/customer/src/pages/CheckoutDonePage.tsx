@@ -35,7 +35,7 @@ export function CheckoutDonePage() {
           <div><dt>Total</dt><dd>{formatMoney(checkout.total, checkout.currency)}</dd></div>
         </dl>
         <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link to={grocery ? '/groceries' : '/shopping'} className="btn btn--glass btn--sm">{grocery ? 'Continue Groceries' : 'Continue Shopping'}</Link>
+          <Link to={grocery ? '/groceries' : '/shopping'} className="btn btn--glass btn--sm">{grocery ? 'Continue Groceries' : 'Continue in Shop'}</Link>
           <Link to="/activity" className="btn btn--glass btn--sm">Activity</Link>
         </div>
       </section>

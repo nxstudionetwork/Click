@@ -638,6 +638,8 @@ export interface BuzzItem {
     item: { name: string; price: Money; available: boolean } | null;
     offer: string | null;
   } | null;
+  /** Real likes and this viewer's like / save, for every item (posts and Click-built items alike). */
+  engage: { likes: number; liked: boolean; saved: boolean };
 }
 
 // --- Wallet -----------------------------------------------------------------
@@ -892,7 +894,16 @@ export interface PartnerLocationInput {
 export interface RidePlace { label: string; address: string; lat: number; lng: number }
 export interface RidePlaceResult extends RidePlace { kind: 'saved' | 'recent' | 'place' | 'search' }
 /** A place from the maps search or current-location lookup (apps.geo). */
-export interface GeoPlace extends RidePlace { kind: 'search' | 'reverse' }
+export interface GeoPlace extends RidePlace {
+  kind: 'search' | 'reverse';
+  parts?: { street: string; locality: string; city: string; state: string; postalCode: string };
+}
+export interface CatalogFacets {
+  sections: { name: string; count: number }[];
+  priceBands: { max: number; label: string; count: number }[];
+  veg: boolean;
+  items: number;
+}
 export interface GeoRoute { distanceKm: number; durationMin: number; geometry: [number, number][] }
 export interface RideTypeInfo { code: string; name: string; description: string; icon: string; seats: number }
 export interface RideFare { base: Money; distance: Money; time: Money; fees: Money; subtotal: Money; discount: Money; total: Money; minimumApplied?: boolean }

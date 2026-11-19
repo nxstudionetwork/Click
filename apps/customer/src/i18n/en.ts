@@ -7,7 +7,7 @@ export const en = {
   'explore.title': 'Explore', 'explore.subtitle': 'Everything Click. can do for you', 'explore.quick': 'Quick actions',
   'explore.features': 'Click. Features', 'explore.yours': 'Your Click.', 'explore.account': 'Account',
   'quick.offers': 'Offers', 'quick.orders': 'Orders', 'quick.rides': 'Rides', 'quick.bookings': 'Bookings', 'quick.parcels': 'Parcels',
-  'quick.wishlist': 'Wishlist', 'quick.rewards': 'Rewards', 'quick.buzz': 'Click Buzz', 'quick.help': 'Help & Support', 'quick.refer': 'Refer a friend',
+  'quick.wishlist': 'Wishlist', 'quick.rewards': 'Rewards', 'quick.buzz': 'Click Buzz', 'quick.help': 'Help & Support', 'quick.refer': 'Refer a friend', 'quick.cart': 'Cart', 'quick.invoices': 'Invoices', 'quick.reviews': 'Reviews',
   'account.profile': 'Profile', 'account.profileHint': 'Your Click. ID and details', 'account.addresses': 'Saved locations', 'account.addressesHint': 'Home, work and other places',
   'account.payments': 'Payments', 'account.paymentsHint': 'Methods and history', 'account.notifications': 'Notifications', 'account.notificationsHint': 'Updates and preferences',
   'account.settings': 'Settings & privacy', 'account.settingsHint': 'Language, personalisation, appearance', 'account.security': 'Security & safety',

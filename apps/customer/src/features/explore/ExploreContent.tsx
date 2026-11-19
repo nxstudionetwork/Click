@@ -8,11 +8,16 @@ import { useT } from '../../i18n';
 import type { Key } from '../../i18n/en';
 
 const QUICK: { to: string; key: Key; icon: IconName }[] = [
-  { to: '/offers', key: 'quick.offers', icon: 'tag' }, { to: '/orders', key: 'quick.orders', icon: 'bag' }, { to: '/rides', key: 'quick.rides', icon: 'ride' },
-  { to: '/bookings/mine', key: 'quick.bookings', icon: 'ticket' }, { to: '/parcels/history', key: 'quick.parcels', icon: 'parcel' },
-  { to: '/wishlist', key: 'quick.wishlist', icon: 'heart' }, { to: '/rewards', key: 'quick.rewards', icon: 'star' }, { to: '/buzz', key: 'quick.buzz', icon: 'play' },
-  { to: '/referrals', key: 'quick.refer', icon: 'gift' }, { to: '/help', key: 'quick.help', icon: 'help' },
+  { to: '/orders', key: 'quick.orders', icon: 'bag' }, { to: '/bookings/mine', key: 'quick.bookings', icon: 'ticket' },
+  { to: '/parcels/history', key: 'quick.parcels', icon: 'parcel' }, { to: '/wishlist', key: 'quick.wishlist', icon: 'heart' },
+  { to: '/cart', key: 'quick.cart', icon: 'bag' }, { to: '/account/invoices', key: 'quick.invoices', icon: 'receipt' },
+  { to: '/account/reviews', key: 'quick.reviews', icon: 'star' }, { to: '/help', key: 'quick.help', icon: 'help' },
 ];
+/** Shown as live badges in "Your Click.", so the feature grid doesn't repeat them. */
+const IN_BADGES = new Set(['wallet', 'rewards', 'activity', 'offers']);
+/** Reachable from Quick actions, Account or the header. */
+const ELSEWHERE = new Set(['cart', 'invoices', 'reviews', 'safety', 'search']);
+const FEATURES = CLICK_FEATURES.filter((f) => !IN_BADGES.has(f.id) && !ELSEWHERE.has(f.id));
 const ACCOUNT: { to: string; title: Key; hint?: Key; icon: IconName }[] = [
   { to: '/account', title: 'account.profile', hint: 'account.profileHint', icon: 'user' },
   { to: '/account/addresses', title: 'account.addresses', hint: 'account.addressesHint', icon: 'pin' },
@@ -51,7 +56,7 @@ export function ExploreContent({ titleId = 'explore-h', onNavigate }: { titleId?
       <section className="explore__sec" aria-labelledby={`${titleId}-features`}>
         <h2 id={`${titleId}-features`} className="explore__h">{t('explore.features')}</h2>
         <ul className="xfeatures">
-          {CLICK_FEATURES.map((f) => (
+          {FEATURES.map((f) => (
             <li key={f.id}>
               <Link to={f.path} className={`xfeature ${f.status === 'soon' ? 'xfeature--soon' : ''}`} data-theme={f.theme}
                 title={f.status === 'soon' ? `${f.name}: coming soon` : f.tagline}

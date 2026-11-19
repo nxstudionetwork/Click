@@ -109,6 +109,18 @@ class BuzzReaction(BaseModel):
         constraints = [models.UniqueConstraint(fields=["post", "user", "kind"], name="buzz_reaction_once")]
 
 
+class BuzzItemReaction(BaseModel):
+    """Like / save on a Buzz item Click builds from live records (offer, show, store, product…), keyed by its feed id,
+    e.g. "offer:<uuid>". Partner posts keep using BuzzReaction."""
+
+    item_key = models.CharField(max_length=64, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="buzz_item_reactions")
+    kind = models.CharField(max_length=4, choices=BuzzReaction.Kind.choices)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["item_key", "user", "kind"], name="buzz_item_reaction_once")]
+
+
 class BuzzEvent(BaseModel):
     class Kind(models.TextChoices):
         VIEW = "view", "View"

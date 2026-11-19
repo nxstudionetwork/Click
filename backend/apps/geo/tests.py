@@ -3,7 +3,7 @@ import pytest
 from apps.geo import providers
 
 PHOTON = {"features": [
-    {"geometry": {"coordinates": [77.6386519, 12.9782941]}, "properties": {"name": "Indiranagar Metro Station", "street": "CMH Road",
+    {"geometry": {"coordinates": [77.6386519, 12.9782941]}, "properties": {"name": "Indiranagar Metro Station", "street": "CMH Road", "postcode": "560038",
                                                                           "locality": "Indiranagar", "city": "Bengaluru", "state": "Karnataka", "countrycode": "IN"}},
     {"geometry": {"coordinates": [-0.1, 51.5]}, "properties": {"name": "Somewhere abroad", "countrycode": "GB"}},
 ]}
@@ -54,3 +54,8 @@ def test_everything_falls_back_when_maps_are_off(auth_api, settings):
 
 def test_maps_need_sign_in(api):
     assert api.get("/api/v1/geo/search", {"q": "x"}).status_code == 401
+
+
+def test_reverse_returns_address_parts_for_saving(auth_api, maps_on):
+    parts = auth_api.get("/api/v1/geo/reverse", {"lat": 12.97, "lng": 77.64}).json()["place"]["parts"]
+    assert parts == {"street": "CMH Road", "locality": "Indiranagar", "city": "Bengaluru", "state": "Karnataka", "postalCode": "560038"}

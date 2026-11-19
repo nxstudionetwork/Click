@@ -111,7 +111,7 @@ def home(request) -> dict:
     if not any(s["id"] == "for_you" for s in sections):
         popular = base.filter(Q(units_sold__gt=0) | Q(rating_count__gt=0)).order_by("-units_sold", "-rating_average", "id")
         _section(sections, request, "for_you", "Just for You",
-                 "Popular on Click. Shopping right now. This gets more personal as you browse and shop.", popular)
+                 "Popular on Click. Shop right now. This gets more personal as you browse and shop.", popular)
 
     if sig.viewed:
         last = listings().filter(pk__in=sig.viewed[:5]).first()

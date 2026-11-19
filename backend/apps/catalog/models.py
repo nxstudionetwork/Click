@@ -116,6 +116,8 @@ class Product(BaseModel):
         max_digits=10, decimal_places=2, null=True, blank=True, help_text="Original price when discounted (shown struck out)."
     )
     brand = models.CharField(max_length=80, blank=True)
+    barcode = models.CharField(max_length=14, blank=True, db_index=True,
+                               help_text="GTIN / EAN / UPC printed on the pack (8-14 digits). Customers can scan it to find the product.")
     unit_label = models.CharField(max_length=40, blank=True, help_text="e.g. '1 kg', '500 ml', 'Pack of 6'.")
     stock_quantity = models.PositiveIntegerField(
         null=True, blank=True, help_text="Tracked inventory. Null = not tracked (made to order)."

@@ -1,64 +1,77 @@
-import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useAuth } from '../../auth/AuthProvider';
 import { Button, Icon } from '../../components/ui';
 import { api } from '../../lib/api';
+import { useAuth } from '../../auth/AuthProvider';
 import { useCapabilities } from './useCapabilities';
 import { useRecorder } from './useRecorder';
+import { speechSupported, useSpeech } from './useSpeech';
 
 /**
- * Voice-first input with an honest text fallback. Records only when the server reports a configured speech
- * provider; otherwise it says voice isn't on yet and lets the customer type. It never pretends to have listened.
+ * Voice input. Uses Click.'s server speech provider when it is configured; otherwise the browser's own speech
+ * recogniser (no keys, works signed in or out). Live words appear as the customer speaks; typing always works too.
+ * It never pretends to have listened: unsupported browsers and blocked microphones say so plainly.
  */
-export function VoiceInput({ onText, placeholder, listeningLabel = 'Listening…', busy = false }: {
-  onText: (text: string) => void; placeholder: string; listeningLabel?: string; busy?: boolean;
+export function VoiceInput({ onText, placeholder, listeningLabel = 'Listening…', busy = false, autoStart = true }: {
+  onText: (text: string) => void; placeholder: string; listeningLabel?: string; busy?: boolean; autoStart?: boolean;
 }) {
   const { status } = useAuth();
   const caps = useCapabilities();
   const [draft, setDraft] = useState('');
+  const serverVoice = status === 'authenticated' && caps.data?.voice === true;
+
   const transcribe = useMutation({
     mutationFn: (audio: Blob) => api.customer.assistant.transcribe(audio),
     onSuccess: (r) => { if (r.text) onText(r.text); },
   });
   const rec = useRecorder((audio) => transcribe.mutate(audio));
-  const voiceOn = status === 'authenticated' && caps.data?.voice === true;
-  const listening = rec.state === 'listening';
+  const speech = useSpeech(onText);
 
+  const useServer = serverVoice;
+  const listening = useServer ? rec.state === 'listening' : speech.state === 'listening';
+  const available = useServer || speechSupported();
+
+  // Opening the voice panel starts listening straight away (one tap, like any voice search).
+  useEffect(() => {
+    if (!autoStart || caps.isPending && status === 'authenticated') return;
+    if (useServer) rec.start(); else if (speechSupported()) speech.start();
+  }, [caps.isPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = () => {
+    if (useServer) { if (listening) rec.stop(); else rec.start(); return; }
+    if (listening) speech.stop(); else speech.start();
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (draft.trim()) { onText(draft.trim()); setDraft(''); }
   };
 
   let note: string | null = null;
-  if (status !== 'authenticated') note = 'Sign in to talk to Buddy.';
-  else if (caps.isPending) note = null;
-  else if (!voiceOn) note = 'Voice isn’t switched on for Click. yet, so I can’t listen. Type what you need instead.';
-  else if (rec.state === 'unsupported') note = 'This browser can’t record audio. Type what you need instead.';
-  else if (rec.state === 'denied') note = 'Microphone access is blocked. Allow it in your browser settings, or type instead.';
-  else if (rec.state === 'error' || transcribe.isError) note = 'Couldn’t hear that clearly. Try again or type instead.';
+  const st = useServer ? rec.state : speech.state;
+  if (!available) note = 'This browser can’t take voice input. Type instead, or try Chrome, Edge or Safari.';
+  else if (st === 'denied') note = 'Microphone access is blocked. Allow it in your browser settings, or type instead.';
+  else if (st === 'nomatch') note = 'Didn’t catch that. Tap the mic and try again.';
+  else if (st === 'error' || transcribe.isError) note = 'Couldn’t hear that clearly. Try again or type instead.';
 
   return (
     <div className="voice">
       <button
-        type="button" className={`voice__orb ${listening ? 'voice__orb--live' : ''} ${voiceOn ? '' : 'voice__orb--off'}`}
-        style={{ ['--lvl' as string]: rec.level }}
-        disabled={!voiceOn || transcribe.isPending || busy} aria-pressed={listening}
-        aria-label={listening ? 'Stop listening' : voiceOn ? 'Start speaking' : 'Voice unavailable'}
-        onClick={() => (listening ? rec.stop() : rec.start())}
+        type="button" className={`voice__orb ${listening ? 'voice__orb--live' : ''} ${available ? '' : 'voice__orb--off'}`}
+        style={{ ['--lvl' as string]: useServer ? rec.level : listening ? 0.35 : 0 }}
+        disabled={!available || transcribe.isPending || busy} aria-pressed={listening}
+        aria-label={listening ? 'Stop listening' : available ? 'Start speaking' : 'Voice unavailable'}
+        onClick={toggle}
       >
         <Icon name="mic" size={30} />
       </button>
       <p className="voice__status" role="status" aria-live="polite">
-        {transcribe.isPending ? 'Understanding…' : listening ? listeningLabel : voiceOn ? 'Tap to speak' : ''}
+        {transcribe.isPending ? 'Understanding…' : listening ? (speech.interim ? `“${speech.interim}”` : listeningLabel) : available ? 'Tap to speak' : ''}
       </p>
-      {note && <p className="voice__note">{note}{status !== 'authenticated' && <> <Link to="/login">Sign in</Link></>}</p>}
-      {status === 'authenticated' && (
-        <form className="voice__type" onSubmit={submit}>
-          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} aria-label={placeholder} maxLength={500} />
-          <Button type="submit" size="sm" disabled={!draft.trim() || busy} loading={busy} aria-label="Send"><Icon name="send" size={16} /></Button>
-        </form>
-      )}
+      {note && <p className="voice__note">{note}</p>}
+      <form className="voice__type" onSubmit={submit}>
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} aria-label={placeholder} maxLength={500} />
+        <Button type="submit" size="sm" disabled={!draft.trim() || busy} loading={busy} aria-label="Send"><Icon name="send" size={16} /></Button>
+      </form>
     </div>
   );
 }

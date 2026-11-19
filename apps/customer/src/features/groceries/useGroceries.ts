@@ -59,7 +59,7 @@ export function useBasketActions() {
       if (!isStoreConflict(e)) { fail(e); return false; }
       const ok = await confirm({
         title: 'Start a grocery basket?',
-        message: `${e instanceof ApiError ? e.message.replace(/ Clear it to add this (item|product)\.$/, '') : 'Your cart has other items.'} Food, Shopping and Groceries are checked out separately. Clear the cart and add ${l.name}?`,
+        message: `${e instanceof ApiError ? e.message.replace(/ Clear it to add this (item|product)\.$/, '') : 'Your cart has other items.'} Food, Shop and Groceries are checked out separately. Clear the cart and add ${l.name}?`,
         confirmLabel: 'Clear cart and add', cancelLabel: 'Keep my cart',
       });
       if (!ok) return false;

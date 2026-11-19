@@ -37,6 +37,18 @@ class ReactionView(APIView):
         return Response(toggle_reaction(request.user, pk, kind))
 
 
+class ItemReactionView(APIView):
+    """POST /api/v1/buzz/items/<key>/like|save — like or save a Click-built Buzz item (offer, show, store…)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "buzz"
+
+    def post(self, request, key, kind):
+        from .services import toggle_item_reaction
+
+        return Response(toggle_item_reaction(request.user, key, kind))
+
+
 class EventView(APIView):
     """POST /api/v1/buzz/posts/<id>/event {kind: view|click} — counted once per viewer per day."""
 

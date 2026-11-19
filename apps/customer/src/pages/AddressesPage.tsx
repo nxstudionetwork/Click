@@ -11,7 +11,8 @@ export function AddressesPage() {
   const addresses = useAddresses();
   const qc = useQueryClient();
   const toast = useToast();
-  const [adding, setAdding] = useState(false);
+  // /account/addresses?new=1 (from the location selector) opens the form straight away.
+  const [adding, setAdding] = useState(() => new URLSearchParams(window.location.search).get('new') === '1');
   const onError = (e: unknown) => toast(e instanceof Error ? e.message : 'Something went wrong.', 'error');
   const invalidate = () => qc.invalidateQueries({ queryKey: addressesKey });
   const remove = useMutation({ mutationFn: api.customer.addresses.remove, onSuccess: invalidate, onError });

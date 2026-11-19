@@ -10,6 +10,7 @@ with the same item shape, plus a `post` block with engagement and the attached i
 one of the partner's own live listings, re-checked when served.
 """
 
+import re
 from dataclasses import asdict, dataclass
 from itertools import chain, zip_longest
 
@@ -215,7 +216,52 @@ def build_feed(limit: int = 12, user=None) -> list[dict]:
     sources = [list(_post_items(per_source, user)), list(_offer_items(per_source)), list(_product_deal_items(per_source)), list(_event_items(per_source)), list(_trailer_items(per_source)),
                list(_grocery_items(per_source)), list(_event_team_items(per_source)), list(_store_items(per_source))]
     mixed = [item for item in chain.from_iterable(zip_longest(*sources)) if item is not None]
-    return [asdict(i) for i in mixed[:limit]]
+    out = [asdict(i) for i in mixed[:limit]]
+    _attach_engagement(out, user)
+    return out
+
+
+ITEM_KEY = re.compile(r"^(offer|trailer|event|store|product|grocery|eventteam):[0-9a-f-]{36}$")
+
+
+def _attach_engagement(items: list[dict], user) -> None:
+    """Every item carries {likes, liked, saved}: partner posts from their own reactions, Click-built items from
+    BuzzItemReaction. Nothing is invented: counts are real reactions."""
+    from django.db.models import Count
+
+    from .models import BuzzItemReaction
+
+    keys = [i["id"] for i in items if i["kind"] != "post"]
+    counts = {k: n for k, n in BuzzItemReaction.objects.filter(item_key__in=keys, kind="like").values_list("item_key").annotate(n=Count("id"))}
+    mine = set()
+    if user is not None and user.is_authenticated:
+        mine = set(BuzzItemReaction.objects.filter(user=user, item_key__in=keys).values_list("item_key", "kind"))
+    for i in items:
+        if i["kind"] == "post":
+            p = i["post"] or {}
+            i["engage"] = {"likes": p.get("likes", 0), "liked": p.get("liked", False), "saved": p.get("saved", False)}
+        else:
+            k = i["id"]
+            i["engage"] = {"likes": counts.get(k, 0), "liked": (k, "like") in mine, "saved": (k, "save") in mine}
+
+
+def toggle_item_reaction(user, item_key: str, kind: str) -> dict:
+    from django.db import transaction
+
+    from apps.core.api.exceptions import DomainError
+
+    from .models import BuzzItemReaction
+
+    if not ITEM_KEY.match(item_key or ""):
+        raise DomainError("This Buzz item isn't available.", code="not_found", status_code=404)
+    with transaction.atomic():
+        existing = BuzzItemReaction.objects.filter(item_key=item_key, user=user, kind=kind)
+        on = not existing.exists()
+        if on:
+            BuzzItemReaction.objects.get_or_create(item_key=item_key, user=user, kind=kind)
+        else:
+            existing.delete()
+    return {"on": on, "count": BuzzItemReaction.objects.filter(item_key=item_key, kind=kind).count()}
 
 
 # --- engagement on partner posts ---------------------------------------------------------------------------------

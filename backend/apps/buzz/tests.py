@@ -34,3 +34,22 @@ def test_every_store_type_has_a_theme_and_a_real_destination(api):
     make_store("Care Pharmacy", store_type=StoreType.PHARMACY, rating_count=40)
     item = next(i for i in api.get("/api/v1/buzz").json()["results"] if i["title"] == "Care Pharmacy")
     assert item["action"] == {"label": "Shop pharmacy", "path": "/pharma"} and item["theme"] == "shopping"
+
+
+def test_every_buzz_item_can_be_liked_and_saved(auth_api):
+    import uuid
+
+    from rest_framework.test import APIClient
+
+    key = f"offer:{uuid.uuid4()}"
+    r = auth_api.post(f"/api/v1/buzz/items/{key}/like")
+    assert r.status_code == 200 and r.json() == {"on": True, "count": 1}
+    assert auth_api.post(f"/api/v1/buzz/items/{key}/like").json() == {"on": False, "count": 0}
+    assert auth_api.post(f"/api/v1/buzz/items/{key}/save").json()["on"] is True
+    assert auth_api.post("/api/v1/buzz/items/nonsense:1/like").status_code == 404
+    assert APIClient().post(f"/api/v1/buzz/items/{key}/like").status_code == 401
+
+
+def test_feed_items_carry_real_engagement(auth_api):
+    for item in auth_api.get("/api/v1/buzz", {"limit": 30}).json()["results"]:
+        assert set(item["engage"]) == {"likes", "liked", "saved"}
