@@ -17,7 +17,8 @@ const COMMANDS: { title: string; path: string; icon: IconName; perm?: string }[]
   { title: 'Open alerts', path: '/alerts', icon: 'alert' }, { title: 'Open announcements', path: '/announcements', icon: 'send' },
   { title: 'Request leave', path: '/people/leave?new=1', icon: 'calendar', perm: 'people.leave.create' },
   { title: 'Check in / out', path: '/people/attendance', icon: 'clock', perm: 'people.attendance.create' },
-  { title: 'Open my HR', path: '/people/me', icon: 'user' }, { title: 'Open settings', path: '/settings/preferences', icon: 'settings' },
+  { title: 'Open my HR', path: '/people/me', icon: 'user' },
+  { title: 'My access', path: '/access/me', icon: 'key' }, { title: 'Request access', path: '/access/requests?new=1', icon: 'key' }, { title: 'Open settings', path: '/settings/preferences', icon: 'settings' },
   { title: 'Security & sessions', path: '/settings/security', icon: 'shield' },
 ];
 

@@ -1,4 +1,4 @@
-import { ApiError, createClickClient, osApi, osHomeApi, peopleApi } from '@click/api';
+import { ApiError, createClickClient, osApi, osHomeApi, osModuleApi, peopleApi } from '@click/api';
 
 /**
  * Business OS has its own session (separate cookie `click_os_refresh`, refreshed at /os/auth/refresh) so being signed
@@ -14,6 +14,9 @@ export const { http, session, refreshSession, restoreSession } = client;
 export const api = osApi(http);
 export const home = osHomeApi(http);
 export const people = peopleApi(http);
+export const access = osModuleApi(http, '/os/access');
+export const finance = osModuleApi(http, '/os/finance');
+export const procurement = osModuleApi(http, '/os/procurement');
 
 export function apiMessage(err: unknown): string {
   if (err instanceof ApiError) return err.message;

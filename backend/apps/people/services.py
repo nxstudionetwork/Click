@@ -532,6 +532,10 @@ def apply_change(request, ch: LifecycleChange):
 
 def access_review_task(emp: Employee, why: str, requested_by=None):
     """Identity & Access integration: role changes trigger a review by the people who manage access — no duplicate system."""
+    if emp.user_id:  # mover: the person's current access goes into an event-triggered access review
+        from apps.access.governance import event_review
+
+        event_review(emp.user, why)
     admins = holders_of("access.role.assign", emp.organization)
     if not admins:
         return

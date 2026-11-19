@@ -13,6 +13,7 @@ from apps.workflows import views as wf
 
 from apps.documents import views as docs
 from apps.people.urls import urlpatterns as people_urls
+from apps.access.urls import urlpatterns as access_urls
 
 from . import home_views as home
 from . import views as ws
@@ -76,6 +77,7 @@ urlpatterns = [
     path("ai", ws.AIView.as_view(), name="os-ai"),
     path("people/picker", wf.PeoplePickerView.as_view(), name="os-people-picker"),
     path("people/", include(people_urls)),
+    path("access/", include(access_urls)),
     # Approvals & tasks
     path("approvals", wf.ApprovalsView.as_view(), name="os-approvals"),
     path("approvals/policies", wf.SubmittablePoliciesView.as_view(), name="os-approval-policies"),

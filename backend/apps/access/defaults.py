@@ -26,6 +26,7 @@ EVERYONE = [
     ("documents.document.view", "organization"),
     ("ai.assistant.view", "own"),
     ("analytics.kpi.view", "department"),
+    ("access.request.create", "own"),
 ]
 
 # Given automatically to anyone with direct reports (decided from the reporting line in People & HR).
@@ -35,6 +36,7 @@ MANAGER = [
     ("people.performance.review", "reports"), ("people.goal.view", "reports"), ("people.goal.create", "reports"), ("people.goal.edit", "reports"),
     ("people.learning.view", "reports"), ("people.learning.assign", "reports"), ("people.lifecycle.create", "reports"),
     ("people.document.view", "reports"), ("workflows.task.assign", "reports"), ("workflows.request.view", "reports"),
+    ("access.request.approve", "reports"), ("access.request.view", "reports"),
 ]
 HR_ALL = [c for c in registry.PERMISSIONS if c.startswith("people.")]
 
@@ -55,7 +57,7 @@ ROLES = [
         "grants": MANAGER, "widgets": ["team", "pending_leave", "upcoming_reviews"],
     },
     {
-        "key": "os-admin", "name": "System Administrator", "priority": 5, "audience": "employee", "requires_mfa": True,
+        "key": "os-admin", "name": "System Administrator", "priority": 5, "audience": "employee", "requires_mfa": True, "emergency": True,
         "description": "Runs the Business OS: users, roles, organization, workflows, integrations, system and audit. No business data.",
         "grants": [(c, "organization") for m in ADMIN_MODULES for c in _all_actions(m)] + [("workflows.task.assign", "organization")],
         "widgets": ["security_overview", "system_status", "alerts", "approvals", "my_work"],
@@ -129,7 +131,9 @@ ROLES = [
         "key": "auditor", "name": "Internal Auditor", "priority": 50, "audience": "employee", "requires_mfa": True,
         "description": "Read-only: audit trail (including sensitive events), finance and approvals.",
         "grants": [("audit.event.view", "organization"), ("audit.event.export", "organization"), ("audit.sensitive.view", "organization"),
-                   ("workflows.request.view", "organization")] + [(c, "organization") for c in _all_actions("finance", {"view"})],
+                   ("workflows.request.view", "organization"), ("identity.user.view", "organization"), ("identity.security.view", "organization"),
+                   ("access.role.view", "organization")] + [(c, "organization") for c in _all_actions("access", {"view"})]
+                  + [(c, "organization") for m in ("finance", "procurement") for c in _all_actions(m, {"view"})],
         "widgets": ["alerts", "risk_watch", "approvals"],
     },
     {
@@ -181,8 +185,33 @@ ROLES = [
         "key": "it-admin", "name": "IT Administrator", "priority": 47, "audience": "employee",
         "description": "IT assets, platform operations, integrations and system health.",
         "grants": [(c, "organization") for c in _all_actions("technology")] + [("system.health.view", "organization"),
-                                                                              ("integrations.integration.view", "organization")],
+                                                                              ("integrations.integration.view", "organization"),
+                                                                              ("access.emergency.create", "organization")],
         "widgets": ["system_status", "alerts", "approvals", "my_work"],
+    },
+    {
+        "key": "identity-admin", "name": "Identity Administrator", "priority": 6, "audience": "employee", "requires_mfa": True,
+        "description": "Creates, suspends and expires identities and service accounts. Cannot change roles or security policy.",
+        "grants": [(c, "organization") for c in _all_actions("identity") if not c.startswith("identity.security.")]
+                  + [("organization.unit.view", "organization"), ("organization.department.view", "organization"), ("access.role.view", "organization")],
+        "widgets": ["security_overview", "approvals", "alerts", "my_work"],
+    },
+    {
+        "key": "access-admin", "name": "Access Administrator", "priority": 7, "audience": "employee", "requires_mfa": True,
+        "description": "Roles, packages, access requests, reviews and effective-access tools. Cannot create identities or approve SoD exceptions.",
+        "grants": [(c, "organization") for c in _all_actions("access") if not c.startswith(("access.sod.approve", "access.sod.configure", "access.emergency."))]
+                  + [("identity.user.view", "organization"), ("organization.unit.view", "organization"), ("organization.department.view", "organization")],
+        "widgets": ["security_overview", "approvals", "alerts", "my_work"],
+    },
+    {
+        "key": "security-admin", "name": "Security Administrator", "priority": 8, "audience": "employee", "requires_mfa": True,
+        "description": "Security events, sessions, segregation-of-duties policy and exceptions, emergency access oversight.",
+        "grants": [("identity.security.view", "organization"), ("identity.security.manage", "organization"), ("identity.user.view", "organization"),
+                   ("identity.user.manage", "organization"), ("access.sod.view", "organization"), ("access.sod.configure", "organization"),
+                   ("access.sod.approve", "organization"), ("access.emergency.view", "organization"), ("access.emergency.manage", "organization"),
+                   ("access.analysis.view", "organization"), ("access.review.view", "organization"), ("access.review.manage", "organization"),
+                   ("audit.event.view", "organization"), ("audit.sensitive.view", "organization"), ("system.settings.view", "organization")],
+        "widgets": ["security_overview", "alerts", "approvals", "my_work"],
     },
     {
         "key": "partner-business", "name": "Partner Business User", "priority": 80, "audience": "partner",
@@ -227,10 +256,31 @@ POLICIES = [
      "submit_permission": "procurement.request.create", "requires_amount": True,
      "description": "Buying goods or services. Goes to procurement approvers within limit.",
      "levels": [("Manager approval", "procurement.request.approve", 0, 48), ("Finance approval", "finance.payment.approve", 100000, 72)]},
+    {"key": "access.request", "name": "Access request", "module": "access", "approval_type": "general", "amount_unit": "count",
+     "submit_permission": "access.request.create", "requires_amount": False,
+     "description": "A role or access package for yourself. Manager first, then an access administrator who grants it.",
+     "levels": [("Manager", "access.request.approve", 0, 48), ("Access administrator", "access.role.assign", 0, 48)]},
     {"key": "workflows.general", "name": "General approval", "module": "workflows", "approval_type": "general",
      "submit_permission": "workflows.request.create", "requires_amount": False,
      "description": "Anything else that needs a manager's sign-off.",
      "levels": [("Approver", "workflows.request.view", 0, 72)]},
+]
+
+
+# Segregation-of-duties starting rules. Severity is data: administrators tighten warnings to "exception" or "block".
+SOD_RULES = [
+    ("create-and-approve-payments", "Create and approve payments", ["finance.payment.create"], ["finance.payment.approve"], "warning"),
+    ("post-and-approve-journals", "Create and approve journal entries", ["finance.ledger.create"], ["finance.ledger.approve"], "warning"),
+    ("create-and-approve-suppliers", "Create and approve suppliers", ["procurement.supplier.create"], ["procurement.supplier.approve"], "exception"),
+    ("create-and-approve-po", "Create and approve purchase orders", ["procurement.order.create"], ["procurement.order.approve"], "warning"),
+    ("receive-and-pay", "Receive goods and approve supplier payments", ["procurement.receipt.create"], ["finance.payment.approve"], "warning"),
+    ("bank-details-and-settlements", "Change bank details and approve settlements", ["finance.bank.manage", "procurement.supplier_bank.manage"],
+     ["finance.settlement.approve", "finance.payment.approve"], "exception"),
+    ("create-and-approve-refunds", "Create and approve refunds", ["finance.refund.create", "payments.refund.create"],
+     ["finance.refund.approve", "payments.refund.approve"], "warning"),
+    ("invoice-and-credit-notes", "Create invoices and approve credit notes", ["finance.invoice.create"], ["finance.invoice.approve"], "warning"),
+    ("grant-and-excuse-sod", "Grant access and approve SoD exceptions", ["access.role.assign"], ["access.sod.approve"], "warning"),
+    ("salary-and-own-pay", "Manage employee records and approve payroll changes", ["people.employee.create"], ["people.payroll.approve"], "warning"),
 ]
 
 
@@ -257,6 +307,7 @@ def install(organization) -> dict:
         role, _ = Role.objects.update_or_create(organization=organization, key=spec["key"], defaults={
             "name": spec["name"], "description": spec["description"], "priority": spec["priority"], "audience": spec["audience"],
             "requires_mfa": spec.get("requires_mfa", False), "home_widgets": spec.get("widgets", []), "is_system": True, "is_active": True,
+            "emergency_eligible": spec.get("emergency", False),
             "home_config": {"pulse": spec.get("pulse", [])}})
         role.grants.all().delete()
         RolePermission.objects.bulk_create([RolePermission(role=role, permission=perms[c], scope=s) for c, s in expand(spec["grants"]) if c in perms])
@@ -274,4 +325,9 @@ def install(organization) -> dict:
                 ApprovalLevel.objects.create(policy=pol, sequence=i, name=name, approver_permission=perm,
                                              min_amount=Decimal(min_amount), escalate_after_hours=hours,
                                              enforce_limit=spec["approval_type"] != "general" and spec.get("amount_unit", "currency") == "currency")
+    from .models import SoDRule
+
+    for key, name, first, second, severity in SOD_RULES:
+        SoDRule.objects.get_or_create(organization=organization, key=key, defaults={"name": name, "first": first, "second": second,
+                                                                                    "severity": severity})
     return roles

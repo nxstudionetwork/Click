@@ -32,6 +32,22 @@ const pTalent = () => import('./pages/people/talent');
 const pWork = () => import('./pages/people/workforce');
 const pGrowth = () => import('./pages/people/growth');
 const pCare = () => import('./pages/people/care');
+const pAccess = () => import('./pages/access');
+const AccessLayout = lazyPage(pAccess, 'AccessLayout');
+const AccessHome = lazyPage(pAccess, 'AccessHome');
+const MyAccess = lazyPage(pAccess, 'MyAccess');
+const EffectiveAccess = lazyPage(pAccess, 'EffectiveAccess');
+const AccessSimulator = lazyPage(pAccess, 'Simulator');
+const AccessWhoHas = lazyPage(pAccess, 'WhoHas');
+const AccessCompare = lazyPage(pAccess, 'Compare');
+const AccessPackages = lazyPage(pAccess, 'Packages');
+const AccessRequests = lazyPage(pAccess, 'Requests');
+const AccessReviews = lazyPage(pAccess, 'Reviews');
+const AccessSoD = lazyPage(pAccess, 'SoD');
+const AccessEmergency = lazyPage(pAccess, 'Emergency');
+const AccessPrivileged = lazyPage(pAccess, 'Privileged');
+const AccessHygiene = lazyPage(pAccess, 'Hygiene');
+const AccessSecurity = lazyPage(pAccess, 'SecurityEvents');
 const HRHome = lazyPage(pCore, 'HRHome');
 const Directory = lazyPage(pCore, 'Directory');
 const Profile360 = lazyPage(pCore, 'Profile');
@@ -148,6 +164,22 @@ export function App() {
         <Route path="/profile" element={<InShell><ProfilePage /></InShell>} />
         <Route path="/alerts" element={<InShell><AlertsPage /></InShell>} />
         <Route path="/announcements" element={<InShell><AnnouncementsPage /></InShell>} />
+        <Route path="/access" element={<InShell><AccessLayout /></InShell>}>
+          <Route index element={<AccessHome />} />
+          <Route path="me" element={<MyAccess />} />
+          <Route path="requests" element={<AccessRequests />} />
+          <Route path="reviews" element={<AccessReviews />} />
+          <Route path="emergency" element={<AccessEmergency />} />
+          <Route path="effective" element={<RequirePerm any={['access.analysis.view']}><EffectiveAccess /></RequirePerm>} />
+          <Route path="simulator" element={<RequirePerm any={['access.analysis.view']}><AccessSimulator /></RequirePerm>} />
+          <Route path="who" element={<RequirePerm any={['access.analysis.view']}><AccessWhoHas /></RequirePerm>} />
+          <Route path="compare" element={<RequirePerm any={['access.analysis.view']}><AccessCompare /></RequirePerm>} />
+          <Route path="packages" element={<RequirePerm any={['access.package.view']}><AccessPackages /></RequirePerm>} />
+          <Route path="sod" element={<RequirePerm any={['access.sod.view']}><AccessSoD /></RequirePerm>} />
+          <Route path="privileged" element={<RequirePerm any={['access.analysis.view']}><AccessPrivileged /></RequirePerm>} />
+          <Route path="hygiene" element={<RequirePerm any={['access.analysis.view']}><AccessHygiene /></RequirePerm>} />
+          <Route path="security" element={<RequirePerm any={['identity.security.view']}><AccessSecurity /></RequirePerm>} />
+        </Route>
         <Route path="/people" element={<InShell><PeopleLayout /></InShell>}>
           <Route index element={<HRHome />} />
           <Route path="me" element={<MyHR />} />

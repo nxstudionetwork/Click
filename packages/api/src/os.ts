@@ -119,6 +119,7 @@ export interface OSAccountRow {
   id: UUID; userId: UUID; fullName: string; email: string | null; kind: OSAccountKind; status: OSAccountStatus;
   employee: { id: UUID; employeeId: string; designation: string | null; department: { name: string } | null; orgUnit: OSUnitBrief | null } | null;
   roles: { id: UUID; name: string }[]; mfaEnabled: boolean; isLocked: boolean; lastLoginAt: ISO | null; createdAt: ISO; avatarUrl: string | null;
+  identityType?: string; expiresAt?: ISO | null;
 }
 export interface OSAssignment {
   id: UUID; role: { id: UUID; name: string; key: string }; orgUnit: OSUnitBrief | null; department: { id: UUID; name: string } | null;

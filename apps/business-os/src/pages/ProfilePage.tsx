@@ -63,6 +63,7 @@ export function ProfilePage() {
               <dt>Session ends</dt><dd>{fmtDateTime(ctx.session?.expiresAt)} (or after {ctx.security.idleMinutes} min idle)</dd>
             </dl>
             <Link to="/settings/security" className="small" style={{ display: 'inline-block', marginTop: 12 }}>Security & sessions →</Link>
+            <div className="row" style={{ gap: 12, marginTop: 8 }}><Link to="/access/me" className="small">My access →</Link><Link to="/access/requests?new=1" className="small">Request access →</Link></div>
           </Card>
         </div>
         {ctx.approvalAuthority.length > 0 && (

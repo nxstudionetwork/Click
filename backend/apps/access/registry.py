@@ -28,7 +28,7 @@ SCOPE_LABELS = {
 
 APPROVAL_TYPES = {
     "general": "General", "expense": "Expense", "purchase": "Purchase", "refund": "Refund", "discount": "Discount",
-    "hiring": "Hiring", "payment": "Payment",
+    "hiring": "Hiring", "payment": "Payment", "journal": "Journal entry", "settlement": "Partner settlement", "budget": "Budget",
 }
 
 
@@ -221,9 +221,23 @@ MODULES: tuple[Module, ...] = (
            includes=("Locations / Branches",)),
     Module("identity", "Users", "administration", "user", "Accounts, invitations, suspension and sessions.", "live", path="/settings/users",
            resources=(R("user", "User accounts", ("view", "create", "edit", "manage"), sensitive=True),
-                      R("service_account", "Service accounts", ("view", "manage"), sensitive=True))),
-    Module("access", "Roles & Permissions", "administration", "key", "Roles, scoped permissions and approval authority.", "live", path="/settings/roles",
-           resources=(R("role", "Roles", ("view", "create", "edit", "delete", "assign"), sensitive=True),)),
+                      R("service_account", "Service accounts", ("view", "manage"), sensitive=True),
+                      R("security", "Security events, sessions & sign-in risk", ("view", "manage"), sensitive=True))),
+    Module("access", "Identity & Access", "administration", "key",
+           "Who can do what, where: roles, packages, requests, reviews, segregation of duties, emergency access and effective-access tools.",
+           "live", path="/access",
+           nav_requires=("access.role.view", "access.analysis.view", "access.package.view", "access.review.view", "access.sod.view",
+                         "access.emergency.view", "access.emergency.create", "identity.user.view"),
+           resources=(R("role", "Roles", ("view", "create", "edit", "delete", "assign"), sensitive=True),
+                      R("package", "Access packages", ("view", "manage")),
+                      R("request", "Access requests", ("view", "create", "approve")),
+                      R("review", "Access reviews & certification", ("view", "manage")),
+                      R("analysis", "Effective access, who-has-access, simulator & role comparison", ("view",)),
+                      R("sod", "Segregation of duties (rules & exceptions)", ("view", "configure", "approve"), sensitive=True),
+                      R("emergency", "Emergency (break-glass) access", ("view", "create", "manage"), sensitive=True)),
+           submodules=("Identity Directory", "Service Accounts", "Role Directory", "Role Comparison", "Access Packages", "Access Requests",
+                       "Temporary Access", "Delegations", "Access Reviews", "Approval Authority", "Effective Access", "Permission Simulator",
+                       "Who Has Access", "Segregation of Duties", "Privileged Access", "Emergency Access", "Security Events", "Orphaned & Unused Access")),
     Module("workflows", "Workflows", "administration", "flow", "Approval policies, levels, limits and escalation.", "live", path="/settings/workflows",
            nav_requires=("workflows.policy.view", "workflows.policy.configure"),
            resources=(R("policy", "Approval policies", ("view", "configure")), R("request", "Approval requests", ("view", "create")),
@@ -238,7 +252,10 @@ MODULE_BY_KEY = {m.key: m for m in MODULES}
 
 # What makes someone an administrator (for the "Administrator" sign-in path and admin badges). Raising requests or
 # assigning tasks lives in the workflows module too, but that is everyday work, not administration.
-ADMIN_CODE_PREFIXES = ("organization.", "identity.", "access.", "workflows.policy.", "integrations.", "system.", "audit.")
+ADMIN_CODE_PREFIXES = ("organization.", "identity.", "access.role.", "access.package.", "access.review.", "access.analysis.", "access.sod.",
+                       "access.emergency.", "workflows.policy.", "integrations.", "system.", "audit.")
+# Requesting access for yourself ("access.request.create") and managers approving their reports' requests are everyday
+# work, not administration: they never make someone an administrator or put Identity & Access in their sidebar.
 
 
 def is_admin_code(code: str) -> bool:

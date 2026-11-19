@@ -32,12 +32,27 @@ class AccountKind(models.TextChoices):
     EXTERNAL = "external", "Other authorized account"
 
 
+class IdentityType(models.TextChoices):
+    """What the relationship is (independent of `kind`, which is the audience the account signs in as)."""
+
+    EMPLOYEE = "employee", "Employee"
+    CONTRACTOR = "contractor", "Contractor"
+    CONSULTANT = "consultant", "Consultant"
+    INTERN = "intern", "Intern"
+    TEMPORARY = "temporary", "Temporary worker"
+    PARTNER_USER = "partner_user", "Partner user"
+    SUPPORT = "support", "Customer support user"
+    EXTERNAL = "external", "Other external user"
+
+
 class OSAccount(BaseModel):
     class Status(models.TextChoices):
         INVITED = "invited", "Invited"
         ACTIVE = "active", "Active"
         SUSPENDED = "suspended", "Suspended"
         DEACTIVATED = "deactivated", "Deactivated"
+        EXPIRED = "expired", "Expired"
+        ARCHIVED = "archived", "Archived"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="os_account")
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="accounts")
@@ -46,6 +61,8 @@ class OSAccount(BaseModel):
     partner = models.ForeignKey("partners.Partner", on_delete=models.PROTECT, null=True, blank=True, related_name="os_accounts",
                                 help_text="Partner accounts only: the partner business this login acts for.")
     external_org_name = models.CharField(max_length=150, blank=True)
+    identity_type = models.CharField(max_length=16, choices=IdentityType.choices, default=IdentityType.EMPLOYEE)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Contractors, interns, temporary workers: access ends here.")
 
     # Security
     failed_attempts = models.PositiveSmallIntegerField(default=0)
@@ -151,6 +168,8 @@ class Role(BaseModel):
     home_widgets = models.JSONField(default=list, blank=True, help_text="Ordered Home widget keys this role brings.")
     home_config = models.JSONField(default=dict, blank=True, help_text='Home defaults, e.g. {"pulse": ["gmv", "orders"]}.')
     priority = models.PositiveSmallIntegerField(default=100, help_text="Lower comes first when composing Home.")
+    emergency_eligible = models.BooleanField(default=False, help_text="May be activated as time-boxed break-glass access.")
+    version = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -257,3 +276,171 @@ class ServiceAccount(BaseModel):
     @property
     def is_usable(self) -> bool:
         return self.revoked_at is None and (self.expires_at is None or self.expires_at > timezone.now())
+
+
+# =====================================================================================================================
+# Governance (Module 3): packages, requests, reviews, segregation of duties, emergency access, role versions.
+# All of them resolve through the same Role / RoleAssignment model: nothing here is a second permission system.
+# =====================================================================================================================
+class RoleVersion(BaseModel):
+    """Immutable snapshot after every change to a role's grants, limits or inheritance."""
+
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="versions")
+    version = models.PositiveIntegerField()
+    snapshot = models.JSONField(default=dict)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    reason = models.CharField(max_length=300, blank=True)
+    affected_users = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-version"]
+        constraints = [models.UniqueConstraint(fields=["role", "version"], name="role_version_unique")]
+
+
+class AccessPackage(BaseModel):
+    """A reusable bundle of roles (e.g. "Finance Executive"), assigned in one step and reviewed as one unit."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="access_packages")
+    key = models.SlugField(max_length=60)
+    name = models.CharField(max_length=120)
+    description = models.CharField(max_length=300, blank=True)
+    roles = models.ManyToManyField(Role, related_name="packages")
+    requestable = models.BooleanField(default=True, help_text="Employees may request it from the Access Request Center.")
+    max_days = models.PositiveIntegerField(null=True, blank=True, help_text="If set, grants from this package expire after N days.")
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [models.UniqueConstraint(fields=["organization", "key"], name="access_package_key_unique")]
+
+
+class AccessRequest(BaseModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for approval"
+        PROVISIONED = "provisioned", "Granted"
+        REJECTED = "rejected", "Rejected"
+        CANCELLED = "cancelled", "Withdrawn"
+        BLOCKED = "blocked", "Approved but not granted"
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
+    code = models.CharField(max_length=20, unique=True)
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="access_requests")
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    package = models.ForeignKey(AccessPackage, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+    org_unit = models.ForeignKey(OrgUnit, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    valid_until = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    approval = models.ForeignKey("workflows.ApprovalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    outcome_note = models.CharField(max_length=300, blank=True)
+    assignment_ids = models.JSONField(default=list, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class AccessReview(BaseModel):
+    class Kind(models.TextChoices):
+        PERIODIC = "periodic", "Periodic certification"
+        PRIVILEGED = "privileged", "Privileged access review"
+        EVENT = "event", "Event-triggered (join / move / leave)"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        CLOSED = "closed", "Closed"
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
+    name = models.CharField(max_length=160)
+    kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.PERIODIC)
+    due_on = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.OPEN)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class AccessReviewItem(BaseModel):
+    class Decision(models.TextChoices):
+        PENDING = "pending", "To review"
+        KEEP = "keep", "Keep"
+        REMOVE = "remove", "Remove"
+        SUSPEND = "suspend", "Suspend account"
+        ESCALATE = "escalate", "Escalate"
+
+    review = models.ForeignKey(AccessReview, on_delete=models.CASCADE, related_name="items")
+    assignment = models.ForeignKey(RoleAssignment, on_delete=models.CASCADE, related_name="review_items")
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="access_reviews_to_do")
+    reason = models.CharField(max_length=200, blank=True, help_text="Why it is being reviewed (e.g. transfer, sensitive role).")
+    decision = models.CharField(max_length=10, choices=Decision.choices, default=Decision.PENDING)
+    comment = models.CharField(max_length=500, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["decision", "created_at"]
+
+
+class SoDRule(BaseModel):
+    class Severity(models.TextChoices):
+        WARNING = "warning", "Warning (allowed, flagged)"
+        EXCEPTION = "exception", "Needs an approved exception"
+        BLOCK = "block", "Blocked"
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="sod_rules")
+    key = models.SlugField(max_length=60)
+    name = models.CharField(max_length=160)
+    description = models.CharField(max_length=300, blank=True)
+    first = models.JSONField(default=list, help_text="Permission codes (fnmatch patterns) — side A.")
+    second = models.JSONField(default=list, help_text="Permission codes (fnmatch patterns) — side B.")
+    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.WARNING)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [models.UniqueConstraint(fields=["organization", "key"], name="sod_rule_key_unique")]
+
+
+class SoDException(BaseModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
+    rule = models.ForeignKey(SoDRule, on_delete=models.CASCADE, related_name="exceptions")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sod_exceptions")
+    reason = models.CharField(max_length=500)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    valid_until = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_live(self) -> bool:
+        return self.revoked_at is None and (self.valid_until is None or self.valid_until > timezone.now())
+
+
+class EmergencyAccess(BaseModel):
+    """Break-glass: a time-boxed role activated by the person themselves, loudly announced, reviewed afterwards."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        ENDED = "ended", "Ended"
+        REVIEWED = "reviewed", "Reviewed"
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="emergency_access")
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="+")
+    assignment = models.OneToOneField(RoleAssignment, on_delete=models.SET_NULL, null=True, related_name="emergency")
+    reason = models.TextField()
+    starts_at = models.DateTimeField(default=timezone.now)
+    ends_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    review_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]

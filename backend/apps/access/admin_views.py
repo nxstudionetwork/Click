@@ -34,6 +34,12 @@ from .serializers import AccountListSerializer, AssignmentSerializer, RoleListSe
 from .sessions import revoke_all
 
 
+def snapshot_role(role, user, reason=""):
+    from .governance import snapshot_role as _snap
+
+    return _snap(role, user, reason)
+
+
 def _target_for_user(user) -> dict:
     emp = getattr(user, "employee", None)
     t = {"owner": user.pk}
@@ -229,20 +235,18 @@ class UserRolesView(OSView):
         if role.audience not in ("any", acct.kind):
             raise DomainError(f"“{role.name}” is for {role.get_audience_display().lower()}, not this account type.", code="validation_error",
                               details={"roleId": ["Wrong account type for this role."]})
-        assert_can_grant(ctx, _role_codes_with_scope(role))
         unit = OrgUnit.objects.filter(pk=d["org_unit_id"], organization=ctx.organization).first() if d.get("org_unit_id") else None
         dept = Department.objects.filter(pk=d["department_id"], organization=ctx.organization).first() if d.get("department_id") else None
         team = Team.objects.filter(pk=d["team_id"], department__organization=ctx.organization).first() if d.get("team_id") else None
         until = parse_datetime(str(d["valid_until"])) if d.get("valid_until") else None
         if until and until <= timezone.now():
             raise DomainError("The end date must be in the future.", code="validation_error", details={"validUntil": ["Must be in the future."]})
-        a = RoleAssignment.objects.create(user=acct.user, role=role, org_unit=unit, department=dept, team=team, valid_until=until,
-                                          granted_by=request.user, note=str(d.get("note", ""))[:200])
-        acct.bump_access()
-        record(request, "access.role.assigned", category="access", module="access", resource=acct, resource_label=str(acct.user),
-               new={"role": role.key, "unit": unit.code if unit else None, "department": dept.code if dept else None, "valid_until": until})
-        notify(acct.user, "security", f"You were given the {role.name} role", body=f"By {request.user.full_name}", link="/profile")
-        return Response(AssignmentSerializer(a).data, status=status.HTTP_201_CREATED)
+        from .governance import provision
+
+        a, warnings = provision(request, org=ctx.organization, user=acct.user, role=role, granted_by=request.user, org_unit=unit, department=dept,
+                                team=team, valid_until=until, note=str(d.get("note", ""))[:150], actor_ctx=ctx,
+                                sod_reason=str(d.get("sod_exception_reason", "")), source="admin")
+        return Response({**AssignmentSerializer(a).data, "sod_warnings": warnings}, status=status.HTTP_201_CREATED)
 
 
 class UserRoleDetailView(OSView):
@@ -282,6 +286,10 @@ def role_detail(role: Role, ctx: AuthContext) -> dict:
                              "currency": lim.currency} for lim in role.approval_limits.all()],
         "holders": [{"user_id": str(a.user_id), "full_name": a.user.full_name, "org_unit": a.org_unit.name if a.org_unit_id else None,
                      "department": a.department.name if a.department_id else None} for a in holders[:100]],
+        "version": role.version,
+        "emergency_eligible": role.emergency_eligible,
+        "versions": [{"version": v.version, "at": v.created_at, "by": v.changed_by.full_name if v.changed_by_id else None, "reason": v.reason,
+                      "affected_users": v.affected_users} for v in role.versions.select_related("changed_by")[:20]],
         "can_edit": not role.is_system and ctx.has("access.role.edit"),
         "can_delete": not role.is_system and ctx.has("access.role.delete") and not holders.exists(),
     }
@@ -298,6 +306,8 @@ def _apply_role(ctx: AuthContext, role: Role, data: dict, *, creating: bool) -> 
         bad = [lim["approval_type"] for lim in data["approval_limits"] if lim["approval_type"] not in registry.APPROVAL_TYPES]
         if bad:
             raise DomainError("Unknown approval types.", code="validation_error", details={"approvalLimits": bad})
+    if "emergency_eligible" in data and data["emergency_eligible"] != role.emergency_eligible and not ctx.has("access.emergency.manage"):
+        raise DomainError("Only emergency-access managers can change which roles are break-glass eligible.", code="permission_denied", status_code=403)
     if data.get("home_widgets") is not None:
         from apps.workspace.widgets import WIDGETS
 
@@ -308,7 +318,7 @@ def _apply_role(ctx: AuthContext, role: Role, data: dict, *, creating: bool) -> 
         if parent is None or (role.pk and role.pk in {r.pk for r in parent.lineage()}):
             raise DomainError("Choose a valid parent role.", code="validation_error", details={"parentId": ["Invalid parent."]})
         assert_can_grant(ctx, _role_codes_with_scope(parent))
-    for f in ("name", "description", "audience", "requires_mfa", "priority", "home_widgets"):
+    for f in ("name", "description", "audience", "requires_mfa", "emergency_eligible", "priority", "home_widgets"):
         if f in data:
             setattr(role, f, data[f])
     if "parent_id" in data:
@@ -346,6 +356,7 @@ class RolesView(OSView):
         with transaction.atomic():
             role = Role(organization=ctx.organization, key=key, name=data["name"])
             _apply_role(ctx, role, data, creating=True)
+            snapshot_role(role, request.user, "Created")
         record(request, "access.role.create", category="access", module="access", resource=role,
                new={"grants": data.get("grants", []), "approval_limits": data.get("approval_limits", [])})
         return Response(role_detail(role, ctx), status=status.HTTP_201_CREATED)
@@ -374,6 +385,7 @@ class RoleDetailView(OSView):
         s.is_valid(raise_exception=True)
         with transaction.atomic():
             _apply_role(ctx, role, dict(s.validated_data), creating=False)
+            snapshot_role(role, request.user, str(request.data.get("change_reason", ""))[:300])
         after = role_detail(role, ctx)
         record(request, "access.role.update", category="access", module="access", resource=role,
                old={k: before[k] for k in ("name", "grants", "approval_limits", "requires_mfa")},
@@ -413,6 +425,7 @@ class RoleDuplicateView(OSView):
             RolePermission.objects.bulk_create([RolePermission(role=role, permission=g.permission, scope=g.scope) for g in src.grants.all()])
             RoleApprovalLimit.objects.bulk_create([RoleApprovalLimit(role=role, approval_type=lim.approval_type, max_amount=lim.max_amount,
                                                                      currency=lim.currency) for lim in src.approval_limits.all()])
+        snapshot_role(role, request.user, f"Duplicated from {src.name}")
         record(request, "access.role.duplicate", category="access", module="access", resource=role, metadata={"from": src.key})
         return Response(role_detail(role, ctx), status=status.HTTP_201_CREATED)
 

@@ -23,3 +23,4 @@ export * from './partner-buzz';
 export * from './os';
 export * from './os-home';
 export * from './people';
+export * from './os-modules';

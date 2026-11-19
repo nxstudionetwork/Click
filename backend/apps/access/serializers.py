@@ -80,7 +80,7 @@ class AccountListSerializer(serializers.ModelSerializer):
     class Meta:
         model = OSAccount
         fields = ["id", "user_id", "full_name", "email", "kind", "status", "employee", "roles", "mfa_enabled", "is_locked",
-                  "last_login_at", "created_at", "avatar_url"]
+                  "last_login_at", "created_at", "avatar_url", "identity_type", "expires_at"]
 
     def get_employee(self, a):
         e = getattr(a.user, "employee", None)
@@ -128,6 +128,7 @@ class RoleWriteSerializer(serializers.Serializer):
     audience = serializers.ChoiceField(choices=Role.Audience.choices, required=False)
     parent_id = serializers.UUIDField(required=False, allow_null=True)
     requires_mfa = serializers.BooleanField(required=False)
+    emergency_eligible = serializers.BooleanField(required=False)
     priority = serializers.IntegerField(required=False, min_value=0, max_value=1000)
     home_widgets = serializers.ListField(child=serializers.CharField(), required=False)
     grants = GrantInput(many=True, required=False)

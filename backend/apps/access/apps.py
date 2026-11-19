@@ -15,3 +15,8 @@ class AccessConfig(AppConfig):
                 sync_permissions(using=kwargs.get("using", "default"))
 
         post_migrate.connect(_sync, dispatch_uid="access.sync_permissions")
+
+        from .governance import _register_hooks
+
+        _register_hooks()
+        from . import integrations  # noqa: F401  (Business AI tools for access questions)

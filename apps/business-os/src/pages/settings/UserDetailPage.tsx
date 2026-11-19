@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Icon, TextField, useToast } from '@click/ui';
-import { api, apiMessage } from '../../lib/api';
+import { access, api, apiMessage } from '../../lib/api';
 import { fmtDateTime, fromLocalInput, humanize, relative } from '../../lib/format';
 import { Alert, Avatar, Card, ConfirmDialog, Dialog, LoadingRows, QueryError, Status } from '../../components/ui';
 
@@ -44,7 +44,11 @@ export function UserDetailPage() {
             <h2 style={{ fontSize: 'var(--fs-xl)' }}>{u.fullName}</h2>
             <div className="muted small">{u.email} · {humanize(u.kind)}{u.employee ? ` · ${u.employee.employeeId}` : ''}</div>
             <div className="row row--wrap" style={{ marginTop: 6 }}><Status value={u.status} />{u.isLocked && <Status value="locked" tone="danger" label={`Locked until ${fmtDateTime(u.lockedUntil)}`} />}
-              {u.mfaEnabled ? <Status value="active" label="2-step on" /> : <Status value="warning" label="2-step off" />}</div>
+              {u.mfaEnabled ? <Status value="active" label="2-step on" /> : <Status value="warning" label="2-step off" />}
+              {u.identityType && <span className="chip">{humanize(u.identityType)}</span>}
+              {u.expiresAt && <span className="chip">Access ends {fmtDateTime(u.expiresAt)}</span>}
+              <Link to={`/access/effective?account=${u.id}`} className="small">Effective access →</Link></div>
+            {u.canManage && <IdentityLifecycle id={u.id} type={u.identityType} expires={u.expiresAt} onDone={refresh} />}
           </div>
           {u.canManage && (
             <div className="row row--wrap">
@@ -135,5 +139,24 @@ function AssignRoleDialog({ userId, onClose }: { userId: string; onClose: () => 
       <TextField label="Valid until (optional)" type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)} />
       <TextField label="Reason" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
     </Dialog>
+  );
+}
+
+function IdentityLifecycle({ id, type, expires, onDone }: { id: string; type?: string; expires?: string | null; onDone: () => void }) {
+  const toast = useToast();
+  const [t, setT] = useState(type ?? 'employee');
+  const [e, setE] = useState(expires ? expires.slice(0, 10) : '');
+  const save = useMutation({
+    mutationFn: () => access.patch(`identities/${id}`, { identityType: t, expiresAt: e || null }),
+    onSuccess: () => { toast('Identity updated'); onDone(); }, onError: (err) => toast(apiMessage(err), 'error'),
+  });
+  return (
+    <div className="row row--wrap" style={{ marginTop: 8 }}>
+      <select className="field__input" aria-label="Identity type" value={t} onChange={(x) => setT(x.target.value)}>
+        {['employee', 'contractor', 'consultant', 'intern', 'temporary', 'partner_user', 'support', 'external'].map((v) => <option key={v} value={v}>{humanize(v)}</option>)}
+      </select>
+      <label className="row small">Access ends <input type="date" className="field__input" value={e} onChange={(x) => setE(x.target.value)} /></label>
+      <Button size="sm" variant="outline" loading={save.isPending} onClick={() => save.mutate()}>Save</Button>
+    </div>
   );
 }
