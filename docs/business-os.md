@@ -123,6 +123,7 @@ steps. All amounts are data, none are hard-coded.
 | Customer | `CL-CU-…` (older `CLK-CS-…` kept) | Customer app |
 | Partner | `CLK-PT-…` | Partner app |
 | Order | `CLK-…` | Customer & partner apps |
+| Finance documents | `JV-`, `INV-`, `BILL-`, `CN-`, `DN-`, `PAY-`, `RCPT-`, `STL-`, `EXP-`, `BUD-`, `FA-`, `DSP-`, `AGR-` | Business OS (gap-free `NumberSeries`) |
 
 Employee IDs come from `people.models.next_id`, which skips values already taken, so explicit or imported IDs never
 collide. Old `CLK-E-` employee numbers were migrated to `EMP-`. An OS session is also separate from customer and
@@ -177,6 +178,40 @@ no second permission system.
 - Job: `python manage.py os_access_jobs` every 15 minutes (ends temporary / emergency access, warns 3 days before,
   expires accounts, lapses SoD exceptions).
 
+## Finance (module 4)
+
+`backend/apps/finance/` (API `/api/v1/os/finance/*`), UI at `/finance`. Finance owns financial consequences only;
+customers, partners, orders, employees and identities stay in their own apps and are referenced.
+
+- **GTV is not revenue.** Every captured platform payment becomes a `TransactionBreakdown` using the partner
+  agreement in force at the time (snapshotted): gross → partner share, Click commission, platform fee, tax on Click's
+  fees, gateway cost, who funded the discount. Click-operated / owned-inventory sales are revenue as principal. Wallet
+  top-ups and gift cards are a liability. Rides, bookings and other services without a partner agreement yet are shown
+  as "unclassified", never guessed into revenue.
+- **Double entry** through `ledger.post()` only: balanced to the paisa, open period, valid account mapping (a missing
+  mapping refuses to post), idempotent per source. Posted journals are never edited — reversals, credit / debit notes
+  and corrective journals instead.
+- **Periods**: open → soft-closed (adjustments only) → closed → locked. Closing checks the close checklist; reopening
+  needs a reason and a second approver (`finance.period_reopen`).
+- **Approvals** (central engine): manual journals, vendor bills, payments / payment runs, settlements, credit notes,
+  budgets, partner commercial terms, period reopen. Preparers can't release their own payments or settlements.
+- **Partner settlements**: unsettled sales and refunds (with the refund responsibility from the agreement) and
+  adjustments → net payable per partner → approval → payment (Dr partner payable / Cr bank) → bank reconciliation.
+  Partner statements reconcile opening + movements to closing.
+- **AP / AR**: invoices, vendor bills (duplicate supplier-invoice detection, three-way match hook for Procurement),
+  receipts, outgoing payments with duplicate-payment detection, payment runs, aging.
+- **Budgets**: budget vs actual (posted ledger) vs committed (`BudgetCommitment`, reserved by Procurement) vs
+  forecast (clearly labelled estimate). `services.check_budget()` / `reserve()` / `consume()` / `release()` are the
+  integration points.
+- **Also**: expense claims with explained policy checks, fixed assets with straight-line depreciation, bank accounts
+  (numbers encrypted, masked, reveal audited, changes announced), statement import and matching, gateway exception
+  detection, disputes, versioned tax rules (templates — review with a tax professional), reports (TB, P&L, balance sheet,
+  cash flow, GL, aging, tax, cash position, forecast, platform), controls page.
+- **Scope**: entity-wide figures (P&L, platform, settlements, banking) need organization-wide finance access; regional
+  finance users see their region's documents. Money leaves the API as exact strings, never floats.
+- Job: `python manage.py os_finance_jobs` every 15 minutes (brings captured / refunded payments into the ledger,
+  detects gateway exceptions).
+
 ## Business AI
 
 `backend/apps/workspace/ai.py`. The AI can only call tools; each tool declares a permission and runs as the asking
@@ -196,7 +231,7 @@ npm run dev -w @click/business-os      # http://localhost:5177 (proxies /api to 
 Sign in with **Development personas** on the login screen (DEBUG only) or any persona email with the development
 password printed by the seed. Personas: CEO, System Administrator, Finance Head, Finance Manager (South region),
 HR Manager, Operations Manager, Partner Manager, Branch Manager (Hyderabad), Recruiter, HR Business Partner
-(South), employees (one on probation), Internal Auditor. Employee numbers run
+(South), employees (one on probation), Internal Auditor, Accountant, Treasury & Controller. Employee numbers run
 EMP-000001 upwards.
 
 Production bootstrap (no default passwords):

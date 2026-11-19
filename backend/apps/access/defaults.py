@@ -80,7 +80,7 @@ ROLES = [
         "grants": [(c, "organization") for m in ("finance", "payments") for c in _all_actions(m)]
                   + [("analytics.business.view", "organization"), ("analytics.report.view", "organization"),
                      ("workflows.request.view", "organization"), ("procurement.order.approve", "organization"), ("procurement.order.view", "organization")],
-        "limits": {"expense": None, "purchase": None, "payment": None, "refund": None},
+        "limits": {"expense": None, "purchase": None, "payment": None, "refund": None, "journal": None, "settlement": None, "budget": None},
         "widgets": ["finance_snapshot", "business_pulse", "approvals", "alerts", "insights", "ai_briefing"],
         "pulse": ["gmv", "refunds", "failed_payments", "expenses", "orders"],
     },
@@ -89,7 +89,8 @@ ROLES = [
         "description": "Approves expenses and payments up to a limit within their region.",
         "grants": [(c, "region") for c in _all_actions("finance", {"view", "create", "edit", "approve", "reject", "export"})]
                   + [("payments.transaction.view", "region"), ("workflows.request.view", "region")],
-        "limits": {"expense": Decimal("50000"), "payment": Decimal("50000"), "refund": Decimal("10000")},
+        "limits": {"expense": Decimal("50000"), "payment": Decimal("50000"), "refund": Decimal("10000"), "journal": Decimal("200000"),
+                   "settlement": Decimal("2500000"), "budget": Decimal("500000")},
         "widgets": ["approvals", "business_pulse", "alerts", "my_work"], "pulse": ["expenses", "approvals"],
     },
     {
@@ -295,6 +296,11 @@ def expand(grants) -> list[tuple[str, str]]:
     return sorted(out.items())
 
 
+# Modules add their own starting configuration (finance chart of accounts, procurement categories, …) here; each
+# installer is idempotent and runs after the shared role templates and policies.
+INSTALLERS: list = []
+
+
 def install(organization) -> dict:
     """Idempotent: creates/refreshes system roles and default policies for an organization."""
     from apps.workflows.models import ApprovalLevel, ApprovalPolicy
@@ -330,4 +336,6 @@ def install(organization) -> dict:
     for key, name, first, second, severity in SOD_RULES:
         SoDRule.objects.get_or_create(organization=organization, key=key, defaults={"name": name, "first": first, "second": second,
                                                                                     "severity": severity})
+    for fn in INSTALLERS:
+        fn(organization)
     return roles

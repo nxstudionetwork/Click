@@ -178,7 +178,7 @@ def headcount(ctx, p, unit):
 
 
 METRICS: dict[str, Metric] = {m.key: m for m in (
-    Metric("gmv", "Gross transaction value", ("analytics.business.view", "finance.overview.view"), gmv, "money", "/m/finance", "Payments",
+    Metric("gmv", "Gross transaction value", ("analytics.business.view", "finance.overview.view"), gmv, "money", "/finance/platform", "Payments",
            description="What customers paid through Click (GMV). Not Click revenue."),
     Metric("orders", "Orders", ("analytics.business.view", "operations.order.view"), orders, drill="/m/operations", source="Orders"),
     Metric("bookings", "Bookings", ("analytics.business.view", "services.booking.view"), bookings, drill="/m/services", source="Bookings"),

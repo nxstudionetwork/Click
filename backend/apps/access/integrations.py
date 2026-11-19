@@ -14,7 +14,7 @@ PHRASES = {
     "approve refund": "payments.refund.approve", "refund": "payments.refund.approve", "salary": "people.payroll.view",
     "payroll": "people.payroll.view", "export customer": "sales.customer.export", "customer data": "sales.customer.export",
     "manage partner": "partners.partner.edit", "approve expense": "finance.expense.approve", "approve payment": "finance.payment.approve",
-    "purchase order": "procurement.order.approve", "assign role": "access.role.assign", "delete invoice": "finance.invoice.delete",
+    "purchase order": "procurement.order.approve", "assign role": "access.role.assign", "credit note": "finance.invoice.approve",
     "journal": "finance.ledger.approve", "settlement": "finance.settlement.approve",
 }
 

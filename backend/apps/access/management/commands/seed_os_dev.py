@@ -19,7 +19,7 @@ from django.test import RequestFactory
 from django.utils import timezone
 
 from apps.access.defaults import install
-from apps.access.models import AccountKind, OSAccount, RoleAssignment
+from apps.access.models import AccountKind, OSAccount, Role, RoleAssignment
 from apps.organization.models import Department, Organization, OrgUnit, Team
 from apps.people.models import Designation, Employee
 from apps.users.models import User
@@ -60,6 +60,10 @@ PERSONAS = [  # email, name, employee id, designation, department, unit, roles [
     ("neha.joshi@click.dev", "Neha Joshi", "EMP-000012", "EXEC", "HR", "CORP", [("recruiter", None)], "sneha.iyer@click.dev", "Recruiter"),
     ("imran.sheikh@click.dev", "Imran Sheikh", "EMP-000013", "MGR", "HR", "HYD-BR", [("hr-business-partner", None)], "sneha.iyer@click.dev", "HR Business Partner - South"),
     ("lakshmi.rao@click.dev", "Lakshmi Rao", "EMP-000014", "EXEC", "OPS", "HYD-BR", [], "arjun.kumar@click.dev", "Employee - Hyderabad 2"),
+    ("suresh.pillai@click.dev", "Suresh Pillai", "EMP-000015", "EXEC", "FIN", "CORP", [("accountant", None), ("payables-executive", None)],
+     "priya.menon@click.dev", "Accountant"),
+    ("anita.desai@click.dev", "Anita Desai", "EMP-000016", "MGR", "FIN", "CORP", [("treasury-manager", None), ("financial-controller", None)],
+     "priya.menon@click.dev", "Treasury & Controller"),
 ]
 
 
@@ -116,12 +120,54 @@ class Command(BaseCommand):
                 acct.onboarding_completed_at = timezone.now() if emp_id != "EMP-000009" else None  # Divya shows first-login onboarding
             acct.save()
             for key in ["employee"] + [r for r, _ in role_specs]:
-                RoleAssignment.objects.get_or_create(user=user, role=roles[key], is_active=True, defaults={"note": "Development seed"})
+                role = roles.get(key) or Role.objects.get(organization=org, key=key)  # module roles (finance, procurement) come from their installers
+                RoleAssignment.objects.get_or_create(user=user, role=role, is_active=True, defaults={"note": "Development seed"})
             people[email] = user
 
         self._samples(org, people)
         self._hr(org, people, depts, units, desig)
+        install(org)  # second pass links module data (e.g. finance cost centers) to the departments created above
+        self._finance(org, people, depts)
         return org
+
+    def _finance(self, org, people, depts):
+        """DEVELOPMENT finance data: platform payments brought into the ledger, budgets, a bill and an overdue invoice."""
+        from apps.access.authz import load_context
+        from apps.finance import platform, services
+        from apps.finance.ledger import default_entity, fiscal_year_of, next_number
+        from apps.finance.models import BankAccount, Budget, BudgetLine, Invoice
+
+        entity = default_entity(org)
+        platform.sync(org)
+        priya = people["priya.menon@click.dev"]
+        req = RequestFactory().post("/")
+        req.user = priya
+        ctx = load_context(priya)
+        bank = BankAccount.objects.filter(entity=entity, account_type="current").first()
+        if bank and not bank.last4:
+            bank.bank_name = "HDFC Bank (dev)"
+            bank.save(update_fields=["bank_name"])
+            services.set_bank_number(req, ctx, bank, "50200012345678", "HDFC0001234")
+        fy = fiscal_year_of(entity, timezone.localdate())
+        for code, name, amount, category in (("TECH", "Technology FY budget", Decimal("1200000"), "technology"),
+                                              ("OPS", "Operations FY budget", Decimal("600000"), "operations"),
+                                              ("MKT", "Marketing FY budget", Decimal("800000"), "marketing")):
+            if depts.get(code) and not Budget.objects.filter(organization=org, department=depts[code], fiscal_year=fy).exists():
+                b = Budget.objects.create(organization=org, entity=entity, number=next_number(org, "budget"), name=name, fiscal_year=fy,
+                                          department=depts[code], category=category, owner=priya, status="active", notes="Development seed (pre-approved)")
+                BudgetLine.objects.create(budget=b, amount=amount)
+        if not Invoice.objects.filter(organization=org).exists():
+            inv = services.create_invoice(req, ctx, {"party_name": "Acme Foods Pvt Ltd (dev)", "party_type": "customer", "revenue_type": "advertising",
+                                                     "issue_date": (timezone.localdate() - timedelta(days=45)).isoformat(),
+                                                     "due_date": (timezone.localdate() - timedelta(days=15)).isoformat(),
+                                                     "lines": [{"description": "Sponsored placement — Hyderabad, October", "quantity": 1, "unit_price": "100000",
+                                                                "account_key": "advertising_revenue",
+                                                                "tax_rule_id": str(__import__("apps.finance.models", fromlist=["TaxRule"]).TaxRule.objects.get(organization=org, code="GST18").pk)}]},
+                                          kind="customer_invoice")
+            services.issue_invoice(req, ctx, inv)
+            services.create_invoice(req, ctx, {"party_name": "CloudServe India (dev)", "party_type": "supplier", "supplier_invoice_number": "CS-2026-1101",
+                                               "lines": [{"description": "Cloud hosting — November", "quantity": 1, "unit_price": "45000", "account_key": "technology"}]},
+                                    kind="vendor_bill")
 
     def _hr(self, org, people, depts, units, desig):
         """DEVELOPMENT people & HR data: policies a real company would configure, and a little activity to look at."""

@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     "apps.workflows",
     "apps.workspace",
     "apps.documents",
+    "apps.finance",
 ]
 
 MIDDLEWARE = [

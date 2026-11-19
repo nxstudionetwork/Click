@@ -48,6 +48,30 @@ const AccessEmergency = lazyPage(pAccess, 'Emergency');
 const AccessPrivileged = lazyPage(pAccess, 'Privileged');
 const AccessHygiene = lazyPage(pAccess, 'Hygiene');
 const AccessSecurity = lazyPage(pAccess, 'SecurityEvents');
+const pFin = () => import('./pages/finance');
+const pFinMoney = () => import('./pages/finance/money');
+const FinanceLayout = lazyPage(pFin, 'FinanceLayout');
+const FinanceHome = lazyPage(pFin, 'FinanceHome');
+const FinPlatform = lazyPage(pFin, 'Platform');
+const FinCash = lazyPage(pFin, 'Cash');
+const FinJournals = lazyPage(pFin, 'Journals');
+const FinAccounts = lazyPage(pFin, 'Accounts');
+const FinPeriods = lazyPage(pFin, 'Periods');
+const FinReports = lazyPage(pFin, 'Reports');
+const FinTax = lazyPage(pFin, 'Tax');
+const FinControls = lazyPage(pFin, 'Controls');
+const FinSettings = lazyPage(pFin, 'Settings');
+const FinReceivables = lazyPage(pFinMoney, 'Receivables');
+const FinPayables = lazyPage(pFinMoney, 'Payables');
+const FinPayments = lazyPage(pFinMoney, 'Payments');
+const FinSettlements = lazyPage(pFinMoney, 'Settlements');
+const FinStatements = lazyPage(pFinMoney, 'Statements');
+const FinAgreements = lazyPage(pFinMoney, 'Agreements');
+const FinDisputes = lazyPage(pFinMoney, 'Disputes');
+const FinExpenses = lazyPage(pFinMoney, 'Expenses');
+const FinBudgets = lazyPage(pFinMoney, 'Budgets');
+const FinAssets = lazyPage(pFinMoney, 'Assets');
+const FinReconciliation = lazyPage(pFinMoney, 'Reconciliation');
 const HRHome = lazyPage(pCore, 'HRHome');
 const Directory = lazyPage(pCore, 'Directory');
 const Profile360 = lazyPage(pCore, 'Profile');
@@ -164,6 +188,29 @@ export function App() {
         <Route path="/profile" element={<InShell><ProfilePage /></InShell>} />
         <Route path="/alerts" element={<InShell><AlertsPage /></InShell>} />
         <Route path="/announcements" element={<InShell><AnnouncementsPage /></InShell>} />
+        <Route path="/finance" element={<InShell><FinanceLayout /></InShell>}>
+          <Route index element={<FinanceHome />} />
+          <Route path="expenses" element={<FinExpenses />} />
+          <Route path="platform" element={<RequirePerm any={['finance.overview.view']}><FinPlatform /></RequirePerm>} />
+          <Route path="cash" element={<RequirePerm any={['finance.bank.view', 'finance.reconciliation.view']}><FinCash /></RequirePerm>} />
+          <Route path="journals" element={<RequirePerm any={['finance.ledger.view']}><FinJournals /></RequirePerm>} />
+          <Route path="accounts" element={<RequirePerm any={['finance.ledger.view']}><FinAccounts /></RequirePerm>} />
+          <Route path="periods" element={<RequirePerm any={['finance.period.view']}><FinPeriods /></RequirePerm>} />
+          <Route path="receivables" element={<RequirePerm any={['finance.invoice.view']}><FinReceivables /></RequirePerm>} />
+          <Route path="payables" element={<RequirePerm any={['finance.bill.view']}><FinPayables /></RequirePerm>} />
+          <Route path="payments" element={<RequirePerm any={['finance.payment.view']}><FinPayments /></RequirePerm>} />
+          <Route path="settlements" element={<RequirePerm any={['finance.settlement.view']}><FinSettlements /></RequirePerm>} />
+          <Route path="statements" element={<RequirePerm any={['finance.settlement.view']}><FinStatements /></RequirePerm>} />
+          <Route path="agreements" element={<RequirePerm any={['finance.commission.view']}><FinAgreements /></RequirePerm>} />
+          <Route path="disputes" element={<RequirePerm any={['finance.dispute.view']}><FinDisputes /></RequirePerm>} />
+          <Route path="budgets" element={<RequirePerm any={['finance.budget.view']}><FinBudgets /></RequirePerm>} />
+          <Route path="assets" element={<RequirePerm any={['finance.asset.view']}><FinAssets /></RequirePerm>} />
+          <Route path="reconciliation" element={<RequirePerm any={['finance.reconciliation.view']}><FinReconciliation /></RequirePerm>} />
+          <Route path="tax" element={<RequirePerm any={['finance.tax.view']}><FinTax /></RequirePerm>} />
+          <Route path="reports" element={<RequirePerm any={['finance.report.view']}><FinReports /></RequirePerm>} />
+          <Route path="controls" element={<RequirePerm any={['finance.report.view']}><FinControls /></RequirePerm>} />
+          <Route path="settings" element={<RequirePerm any={['finance.settings.view']}><FinSettings /></RequirePerm>} />
+        </Route>
         <Route path="/access" element={<InShell><AccessLayout /></InShell>}>
           <Route index element={<AccessHome />} />
           <Route path="me" element={<MyAccess />} />
