@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { CartPrescription } from './PharmaPage';
-import type { Cart, CartGroup } from '@click/api';
+import type { Cart, CartGroup, StoreType } from '@click/api';
 import { Button, EmptyState, ErrorState, Icon, QuantityStepper, Skeleton, SmartImage, useToast } from '../components/ui';
 import { Totals } from '../features/cart/Totals';
+import { CART_SERVICES, CartTabs } from '../features/cart/CartTabs';
 import { cartKey, useCart, useCartActions } from '../features/cart/useCart';
 import { formatMoney } from '../lib/format';
 
@@ -17,17 +19,30 @@ export function CartPage() {
   const { update, remove, clear } = useCartActions();
   const toast = useToast();
   const onError = (e: unknown) => toast(e instanceof Error ? e.message : 'Could not update cart.', 'error');
+  const [picked, setPicked] = useState<StoreType | null>(null);
 
   if (cart.isError) return <ErrorState error={cart.error} onRetry={() => cart.refetch()} />;
   if (cart.isPending) return <div className="stack"><Skeleton height={28} width="30%" /><Skeleton height={180} /></div>;
 
   const c = cart.data;
   // Grocery baskets have their own page (per-store delivery, substitutions, price checks).
-  if (c.mode === 'basket' && c.items.length > 0) return <Navigate to="/groceries/basket" replace />;
-  if (c.items.length === 0) {
+  if (c.mode === 'basket' && c.items.length > 0 && !picked) return <Navigate to="/groceries/basket" replace />;
+  const current: StoreType | null = c.items.length === 0 ? null : (c.store?.storeType ?? c.groups[0]?.store.storeType ?? null);
+  const active: StoreType = picked ?? current ?? 'restaurant';
+  const tabs = <CartTabs active={active} current={current} count={c.itemCount} onPick={setPicked} />;
+  if (active !== current) {
+    const svc = CART_SERVICES.find((x) => x.type === active)!;
+    const other = current ? CART_SERVICES.find((x) => x.type === current) : null;
     return (
-      <EmptyState icon="bag" title="Your cart is waiting for something great." message="Add something from Food, Groceries or Shop."
-        action={<div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}><Link to="/shopping" className="btn btn--primary">Browse Shop</Link><Link to="/food" className="btn btn--outline">Order food</Link></div>} />
+      <div className="stack">
+        <h1>Your cart</h1>
+        {tabs}
+        <EmptyState icon={svc.icon} title={`Your ${svc.label} cart is empty`}
+          message={other ? `You have ${c.itemCount} item${c.itemCount === 1 ? '' : 's'} in your ${other.label} cart. Click. keeps one cart at a time: check it out or clear it to start a ${svc.label} order.` : `Add something from ${svc.label} and it appears here.`}
+          action={<div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+            {other && <button type="button" className="btn btn--outline" onClick={() => setPicked(current)}>View {other.label} cart</button>}
+            <Link to={svc.browse} className="btn btn--primary">{svc.cta}</Link></div>} />
+      </div>
     );
   }
   const marketplace = c.mode === 'marketplace';
@@ -38,9 +53,10 @@ export function CartPage() {
   const busy = update.isPending || remove.isPending;
 
   return (
-    <div className="checkout" data-theme={marketplace ? 'shopping' : undefined}>
+    <div className="checkout" data-theme={CART_SERVICES.find((x) => x.type === current)?.theme ?? (marketplace ? 'shopping' : undefined)}>
       <div className="stack">
         <div className="spread"><h1>Your cart</h1>{marketplace && c.groups.length > 1 && <span className="small muted">{c.groups.length} sellers · {c.groups.length} deliveries</span>}</div>
+        {tabs}
         {c.prescription && c.store && <CartPrescription required={c.prescription.required} attached={c.prescription.attached} available={c.prescription.available} pharmacyId={c.store.id} />}
         {c.groups.map((g) => (
           <GroupCard key={g.store.id} cart={c} g={g} marketplace={marketplace} busy={busy}

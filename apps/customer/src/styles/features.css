@@ -266,3 +266,13 @@ details.faq p { margin-top: var(--s-2); color: var(--c-ink-2); font-size: var(--
 .svc-facets__chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .svc-facets__n { margin-left: 4px; font-size: 11px; font-weight: 700; color: var(--c-ink-3); }
 .svc-dishes .rail__item { width: 200px; }
+
+/* Cart: one row of service tabs */
+.cart-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--s-4)); padding: 2px var(--s-4) 4px; }
+.cart-tabs::-webkit-scrollbar { display: none; }
+.cart-tabs__tab { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 6px; border-radius: 999px; border: 1px solid var(--c-line-strong);
+  background: var(--c-surface); color: var(--c-ink); font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; text-decoration: none; }
+.cart-tabs__icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--c-theme-solid); background: var(--c-theme-soft); }
+.cart-tabs__tab[aria-pressed='true'] { border-color: var(--c-theme-solid); background: var(--c-theme-soft); color: var(--c-theme-strong); }
+.cart-tabs__tab[aria-pressed='true'] .cart-tabs__icon { color: #fff; background: linear-gradient(140deg, var(--c-theme), var(--c-theme-solid)); }
+.cart-tabs__count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; background: var(--c-theme-solid); }

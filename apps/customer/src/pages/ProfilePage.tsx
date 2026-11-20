@@ -25,6 +25,17 @@ export function ProfilePage() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
 
+  // Everything the customer has ordered or booked, by service.
+  const activity: Row[] = [
+    { to: '/orders', title: 'Orders', hint: 'Food, Groceries, Shop and Pharma', icon: 'bag', theme: 'food' },
+    { to: '/activity?category=ride', title: 'Rides', hint: 'Trips and receipts', icon: 'ride', theme: 'ride' },
+    { to: '/parcels/history', title: 'Parcels', hint: 'Sent, received and store pickups', icon: 'parcel', theme: 'parcel' },
+    { to: '/bookings/mine', title: 'Bookings', hint: 'Shows, places and experiences', icon: 'ticket', theme: 'bookings' },
+    { to: '/hotels/bookings', title: 'Hotel stays', hint: 'Upcoming and past stays', icon: 'hotel', theme: 'hotels' },
+    { to: '/travel/bookings', title: 'Trips', hint: 'Bus, train and flight tickets', icon: 'bus', theme: 'travel' },
+    { to: '/services/bookings', title: 'Service bookings', hint: 'Professionals you booked', icon: 'wrench', theme: 'services' },
+    { to: '/events/mine', title: 'Events', hint: 'Plans, quotes and bookings', icon: 'gift', theme: 'events' },
+  ];
   const account: Row[] = [
     { to: '/account/card', title: 'My Click. ID Card', hint: 'Your digital Click. identity', icon: 'card', theme: 'default' },
     { to: '/account/addresses', title: 'Addresses', hint: summary.data ? `${summary.data.addresses} saved` : 'Home, work and other places', icon: 'pin', theme: 'grocery' },
@@ -75,6 +86,19 @@ export function ProfilePage() {
             <ProfileBadges summary={summary} />
           </section>
         )}
+
+        <section aria-labelledby="activity-h" className="profile__sec">
+          <h2 id="activity-h" className="profile__h">Orders &amp; bookings</h2>
+          <nav className="prows prows--grid" aria-labelledby="activity-h">
+            {activity.map((r) => (
+              <Link key={r.to} to={r.to} className="prow" data-theme={r.theme}>
+                <span className="prow__icon"><Icon name={r.icon} size={19} /></span>
+                <span className="prow__text"><strong>{r.title}</strong><span>{r.hint}</span></span>
+                <Icon name="right" size={18} className="prow__chev" />
+              </Link>
+            ))}
+          </nav>
+        </section>
 
         <section aria-labelledby="account-h" className="profile__sec">
           <h2 id="account-h" className="profile__h">Account</h2>

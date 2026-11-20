@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type InboxNotification, type NotificationGroup } from '@click/api';
@@ -22,11 +22,15 @@ export function NotificationsPage() {
   const group = (params.get('group') ?? '') as '' | NotificationGroup;
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [prefs, setPrefs] = useState(false);
-  const summary = useQuery({ queryKey: notificationKeys.summary, queryFn: api.money.notifications.summary });
+  const [q, setQ] = useState('');
+  const [term, setTerm] = useState('');
+  useEffect(() => { const t = setTimeout(() => setTerm(q.trim()), 300); return () => clearTimeout(t); }, [q]);
+  // New notifications appear on their own while the page is open (and when you come back to it).
+  const summary = useQuery({ queryKey: notificationKeys.summary, queryFn: api.money.notifications.summary, refetchInterval: 60_000, refetchOnWindowFocus: true });
   const list = useInfiniteQuery({
-    queryKey: [...notificationKeys.all, 'list', group, unreadOnly],
-    queryFn: ({ pageParam }) => api.money.notifications.list({ group, unread: unreadOnly, page: pageParam }),
-    initialPageParam: 1, getNextPageParam: (l) => (l.hasNext ? l.page + 1 : undefined),
+    queryKey: [...notificationKeys.all, 'list', group, unreadOnly, term],
+    queryFn: ({ pageParam }) => api.money.notifications.list({ group, unread: unreadOnly, q: term || undefined, page: pageParam }),
+    initialPageParam: 1, getNextPageParam: (l) => (l.hasNext ? l.page + 1 : undefined), refetchInterval: 60_000, refetchOnWindowFocus: true,
   });
   const rows = useMemo(() => list.data?.pages.flatMap((p) => p.results) ?? [], [list.data]);
   const refresh = () => qc.invalidateQueries({ queryKey: notificationKeys.all });
@@ -59,13 +63,19 @@ export function NotificationsPage() {
           );
         })}
       </div>
+      <div className="mn-search" role="search">
+        <Icon name="search" size={18} />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notifications" aria-label="Search notifications" />
+        {q && <button type="button" className="gsearch__tool" aria-label="Clear search" onClick={() => setQ('')}><Icon name="close" size={16} /></button>}
+      </div>
       <div className="mn-toolbar">
         <label className="mn-toggle"><input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} /> Unread only</label>
         <button type="button" className="mn-link small" disabled={!groupUnread || readAll.isPending} onClick={() => readAll.mutate()}>Mark all as read</button>
       </div>
 
       {list.isError ? <ErrorState error={list.error} onRetry={() => list.refetch()} /> : !list.data ? <Skeleton height={260} /> : rows.length === 0 ? (
-        <EmptyState icon="bell" title={unreadOnly ? 'No unread notifications' : 'No notifications yet'} message="Updates about your orders, rides, bookings, payments and offers appear here." />
+        <EmptyState icon="bell" title={term ? `Nothing matches “${term}”` : unreadOnly ? 'No unread notifications' : 'No notifications yet'}
+          message={term ? 'Try another word, or clear the search.' : 'Updates about your orders, rides, bookings, payments and offers appear here.'} />
       ) : (
         <>
           {groupByDay(rows, (n) => n.createdAt).map((g) => (

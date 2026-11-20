@@ -97,3 +97,6 @@
   .pbadges { grid-template-columns: repeat(4, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .profile__main, .pcomplete__bar span { animation: none !important; transition: none !important; } }
+
+/* Orders & bookings: two columns on wider screens */
+@media (min-width: 720px) { .prows--grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } }
