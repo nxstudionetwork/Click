@@ -1,6 +1,7 @@
 export * from './types';
 export * from './shop';
 export * from './showtime';
+export * from './streaming';
 export * from './groceries';
 export * from './parcels';
 export * from './http';

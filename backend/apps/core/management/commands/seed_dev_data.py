@@ -19,6 +19,7 @@ from devseed.events import seed_events
 from devseed.food import seed_food
 from devseed.partners import seed_partners
 from devseed.rides import seed_rides
+from devseed.streaming import seed_streaming
 
 
 class Command(BaseCommand):
@@ -38,6 +39,7 @@ class Command(BaseCommand):
             seed_rides(log)
             seed_events(log)
             seed_partners(log)
+            seed_streaming(log)
         if not opts["catalog_only"]:
             with transaction.atomic():
                 seed_test_customer(log)

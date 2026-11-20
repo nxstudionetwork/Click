@@ -52,6 +52,7 @@ from apps.rewards import views as reward_views
 from apps.carts import views as cart_views
 from apps.catalog.search import SearchView
 from apps.catalog import facets as catalog_facets
+from apps.streaming import urls as streaming_urls
 from apps.catalog.views import ProductDetailView, StoreMenuView
 from apps.notifications import views as notification_views
 from apps.support import views as support_views
@@ -116,6 +117,7 @@ customer_urls = [
     path("safety", safety_views.SafetyView.as_view(), name="safety"),
     path("discover/hide", discover_views.HideView.as_view(), name="discover-hide"),
     path("referrals", referral_views.MineView.as_view(), name="referrals"),
+    *streaming_urls.customer,
     path("preferences", customer_preferences.PreferencesView.as_view(), name="customer-preferences"),
     path("pharma/prescriptions", pharma_views.PrescriptionsView.as_view(), name="pharma-rx"),
     path("pharma/prescriptions/<uuid:pk>", pharma_views.PrescriptionView.as_view(), name="pharma-rx-one"),
@@ -191,6 +193,7 @@ api_v1 = [
     path("discover/events", discover_views.EventView.as_view(), name="discover-events"),
     path("home/layout", discover_views.HomeLayoutView.as_view(), name="home-layout"),
     path("", include("apps.geo.urls")),
+    *streaming_urls.public,
     path("search/suggest", search_views.SuggestView.as_view(), name="search-suggest"),
     path("shop/", include(shop_public_urls)),
     path("groceries/", include(grocery_urls.public)),

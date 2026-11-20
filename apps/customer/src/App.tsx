@@ -30,6 +30,7 @@ import { useAppearance } from './appearance';
 import { ShowPage } from './pages/ShowPage';
 import { ShowtimeCheckoutPage } from './pages/ShowtimeCheckoutPage';
 import { ShowtimePage } from './pages/ShowtimePage';
+import { LiveChannelPage, LivePage, LiveTitlePage, LiveWatchPage } from './pages/LivePage';
 import { ShowtimeSearchPage } from './pages/ShowtimeSearchPage';
 import { ShowtimeTitlePage } from './pages/ShowtimeTitlePage';
 import { WalletPage } from './pages/WalletPage';
@@ -179,6 +180,10 @@ function AppRoutes() {
         <Route path="products/:id" element={<ProductPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="showtime" element={<ShowtimePage />} />
+        <Route path="live" element={<LivePage />} />
+        <Route path="live/t/:slug" element={<LiveTitlePage />} />
+        <Route path="live/watch/:id" element={<LiveWatchPage />} />
+        <Route path="live/channel/:slug" element={<LiveChannelPage />} />
         <Route path="showtime/search" element={<ShowtimeSearchPage />} />
         <Route path="showtime/checkout/:holdId" element={guard(<ShowtimeCheckoutPage />)} />
         <Route path="showtime/:slug" element={<ShowtimeTitlePage />} />

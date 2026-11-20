@@ -175,6 +175,8 @@
 [data-theme='movies'] { --c-theme: #e5294b; --c-theme-solid: #c81e3f; --c-theme-soft: rgb(229 41 75 / 11%); --c-theme-deep: #8a1230; --c-theme-tint: #ffc1cc; --c-theme-rgb: 229 41 75;
   --st-ink: #0b0a0f; --st-ink-2: #15121b; --st-ink-3: #201a27; --st-line: rgb(255 255 255 / 8%); --st-wine: #5b0f24; --st-violet: #3b1d5c;
   --hero-bg: radial-gradient(70% 90% at 90% 0%, rgb(229 41 75 / 38%) 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(91 33 182 / 28%) 0%, transparent 65%), linear-gradient(160deg, #1a0f18 0%, #0f0b12 55%, #08070b 100%); }
+[data-theme='live'] { --c-theme: #d946ef; --c-theme-solid: #a21caf; --c-theme-soft: rgb(217 70 239 / 11%); --c-theme-deep: #701a75; --c-theme-tint: #f5d0fe; --c-theme-rgb: 217 70 239;
+  --hero-bg: radial-gradient(70% 90% at 92% 0%, rgb(236 72 153 / 45%) 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(124 58 237 / 40%) 0%, transparent 65%), linear-gradient(160deg, #1e0b2e 0%, #12081d 60%, #0b0613 100%); }
 [data-theme='hotels'] { --c-theme: #d9bf8c; --c-theme-solid: #b8955a; --c-theme-soft: rgb(217 191 140 / 13%); --c-theme-deep: #7a5e2e; --c-theme-tint: #f3e6c8; --c-theme-rgb: 217 191 140;
   --hero-bg: radial-gradient(60% 80% at 85% 0%, rgb(217 191 140 / 18%) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, rgb(52 211 153 / 14%) 0%, transparent 65%), linear-gradient(160deg, #161a1d 0%, #0e1113 70%); }
 [data-theme='travel'] { --c-theme: #38bdf8; --c-theme-solid: #0284c7; --c-theme-soft: rgb(56 189 248 / 13%); --c-theme-deep: #075985; --c-theme-tint: #bae6fd; --c-theme-rgb: 56 189 248;

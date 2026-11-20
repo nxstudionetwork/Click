@@ -8,7 +8,7 @@ import type { StoreType } from '@click/api';
 import type { IconName } from '../components/ui';
 
 export type ServiceStatus = 'live' | 'soon';
-export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'travel' | 'bookings' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers' | 'pharma';
+export type Theme = 'default' | 'food' | 'grocery' | 'shopping' | 'ride' | 'parcel' | 'movies' | 'services' | 'events' | 'hotels' | 'travel' | 'bookings' | 'rewards' | 'wallet' | 'buzz' | 'buddy' | 'explore' | 'profile' | 'activity' | 'offers' | 'pharma' | 'live';
 
 export interface ClickService {
   id: string;
@@ -36,6 +36,7 @@ export const SERVICES: ClickService[] = [
   { id: 'movies', name: 'Showtime', tagline: 'Cinema and live shows near you', icon: 'film', path: '/showtime', status: 'live', theme: 'movies' },
   { id: 'events', name: 'Events', tagline: 'Plan events, find teams and venues', icon: 'gift', path: '/events', status: 'live', theme: 'events' },
   { id: 'hotels', name: 'Hotels', tagline: 'Find a place. Compare it. Book it.', icon: 'hotel', path: '/hotels', status: 'live', theme: 'hotels' },
+  { id: 'live', name: 'Live', tagline: 'Series, episodes, films and live streams', icon: 'tv', path: '/live', status: 'live', theme: 'live' },
   { id: 'liveshows', name: 'Live Shows', tagline: 'Concerts, comedy, theatre and more', icon: 'ticket', path: '/showtime/search?kind=event', status: 'live', theme: 'movies' },
   { id: 'travel', name: 'Travel', tagline: 'Buses, trains and flights — all in one journey', icon: 'bus', path: '/travel', status: 'live', theme: 'travel' },
   { id: 'bookings', name: 'Bookings', tagline: 'Temples, attractions, experiences — and all your bookings', icon: 'temple', path: '/bookings', status: 'live', theme: 'bookings' },
@@ -81,6 +82,7 @@ export const STORE_TYPE_LABEL: Record<StoreType, { singular: string; plural: str
 /** Route → visual theme. Every theme shares Click's type, spacing and components; only accents change. */
 const THEME_ROUTES: [RegExp, Theme][] = [
   [/^\/pharma/, 'pharma'],
+  [/^\/live/, 'live'],
   [/^\/food/, 'food'],
   [/^\/groceries/, 'grocery'],
   [/^\/shopping/, 'shopping'],

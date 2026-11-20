@@ -103,6 +103,7 @@ INSTALLED_APPS = [
     "apps.referrals",
     "apps.analytics",
     "apps.geo",
+    "apps.streaming",
     # Business OS foundation
     "apps.organization",
     "apps.people",
