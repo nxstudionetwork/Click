@@ -296,3 +296,7 @@
   background: rgb(255 255 255 / 14%); backdrop-filter: blur(10px); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
 .buzz-page__saved.is-on { background: #fff; color: #9333ea; }
 .buzz-page__saved b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ffd166; color: #1a1033; font-size: 11px; display: grid; place-items: center; }
+.loc-note { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-sm); color: var(--c-ink-3); }
+.loc-note svg { flex: none; color: var(--c-theme, var(--c-brand)); }
+.loc-note span { min-width: 0; overflow-wrap: anywhere; }
+.loc-note strong { color: var(--c-ink-2); text-transform: capitalize; }

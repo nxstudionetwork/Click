@@ -9,7 +9,7 @@ import { MissionCard } from '../features/parcels/MissionCard';
 import { Panel, ParcelRow, RouteGlyph, RouteLine, StatusChip, vehicleIcon, when } from '../features/parcels/parts';
 import { PHONE, useParcelDraft } from '../features/parcels/useParcelDraft';
 import { api } from '../lib/api';
-import { LocationSelector } from '../location/LocationSelector';
+import { LocationNote } from '../location/LocationNote';
 import { useDeliveryLocation } from '../location/LocationProvider';
 
 const recipientsKey = ['customer', 'parcels', 'recipients'] as const;
@@ -109,7 +109,7 @@ export function ParcelPage() {
       </header>
 
       <div className="pc-where">
-        <LocationSelector />
+        <LocationNote verb="Your location:" />
         {cov?.checked && !cov.available && <p className="pc-note pc-note--warn" role="status"><Icon name="alert" size={14} /> Click. Parcel doesn’t deliver around this location yet.</p>}
         {cov?.checked && cov.available && <p className="pc-note"><Icon name="check" size={14} /> Click. Parcel operates in {cov.area}.</p>}
         {authed && !point && addresses.length > 0 && <p className="pc-note"><Icon name="pin" size={14} /> Your selected address has no map pin; choose pickup and drop below.</p>}

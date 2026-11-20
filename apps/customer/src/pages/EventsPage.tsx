@@ -7,7 +7,7 @@ import { useThemeOverride } from '../components/layout/AppShell';
 import { servicePhoto } from '../config/media';
 import { evIcon, fmtDate, LiveEventCard, PackageCardView, ProviderCardView, ProviderMark, Section } from '../features/events/parts';
 import { api } from '../lib/api';
-import { LocationSelector } from '../location/LocationSelector';
+import { LocationNote } from '../location/LocationNote';
 import { useDeliveryLocation } from '../location/LocationProvider';
 
 /**
@@ -49,7 +49,7 @@ export function EventsPage() {
         </div>
       </header>
 
-      <div className="ev-where"><LocationSelector /></div>
+      <div className="ev-where"><LocationNote verb="Planning around" /></div>
 
       <div className="ev-search" role="search">
         <Icon name="search" />

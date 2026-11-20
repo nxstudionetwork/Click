@@ -2,12 +2,28 @@
    near-black canvas with crimson / wine accents. Shared components adapt because the colour tokens are redefined
    locally on .st-page. */
 
-.shell:has(.st-page) { background: #0b0a0f; }
+:root[data-appearance='dark'] .shell:has(.st-page) { background: #0b0a0f; }
 .st-page {
-  --c-ink: #f4f1f6; --c-ink-2: #d6d0dc; --c-ink-3: #9d95a6; --c-bg: #0b0a0f; --c-page-bg: #0b0a0f;
-  --c-surface: #15121b; --c-surface-2: #1d1825; --c-surface-3: #272030; --c-line: rgb(255 255 255 / 8%); --c-line-strong: rgb(255 255 255 / 16%);
-  --c-float-bg: rgb(20 17 26 / 78%); --c-header-bg: rgb(11 10 15 / 88%);
-  color: var(--c-ink); display: flex; flex-direction: column; gap: var(--s-6); padding-bottom: var(--s-8);
+  color: var(--c-ink);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding-bottom: var(--s-8);
+}
+/* Night palette: Dark appearance, and Showtime's cinematic cards in both appearances. */
+:root[data-appearance='dark'] .st-page, .st-hero, .st-title-hero, .st-plan, .ticket {
+  --c-ink: #f4f1f6;
+  --c-ink-2: #d6d0dc;
+  --c-ink-3: #9d95a6;
+  --c-bg: #0b0a0f;
+  --c-page-bg: #0b0a0f;
+  --c-surface: #15121b;
+  --c-surface-2: #1d1825;
+  --c-surface-3: #272030;
+  --c-line: rgb(255 255 255 / 8%);
+  --c-line-strong: rgb(255 255 255 / 16%);
+  --c-float-bg: rgb(20 17 26 / 78%);
+  --c-header-bg: rgb(11 10 15 / 88%);
 }
 .st-page h1, .st-page h2, .st-page h3 { color: var(--c-ink); }
 .st-page .muted, .st-page .small.muted { color: var(--c-ink-3); }
@@ -243,3 +259,6 @@
 .st-trailer video { width: 100%; max-height: 70vh; border-radius: 16px; background: #000; }
 
 @media (prefers-reduced-motion: reduce) { .ticket, .tcard__poster { animation: none; transition: none; } }
+
+/* Cinematic cards keep light text on their night gradients in both appearances. */
+.st-hero, .st-title-hero, .st-plan, .ticket { color: var(--c-ink); }

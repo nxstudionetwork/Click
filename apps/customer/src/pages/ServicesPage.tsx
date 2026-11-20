@@ -8,7 +8,7 @@ import { servicePhoto } from '../config/media';
 import { catIcon, ProCardView, Section } from '../features/pros/parts';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/format';
-import { LocationSelector } from '../location/LocationSelector';
+import { LocationNote } from '../location/LocationNote';
 import { useDeliveryLocation } from '../location/LocationProvider';
 
 /**
@@ -45,7 +45,7 @@ export function ServicesPage() {
         </div>
       </header>
 
-      <div className="sv-where"><LocationSelector /></div>
+      <div className="sv-where"><LocationNote verb="Professionals near" /></div>
 
       <section className="sv-now" aria-labelledby="sv-now-h">
         <div>

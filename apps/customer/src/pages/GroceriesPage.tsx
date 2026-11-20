@@ -7,7 +7,7 @@ import { GrocerySearchField } from '../features/groceries/GrocerySearch';
 import { BasketBar, CategoryRail, ProductCard, Rail, Section, StoreCard } from '../features/groceries/parts';
 import { useGroceryAt } from '../features/groceries/useGroceries';
 import { api } from '../lib/api';
-import { LocationSelector } from '../location/LocationSelector';
+import { LocationNote } from '../location/LocationNote';
 import { formatMoney } from '../lib/format';
 
 /**
@@ -40,7 +40,7 @@ export function GroceriesPage() {
       </header>
 
       <div className="gr-where">
-        <LocationSelector />
+        <LocationNote verb="Stores delivering to" />
         {status === 'authenticated' && !home.isPending && d && !d.hasLocation && (
           <p className="small gr-note"><Icon name="pin" size={14} /> Add a map pin to this address (Profile → Addresses) so we can check which stores deliver to you and how fast.</p>
         )}

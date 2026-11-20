@@ -375,10 +375,18 @@
 .gs-ad .dc-card { flex: none; max-width: 100%; }
 
 /* Pharma */
-.ph-hero { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 22px; background: var(--hero-bg); color: #ecfdf5; }
-.ph-hero h2 { font-size: clamp(1.2rem, 4.5vw, 1.55rem); font-weight: 800; }
-.ph-hero .mn-search { background: rgb(255 255 255 / 96%); }
-.ph-hero .btn--outline { color: #ecfdf5; border-color: rgb(153 246 228 / 50%); }
+/* Pharma hero: the same vivid service card in White and Dark, white text, solid primary + glass secondary action. */
+.ph-hero { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 26px; color: #fff;
+  background: radial-gradient(70% 90% at 100% 0%, rgb(153 246 228 / 38%), transparent 60%), radial-gradient(60% 80% at 0% 100%, rgb(59 130 246 / 30%), transparent 65%),
+    linear-gradient(150deg, #0f766e 0%, #115e59 55%, #134e4a 100%);
+  box-shadow: 0 22px 44px -28px rgb(13 148 136 / 85%); }
+.ph-hero h2 { font-size: clamp(1.2rem, 4.5vw, 1.55rem); font-weight: 800; line-height: 1.2; color: #fff; }
+.ph-hero .mn-search { background: #fff; color: #0f172a; border-color: transparent; }
+.ph-hero .mn-search input { color: #0f172a; }
+.ph-hero .btn--primary, .ph-hero .mn-row2 > .btn:first-child { background: #fff; color: #0f766e; border-color: #fff; }
+.ph-hero__ghost { background: rgb(255 255 255 / 14%); color: #fff !important; border: 1px solid rgb(255 255 255 / 45%); backdrop-filter: blur(8px); }
+.ph-trust { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; font-weight: 600; color: rgb(255 255 255 / 88%); }
+.ph-trust li { display: inline-flex; align-items: center; gap: 5px; }
 .ph-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 150px), 1fr)); gap: 8px; }
 .ph-cat { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-line);
   color: var(--c-ink); font: inherit; font-weight: 600; font-size: var(--fs-sm); cursor: pointer; text-align: left; }

@@ -65,16 +65,24 @@ export function PharmaPage() {
   const h = home.data;
   return (
     <div className="mn-page ph-page" data-theme="pharma">
-      <MoneyHead title="Pharma" back="/" />
-      <section className="ph-hero">
-        <h2>Medicines and health essentials, from pharmacies near you.</h2>
+      <header className="svc-intro">
+        <h1>Pharma</h1>
+        <p>Medicines and health essentials. One Click. away.</p>
+      </header>
+      <section className="ph-hero" aria-label="Find medicines">
+        <h2>Genuine medicines from licensed pharmacies near you.</h2>
         <form className="mn-search" role="search" onSubmit={(e) => { e.preventDefault(); setParams(q.trim() ? { q: q.trim() } : {}); }}>
           <Icon name="search" size={18} /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search medicines, salt name or health products" aria-label="Search Pharma" />
         </form>
         <div className="mn-row2">
           <Button onClick={() => (status === 'authenticated' ? setUpload(true) : undefined)} disabled={status !== 'authenticated'}><Icon name="camera" size={16} /> Upload prescription</Button>
-          {status === 'authenticated' && <Link to="/pharma/prescriptions" className="btn btn--outline">My prescriptions</Link>}
+          {status === 'authenticated' && <Link to="/pharma/prescriptions" className="btn ph-hero__ghost">My prescriptions</Link>}
         </div>
+        <ul className="ph-trust" aria-label="How Click. Pharma works">
+          <li><Icon name="shield" size={14} /> Licensed pharmacies</li>
+          <li><Icon name="check" size={14} /> Pharmacist-checked prescriptions</li>
+          <li><Icon name="lock" size={14} /> Prescriptions stay private</li>
+        </ul>
       </section>
       {(cat || term) ? (
         <Section title={term ? `Results for “${term}”` : h?.categories.find((c) => c.code === cat)?.label ?? 'Products'} id="ph-list">
