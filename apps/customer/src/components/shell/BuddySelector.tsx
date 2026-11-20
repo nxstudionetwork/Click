@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../lib/api';
 import { Icon, Sheet } from '../ui';
+import { BuddyMark } from './BuddyMark';
 
 /**
  * The header Buddy icon. It never jumps straight into a chat: it offers the two Buddy experiences, which share the
@@ -25,19 +26,19 @@ export function BuddySelector() {
     <>
       <button className="icon-btn buddy-btn" aria-label="Buddy, your Click. assistant" aria-haspopup="dialog"
         onClick={() => { setOpen(true); if (authed) api.buddy.track('opened'); }}>
-        <Icon name="sparkle" />
+        <BuddyMark size={34} />
       </button>
       {/* Portalled: the header's backdrop blur would otherwise trap a fixed-position sheet inside the header. */}
-      {createPortal(<Sheet open={open} onClose={() => setOpen(false)} label="Choose Buddy">
+      {createPortal(<Sheet open={open} onClose={() => setOpen(false)} label="Choose Buddy" variant="full">
         <div className="bd-choose" data-theme="buddy">
           <div className="bd-choose__head">
-            <span className="bd-orb bd-orb--sm" aria-hidden="true" />
+            <BuddyMark size={44} />
             <div><h2>Buddy</h2><span className="small bd-muted">Your Click. intelligence — choose how to talk.</span></div>
             <button type="button" className="bd-icon" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
           </div>
           <div className="bd-modes">
             <button type="button" className="bd-mode bd-mode--man" onClick={() => go('man')}>
-              <span className="bd-mode__icon"><Icon name="sparkle" size={26} /></span>
+              <span className="bd-mode__icon"><BuddyMark size={34} /></span>
               <span className="bd-mode__name">Man</span>
               <span className="bd-mode__desc">Talk, ask, search, plan and control Click.</span>
               <span className="bd-mode__go small">Open workspace <Icon name="right" size={12} /></span>

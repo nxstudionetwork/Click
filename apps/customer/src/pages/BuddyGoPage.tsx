@@ -4,8 +4,10 @@ import { useMutation } from '@tanstack/react-query';
 import type { BuddyAction, BuddyMessage } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, Icon } from '../components/ui';
+import { BuddyMark } from '../components/shell/BuddyMark';
 import { useCapabilities } from '../features/assist/useCapabilities';
 import { useRecorder } from '../features/assist/useRecorder';
+import { speechSupported, useSpeech } from '../features/assist/useSpeech';
 import { ConfirmCard } from '../features/buddy/parts';
 import { speak, stopSpeaking, useBuddyChat } from '../features/buddy/useBuddyChat';
 import { api } from '../lib/api';
@@ -15,8 +17,8 @@ const LABEL: Record<GoState, string> = { ready: 'Ready', listening: 'Listening',
 const EXAMPLES = ['Find me a plumber near my home', 'Show me my pending orders', 'Track my parcel', 'Find a hotel in Goa this weekend', 'Open my rewards'];
 
 /**
- * Buddy GO — voice first. Tap, speak (recording stops by itself after a few seconds, never indefinitely), Buddy
- * transcribes on Click.'s own speech service, acts through the same server action layer as MAN, and answers aloud with
+ * Buddy GO — voice first. Tap, speak (listening stops by itself), Buddy transcribes on Click.'s speech service or,
+ * without one, the browser's own recogniser, acts through the same server action layer as MAN, and answers aloud with
  * an on-device voice. Anything that needs a confirmation shows a summary and waits for a tap; payments always happen in
  * Click.'s checkout, never by voice.
  */
@@ -29,16 +31,20 @@ export function BuddyGoPage() {
   const [last, setLast] = useState<BuddyMessage | null>(null);
   const [heard, setHeard] = useState('');
   const [typed, setTyped] = useState('');
-  const voiceOn = caps.data?.voice === true;
+  const serverVoice = caps.data?.voice === true;
+  // Click.'s speech service when configured; otherwise the browser's own recogniser (no keys needed).
+  const browserVoice = !serverVoice && speechSupported();
+  const voiceOn = serverVoice || browserVoice;
+  const onSpoken = async (text: string) => {
+    api.buddy.track('voice_success');
+    setHeard(text);
+    const m = await chat.send(text, { viaVoice: true });
+    if (m) reply(m);
+  };
+  const speech = useSpeech((t) => void onSpoken(t));
   const transcribe = useMutation({
     mutationFn: (audio: Blob) => api.customer.assistant.transcribe(audio),
-    onSuccess: async (r) => {
-      if (!r.text) return;
-      api.buddy.track('voice_success');
-      setHeard(r.text);
-      const m = await chat.send(r.text, { viaVoice: true });
-      if (m) reply(m);
-    },
+    onSuccess: async (r) => { if (r.text) await onSpoken(r.text); },
     onError: () => api.buddy.track('voice_failed'),
   });
   const rec = useRecorder((audio) => transcribe.mutate(audio));
@@ -50,23 +56,24 @@ export function BuddyGoPage() {
     if (m.content && speak(m.content, () => setSpeakingNow(false))) setSpeakingNow(true);
   };
   const state: GoState = useMemo(() => {
-    if (!voiceOn && caps.isSuccess) return 'off';
-    if (rec.state === 'listening') return 'listening';
+    if (!voiceOn && (caps.isSuccess || caps.isError)) return 'off';
+    if (rec.state === 'listening' || speech.state === 'listening') return 'listening';
     if (transcribe.isPending || chat.busy) return 'thinking';
     if (chat.acting) return 'acting';
     if (speakingNow) return 'speaking';
-    if (chat.error || transcribe.isError || rec.state === 'error' || rec.state === 'denied') return 'error';
+    if (chat.error || transcribe.isError || rec.state === 'error' || rec.state === 'denied' || speech.state === 'error' || speech.state === 'denied' || speech.state === 'nomatch') return 'error';
     if (last) return 'completed';
     return 'ready';
-  }, [voiceOn, caps.isSuccess, rec.state, transcribe.isPending, transcribe.isError, chat.busy, chat.acting, speakingNow, chat.error, last]);
+  }, [voiceOn, caps.isSuccess, caps.isError, rec.state, speech.state, transcribe.isPending, transcribe.isError, chat.busy, chat.acting, speakingNow, chat.error, last]);
 
   const tap = () => {
     if (rec.state === 'listening') return rec.stop();
+    if (speech.state === 'listening') return speech.stop();
     if (speakingNow) { stopSpeaking(); setSpeakingNow(false); return; }
     if (chat.busy) return chat.stop();
     chat.setError(null);
     api.buddy.track('voice_started');
-    rec.start();
+    if (serverVoice) rec.start(); else speech.start();
   };
   const sendTyped = async (e: FormEvent) => {
     e.preventDefault();
@@ -90,20 +97,21 @@ export function BuddyGoPage() {
     <div className="go-page" data-theme="buddy" data-state={state}>
       <header className="go-head">
         <Link to="/" className="bd-icon" aria-label="Back to Click."><Icon name="close" size={20} /></Link>
-        <span className="go-brand"><span className="bd-orb bd-orb--sm" aria-hidden="true" /> Buddy <strong>GO</strong></span>
+        <span className="go-brand"><BuddyMark size={26} state={state === 'listening' ? 'listening' : state === 'thinking' ? 'thinking' : 'idle'} /> Buddy <strong>GO</strong></span>
         <Link to={chat.id ? `/buddy?c=${chat.id}` : '/buddy'} className="bd-icon" aria-label="Open this in Buddy MAN"><Icon name="menu" size={20} /></Link>
       </header>
 
       <main className="go-main">
-        <p className="go-prompt">{state === 'off' ? 'Voice isn’t switched on for Click. yet.' : last ? '' : 'What can I do for you?'}</p>
+        <p className="go-prompt">{state === 'off' ? 'This browser can’t listen. Type what you need below.' : last ? '' : 'What can I do for you?'}</p>
         <button type="button" className="go-orb" onClick={tap} disabled={state === 'off' || transcribe.isPending} style={{ ['--lvl' as string]: rec.level }}
           aria-label={state === 'listening' ? 'Stop listening' : state === 'speaking' ? 'Stop speaking' : state === 'thinking' ? 'Stop' : 'Tap and speak'}>
           <span className="go-orb__ring" /><span className="go-orb__ring go-orb__ring--2" /><span className="go-orb__core"><Icon name={state === 'speaking' ? 'play' : 'mic'} size={34} /></span>
         </button>
         <p className="go-state" role="status" aria-live="assertive">{LABEL[state]}</p>
-        {heard && <p className="go-heard">“{heard}”</p>}
+        {speech.state === 'listening' && speech.interim ? <p className="go-heard">“{speech.interim}”</p> : heard && <p className="go-heard">“{heard}”</p>}
         {state === 'error' && (
-          <p className="go-note">{rec.state === 'denied' ? 'Microphone access is blocked. Allow it in your browser settings and try again.'
+          <p className="go-note">{rec.state === 'denied' || speech.state === 'denied' ? 'Microphone access is blocked. Allow it in your browser settings and try again.'
+            : speech.state === 'nomatch' ? 'I didn’t catch that. Tap and try again.'
             : rec.state === 'unsupported' ? 'This browser can’t record audio.' : transcribe.isError ? 'I couldn’t hear that clearly. Tap and try again.'
               : chat.error?.message ?? 'Try again.'}
             {chat.error?.text && <button type="button" className="bd-chip" onClick={() => chat.retry()}>Retry</button>}</p>
@@ -118,7 +126,7 @@ export function BuddyGoPage() {
         )}
         {chat.pending && <ConfirmCard p={chat.pending} busy={chat.acting} onDecide={(d) => chat.decide(d).then((r) => r && speak(d === 'confirm' ? (r.result.message || 'Done.') : 'Okay, I didn’t do it.'))} />}
         {!last && state !== 'off' && <ul className="go-examples" aria-label="Try saying">{EXAMPLES.map((x) => <li key={x}>“{x}”</li>)}</ul>}
-        {state === 'off' && (
+        {(
           <form className="go-type" onSubmit={sendTyped}>
             <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type instead, e.g. Track my parcel" aria-label="Type a request" maxLength={500} />
             <Button type="submit" disabled={!typed.trim() || chat.busy} loading={chat.busy}>Go</Button>

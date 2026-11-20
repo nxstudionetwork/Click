@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { BuddyMark } from '../components/shell/BuddyMark';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type BuddyAttachment, type BuddyConversation } from '@click/api';
@@ -6,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { Icon, Sheet, Skeleton, useConfirm } from '../components/ui';
 import { useCapabilities } from '../features/assist/useCapabilities';
 import { useRecorder } from '../features/assist/useRecorder';
+import { speechSupported, useSpeech } from '../features/assist/useSpeech';
 import { ConfirmCard, MessageView, QUICK } from '../features/buddy/parts';
 import { useBuddyChat } from '../features/buddy/useBuddyChat';
 import { track } from '../lib/analytics';
@@ -42,7 +44,11 @@ export function BuddyPage() {
     onError: () => api.buddy.track('voice_failed'),
   });
   const rec = useRecorder((audio) => transcribe.mutate(audio));
-  const voiceOn = caps.data?.voice === true;
+  const serverVoice = caps.data?.voice === true;
+  // Click.'s speech service when configured, otherwise the browser's own recogniser.
+  const speech = useSpeech((t) => { api.buddy.track('voice_success'); chat.send(t, { viaVoice: true }); });
+  const voiceOn = serverVoice || speechSupported();
+  const listening = rec.state === 'listening' || speech.state === 'listening';
 
   useEffect(() => { endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' }); }, [chat.messages.length, chat.busy, chat.pending]);
   useEffect(() => {
@@ -77,7 +83,7 @@ export function BuddyPage() {
   if (status !== 'authenticated') {
     return (
       <div className="bd-page" data-theme="buddy">
-        <div className="bd-gate"><span className="bd-orb bd-orb--sm" aria-hidden="true" /><h1>Buddy</h1><p>Sign in so Buddy can use your addresses, orders and bookings — only yours.</p>
+        <div className="bd-gate"><BuddyMark size={30} /><h1>Buddy</h1><p>Sign in so Buddy can use your addresses, orders and bookings — only yours.</p>
           <Link to="/login?next=/buddy" className="bd-btn">Sign in</Link><Link to="/" className="bd-link small">Back to Click.</Link></div>
       </div>
     );
@@ -86,7 +92,7 @@ export function BuddyPage() {
   return (
     <div className="bd-page" data-theme="buddy">
       <header className="bd-header">
-        <div className="bd-brand"><span className="bd-orb bd-orb--sm" aria-hidden="true" /><span><strong>Buddy</strong>{chat.title && <span className="small bd-muted">{chat.title}</span>}</span></div>
+        <div className="bd-brand"><BuddyMark size={30} /><span><strong>Buddy</strong>{chat.title && <span className="small bd-muted">{chat.title}</span>}</span></div>
         <nav className="bd-header__acts" aria-label="Buddy">
           <button type="button" className="bd-icon" onClick={newChat} aria-label="New chat" title="New chat"><Icon name="plus" size={20} /></button>
           <button type="button" className="bd-icon" onClick={() => navigate('/')} aria-label="Click. Home" title="Home"><Icon name="home" size={20} /></button>
@@ -98,7 +104,7 @@ export function BuddyPage() {
       <main className="bd-main" aria-live="polite">
         {chat.loading ? <div className="bd-stream"><Skeleton height={60} /><Skeleton height={120} /></div> : chat.messages.length === 0 ? (
           <section className="bd-welcome">
-            <span className="bd-orb" aria-hidden="true" />
+            <BuddyMark size={72} />
             <h1>Hi, I’m Buddy.</h1>
             <p>What would you like to do with Click. today?</p>
             <div className="bd-quick">{QUICK.map((x) => (
@@ -125,18 +131,21 @@ export function BuddyPage() {
 
       <form className="bd-input" onSubmit={submit}>
         {attachment && <div className="bd-attached small"><Icon name="pin" size={12} /> {attachment.label}<button type="button" aria-label="Remove attachment" onClick={() => setAttachment(null)}><Icon name="close" size={12} /></button></div>}
-        {(rec.state === 'denied' || rec.state === 'unsupported' || transcribe.isError) && (
-          <p className="bd-voicenote small" role="status">{rec.state === 'denied' ? 'Microphone access is blocked. Allow it in your browser, or type.' : rec.state === 'unsupported' ? 'This browser can’t record audio.' : 'Couldn’t hear that clearly. Try again.'}</p>
+        {(rec.state === 'denied' || speech.state === 'denied' || rec.state === 'unsupported' || transcribe.isError || speech.state === 'nomatch' || speech.state === 'error') && (
+          <p className="bd-voicenote small" role="status">{rec.state === 'denied' || speech.state === 'denied' ? 'Microphone access is blocked. Allow it in your browser, or type.' : rec.state === 'unsupported' ? 'This browser can’t record audio.' : speech.state === 'nomatch' ? 'Didn’t catch that. Tap the mic and try again.' : 'Couldn’t hear that clearly. Try again.'}</p>
         )}
         <div className="bd-input__bar">
           <button type="button" className="bd-icon" aria-label="Attach Click. context" onClick={() => setAttachOpen(true)}><Icon name="pin" size={20} /></button>
-          <textarea ref={inputRef} rows={1} value={draft} maxLength={2000} placeholder={rec.state === 'listening' ? 'Listening…' : transcribe.isPending ? 'Understanding…' : 'Ask Buddy anything…'}
+          <textarea ref={inputRef} rows={1} value={draft} maxLength={2000} placeholder={listening ? (speech.interim || 'Listening…') : transcribe.isPending ? 'Understanding…' : 'Ask Buddy anything…'}
             aria-label="Ask Buddy anything" onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} />
-          <button type="button" className={`bd-icon bd-mic${rec.state === 'listening' ? ' is-live' : ''}`} style={{ ['--lvl' as string]: rec.level }}
-            disabled={!voiceOn || transcribe.isPending || chat.busy} aria-pressed={rec.state === 'listening'}
-            aria-label={!voiceOn ? 'Voice isn’t switched on yet' : rec.state === 'listening' ? 'Stop listening' : 'Speak to Buddy'}
-            title={!voiceOn ? 'Voice isn’t switched on for Click. yet' : undefined}
-            onClick={() => { if (rec.state === 'listening') rec.stop(); else { api.buddy.track('voice_started'); rec.start(); } }}>
+          <button type="button" className={`bd-icon bd-mic${listening ? ' is-live' : ''}`} style={{ ['--lvl' as string]: serverVoice ? rec.level : listening ? 0.35 : 0 }}
+            disabled={!voiceOn || transcribe.isPending || chat.busy} aria-pressed={listening}
+            aria-label={!voiceOn ? 'Voice isn’t available in this browser' : listening ? 'Stop listening' : 'Speak to Buddy'}
+            title={!voiceOn ? 'This browser can’t take voice input' : undefined}
+            onClick={() => {
+              if (rec.state === 'listening') rec.stop(); else if (speech.state === 'listening') speech.stop();
+              else { api.buddy.track('voice_started'); if (serverVoice) rec.start(); else speech.start(); }
+            }}>
             <Icon name="mic" size={20} />
           </button>
           {chat.busy ? <button type="button" className="bd-send bd-send--stop" onClick={chat.stop} aria-label="Stop"><span /></button>

@@ -28,7 +28,7 @@ describe('Buddy MAN', () => {
     expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull(); // no Click bottom navigation
     expect(screen.getByText('Hi, I’m Buddy.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Attach Click. context' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Voice isn’t switched on yet' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Voice isn’t available in this browser' })).toBeDisabled();
     await userEvent.type(screen.getByLabelText('Ask Buddy anything'), 'Show my recent orders');
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText('Your latest order CLK-ABC is placed.')).toBeInTheDocument();
