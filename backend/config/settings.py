@@ -154,6 +154,10 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+# Separate test databases for parallel test runs (CI jobs, several developers on one machine): they would otherwise
+# share `test_<name>` and block each other.
+if os.environ.get("CLICK_TEST_DB_NAME"):
+    DATABASES["default"]["TEST"] = {"NAME": os.environ["CLICK_TEST_DB_NAME"]}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"

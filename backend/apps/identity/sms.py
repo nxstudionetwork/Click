@@ -5,7 +5,8 @@ CLICK_SMS_PROVIDER at it — nothing else changes.
 
   ""          no sender configured: requesting a code fails with "phone sign-in unavailable" (production default)
   "console"   development only: the code is written to the API log instead of being texted
-  "dotted.path.ToYourSender"   your provider (credentials come from environment variables, never from code)
+  "msg91" / "twilio"           ready-made senders in sms_providers.py (keys from environment variables)
+  "dotted.path.ToYourSender"   any other provider (credentials come from environment variables, never from code)
 """
 
 from __future__ import annotations
@@ -35,9 +36,16 @@ class ConsoleSmsSender:
 
 
 def current():
+    """The configured sender, or None when phone sign-in can't send codes (no provider, or its keys are missing)."""
     path = settings.CLICK_SMS_PROVIDER
     if not path:
         return None
     if path == "console":
         return ConsoleSmsSender() if settings.DEBUG else None
-    return import_string(path)()
+    from .sms_providers import SENDERS
+
+    try:
+        return SENDERS[path]() if path in SENDERS else import_string(path)()
+    except SmsUnavailable as e:
+        logger.error("SMS provider %s is not ready: %s", path, e)
+        return None

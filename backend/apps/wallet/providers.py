@@ -6,8 +6,10 @@ wallet only after that signature is verified (apps.wallet.services.apply_provide
   sandbox   test mode for development: Click. plays the provider. The customer approves or declines a test payment and
             the outcome is sent through exactly the same signed-event path. Enabled only when CLICK_PAYMENT_SANDBOX is on
             (DEBUG by default) — never in production, where no money would move.
-  (real)    a UPI / card gateway implements the same four methods and is chosen with CLICK_PAYMENT_PROVIDER; its keys
-            stay in server settings. None is connected yet.
+  razorpay  apps.payments.razorpay (CLICK_PAYMENT_PROVIDER=razorpay + RAZORPAY_* keys in the environment).
+
+Every provider implements: create_intent(target, amount) -> reference, client_data(target), parse_event(body, headers)
+-> (reference, outcome, amount, reason) | None after verifying its own signature, and refund(payment).
 """
 
 from __future__ import annotations
@@ -37,8 +39,18 @@ class SandboxProvider:
     methods = ("upi", "card", "netbanking")
     test_mode = True
 
-    def create_intent(self, topup) -> str:
+    def create_intent(self, target, amount=None) -> str:
         return "SBX-" + secrets.token_hex(6).upper()
+
+    def parse_event(self, body: bytes, headers) -> tuple:
+        from decimal import Decimal
+
+        from apps.core.api.exceptions import DomainError
+
+        if not verify(body, headers.get("X-Click-Signature", "")):
+            raise DomainError("Invalid signature.", code="invalid_signature", status_code=400)
+        data = json.loads(body)
+        return str(data["reference"]), str(data["outcome"]), Decimal(str(data["amount"])), str(data.get("reason") or "")
 
     def client_data(self, topup) -> dict:
         return {"provider": self.name, "test_mode": True, "reference": topup.provider_reference,
@@ -55,10 +67,42 @@ class SandboxProvider:
 
 
 def current():
+    """The connected provider, or None (online payment then reports itself unavailable; nothing is faked)."""
     name = getattr(settings, "CLICK_PAYMENT_PROVIDER", "") or ("sandbox" if settings.CLICK_PAYMENT_SANDBOX else "")
     if name == "sandbox" and settings.CLICK_PAYMENT_SANDBOX:
         return SandboxProvider()
+    if name == "razorpay":
+        from apps.payments.razorpay import RazorpayNotConfigured, RazorpayProvider
+
+        try:
+            return RazorpayProvider()
+        except RazorpayNotConfigured as e:
+            import logging
+
+            logging.getLogger("click.payments").error("Razorpay is selected but not ready: %s", e)
     return None
+
+
+def apply(reference: str, outcome: str, amount, reason: str = ""):
+    """Apply a verified outcome to a wallet top-up or to checkout payments (orders, gift cards)."""
+    from .models import WalletTopUp
+    from .services import apply_provider_result
+
+    if WalletTopUp.objects.filter(provider_reference=reference).exists():
+        return apply_provider_result(reference, outcome, amount, reason)
+    from apps.payments.gateway import apply_result
+
+    return apply_result(reference, outcome, amount, reason)
+
+
+def handle_webhook(provider, body: bytes, headers) -> dict:
+    """A provider's webhook: it verifies its own signature and maps its event; ignored events are acknowledged."""
+    parsed = provider.parse_event(body, headers)
+    if parsed is None:
+        return {"received": True, "status": "ignored"}
+    result = apply(*parsed)
+    status = result.get("status") if isinstance(result, dict) else getattr(result, "status", "")
+    return {"received": True, "status": status}
 
 
 def handle_event(body: bytes, signature: str):
@@ -67,16 +111,7 @@ def handle_event(body: bytes, signature: str):
 
     from apps.core.api.exceptions import DomainError
 
-    from .services import apply_provider_result
-
     if not verify(body, signature):
         raise DomainError("Invalid signature.", code="invalid_signature", status_code=400)
     data = json.loads(body)
-    args = (str(data["reference"]), str(data["outcome"]), Decimal(str(data["amount"])), str(data.get("reason") or ""))
-    from .models import WalletTopUp
-
-    if WalletTopUp.objects.filter(provider_reference=args[0]).exists():
-        return apply_provider_result(*args)
-    from apps.payments.gateway import apply_result  # checkout payments (orders)
-
-    return apply_result(*args)
+    return apply(str(data["reference"]), str(data["outcome"]), Decimal(str(data["amount"])), str(data.get("reason") or ""))

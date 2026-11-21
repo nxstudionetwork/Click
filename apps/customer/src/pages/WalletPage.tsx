@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ProviderCheckout } from '../features/payments/ProviderCheckout';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type Wallet, type WalletFilter, type WalletTopUp } from '@click/api';
@@ -292,7 +293,7 @@ function AddMoney({ w, onClose }: { w: Wallet; onClose: () => void }) {
         {step === 'provider' && topup && (
           <div className="mn-form">
             <h2>Payment provider</h2>
-            {topup.client?.testMode ? (
+            {topup.client?.provider === 'sandbox' ? (
               <>
                 <div className="mn-banner mn-banner--warn"><Icon name="alert" size={20} /><div><strong>Test mode</strong><p className="small">{topup.client.instructions}</p></div></div>
                 <dl className="mn-dl"><div><dt>Amount</dt><dd>{money(topup.amount)}</dd></div><div><dt>Reference</dt><dd className="mn-mono">{topup.providerReference}</dd></div></dl>
@@ -302,6 +303,8 @@ function AddMoney({ w, onClose }: { w: Wallet; onClose: () => void }) {
                   <Button loading={decide.isPending && decide.variables === 'succeeded'} onClick={() => decide.mutate('succeeded')}>Approve test payment</Button>
                 </div>
               </>
+            ) : topup.client ? (
+              <ProviderCheckout client={topup.client} description={`Add ${money(topup.amount)} to Click. Wallet`} />
             ) : (
               <p>Complete the payment in the provider’s window. This screen updates once the provider confirms it.</p>
             )}

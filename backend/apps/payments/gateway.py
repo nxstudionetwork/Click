@@ -52,7 +52,7 @@ def start_for_orders(orders, method: str) -> dict:
         raise DomainError("Online payment isn’t available right now. Choose another way to pay.", code="online_payment_unavailable", status_code=503)
     if method not in p.methods:
         raise DomainError("This payment method isn’t available.", code="payment_method_unavailable")
-    reference = p.create_intent(None)
+    reference = p.create_intent(None, amount=sum((o.total for o in orders), Decimal("0")))
     for o in orders:
         Payment.objects.create(order=o, method=method, amount=o.total, currency=o.currency, provider=p.name, provider_reference=reference)
     return intent(reference)
@@ -89,7 +89,7 @@ def start_for_gift_card(card, method: str) -> dict:
         raise DomainError("Online payment isn’t available right now. Choose another way to pay.", code="online_payment_unavailable", status_code=503)
     if method not in p.methods:
         raise DomainError("This payment method isn’t available.", code="payment_method_unavailable")
-    reference = p.create_intent(None)
+    reference = p.create_intent(card, amount=card.amount)
     Payment.objects.create(gift_card=card, method=method, amount=card.amount, provider=p.name, provider_reference=reference)
     return intent(reference)
 

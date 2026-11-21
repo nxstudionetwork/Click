@@ -658,7 +658,61 @@ filters; clients never supply it. Google Cloud, Gemini, Vertex AI and AI Studio 
   Django admin (Business OS screen later); the app falls back to the default order.
 - **Analytics** (`apps/analytics`, `/analytics/events`): batched client events from an allow-list; only identifiers and
   counts are stored — never search text, contact details or payment data.
-- **Menu (Explore sheet):** quick actions first (Offers, Orders, Rides, Bookings, Parcels, Wishlist, Rewards, Buzz,
-  Refer a friend, Help), then features, then the full account list ending with Log out. About, Terms and Privacy are
+- **Explore (menu sheet):** Quick actions (Orders, Bookings, Parcels, Wishlist, Cart, Invoices, Reviews, Help), Click.
+  Features (services plus Buddy, Discover, Gift Cards, Refer a friend), Your Click. (Wallet, Rewards, Activity, Offers
+  with live figures) and Account. No destination appears in two sections (tested). About, Terms and Privacy are
   plain-language summaries until the reviewed legal texts are published. An offline banner shows when the device
   loses its connection.
+
+## Customer app: second completion round
+
+- **Sign-in:** Indian mobile numbers only (+91, 10 digits, 6-9), stored as E.164; every code request, sign-in, failed
+  code, sign-up and sign-out is logged (`identity.SignInEvent`) and recent sign-ins show in Safety Center. The login
+  screen has no development panels or banners.
+- **Theme:** one Click. theme in White and Dark. Service pages use the app's light tokens with their accent deepened
+  for white; their night palette applies only in Dark. Hero cards are vivid night gradients with white text in both
+  appearances (Home, Parcel, Events, Hotels, Travel, Bookings, Services, Showtime, Pharma, Live). Header and bottom-nav
+  separators use the Click. brand line; the active tab is a filled pill in its service colour.
+- **Maps (`apps/geo`):** Photon (search, current location → street address) and OSRM (road routes) behind
+  `CLICK_GEOCODER_URL` / `CLICK_ROUTER_URL`; development uses the public servers, production must self-host or
+  contract. Empty URLs fall back to Click.'s own places and the labelled straight-line estimate. Ride and Parcel maps
+  are MapLibre vector maps (OpenFreeMap styles by default, `VITE_MAP_STYLE_URL` / `VITE_MAP_STYLE_DARK_URL`).
+- **Ride:** fares use the real road distance when routing is available; centre-pin placement resolves to a street
+  address; swap pickup/drop; Indian number for "book for someone"; stale driver offers pass on as soon as the rider's
+  app checks the ride.
+- **Location:** chosen once on Home (saved address, current location saved in one tap, or a new address) and used by
+  every service; checkout confirms it.
+- **Food and other store services:** category-aware filters from the live menus of that category
+  (`/catalog/facets`, `/catalog/dishes`): dish sections, real price bands, veg only where it exists.
+- **Voice and scan:** the server speech provider when configured, otherwise the browser's own recogniser (en-IN /
+  hi-IN / te-IN); QR codes and product barcodes decoded on the device (BarcodeDetector or ZXing), products have a
+  `barcode` field and barcode search.
+- **Buzz:** like, save and share on every instant (`BuzzItemReaction` for Click.-built items), Saved filter.
+- **Shop:** named "Shop" everywhere; Shop by category is two rows that scroll together; detail pages have a back bar.
+- **Buddy:** Buddy mark (animated, reduced-motion aware), full-screen chooser, voice without keys, app theme.
+- **Cart / Account / Notifications:** cart service tabs; Orders & bookings in Account; notification search and refresh.
+- **Click. Live (`apps/streaming`):** series / films / shows with seasons and episodes, live channels, resume and
+  continue watching, watchlist, HLS via hls.js. Development content is openly licensed (Blender Foundation, CC BY,
+  credited) plus a public HLS test stream; production content comes from licensed partners.
+
+## Ready for live integrations (switch on with environment variables only)
+
+| What | Switch | Needs | Without it |
+|---|---|---|---|
+| OTP SMS | `CLICK_SMS_PROVIDER=msg91` or `twilio` | `MSG91_AUTH_KEY` + `MSG91_TEMPLATE_ID` (DLT OTP template, variable `otp`), or `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` | Development prints codes in the API terminal; production says phone sign-in is unavailable |
+| Payments | `CLICK_PAYMENT_PROVIDER=razorpay` | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`; webhook `…/api/v1/payments/webhooks/razorpay` (payment.captured, payment.failed, order.paid) | Development uses the sandbox (approve / decline test payments); production offers wallet and cash only |
+| Maps | `CLICK_GEOCODER_URL`, `CLICK_ROUTER_URL` | Photon and OSRM servers (self-hosted or contracted) | Click.'s own places and the labelled straight-line estimate |
+| Map style | `VITE_MAP_STYLE_URL`, `VITE_MAP_STYLE_DARK_URL` | A MapLibre style | OpenFreeMap (free, no key) |
+
+Every provider plugs in behind one interface: SMS senders implement `send(phone, text)`; payment providers implement
+`create_intent`, `client_data`, `parse_event` (verifies the provider's own webhook signature) and `refund`. Money and
+order status only change from a verified webhook, never from the browser. Keys live in the environment, never in code.
+
+**One backend, three apps.** The Customer app, Partner app and Business OS all use the same Django API and PostgreSQL
+database, so an order placed by a customer appears in the partner's workspace immediately, the partner's decision
+reaches the customer, and Business OS reports on the same records (scoped by each staff role's permissions).
+
+**Development tip.** Browsers share cookies across ports on `localhost`, so run the customer app on
+`http://shop.localhost:5176` (launch config `click-customer-shoptest`) when the partner app is also open; otherwise
+signing in to one app signs the other out. Separate domains in production avoid this. Parallel test runs can use
+`CLICK_TEST_DB_NAME=<name>` so they don't share one test database.

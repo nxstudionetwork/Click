@@ -4,6 +4,7 @@ import { ApiError, type PaymentIntent } from '@click/api';
 import { Button, Icon } from '../../components/ui';
 import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../lib/api';
+import { ProviderCheckout } from './ProviderCheckout';
 import { formatMoney } from '../../lib/format';
 
 /** Online methods a checkout may offer: only those the backend says a connected provider supports right now. */
@@ -62,7 +63,7 @@ export function PayOnline({ intent, onSettled }: { intent: PaymentIntent; onSett
     <section className="pay-online" aria-labelledby="pay-online-h">
       <div className="pay-online__head"><Icon name="card" size={22} /><div><strong id="pay-online-h">Complete your payment</strong>
         <p className="small">{formatMoney(p.amount)} by {p.methodLabel} · reference <span className="mono">{p.reference}</span></p></div></div>
-      {p.client?.testMode ? (
+      {p.client?.provider === 'sandbox' ? (
         <>
           <p className="small pay-online__test"><Icon name="alert" size={14} /> {p.client.instructions}</p>
           {decide.isError && <p className="small" role="alert">{decide.error instanceof ApiError ? decide.error.message : 'The payment provider didn’t respond. Try again.'}</p>}
@@ -71,7 +72,8 @@ export function PayOnline({ intent, onSettled }: { intent: PaymentIntent; onSett
             <Button loading={decide.isPending && decide.variables === 'succeeded'} onClick={() => decide.mutate('succeeded')}>Approve test payment</Button>
           </div>
         </>
-      ) : <p className="small">Finish the payment in the provider’s window. This updates by itself once the provider confirms it.</p>}
+      ) : p.client ? <ProviderCheckout client={p.client} description={`Click. order ${p.orders.map((o) => o.number).join(', ')}`} />
+        : <p className="small">Finish the payment in the provider’s window. This updates by itself once the provider confirms it.</p>}
       <p className="small muted">Not paid by {new Date(p.expiresAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}? The order is cancelled and its items released.</p>
     </section>
   );

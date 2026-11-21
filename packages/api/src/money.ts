@@ -6,6 +6,12 @@ import type { GeoPlace, GeoRoute, ISODateTime, Money, UUID } from './types';
  * eligibility here comes from the server's ledgers; the client never computes money or points itself.
  */
 
+/** What the app needs to open the payment provider. Sandbox (test mode) or Razorpay Checkout (orderId + public keyId). */
+export interface ProviderClient {
+  provider: string; testMode: boolean; reference?: string; instructions: string;
+  keyId?: string; orderId?: string; amount?: number; currency?: string; name?: string;
+}
+
 // --- Wallet ------------------------------------------------------------------------------------------------
 export type WalletStatus = 'active' | 'restricted' | 'locked' | 'suspended' | 'closed';
 export type WalletKind = 'topup' | 'refund' | 'promo' | 'cashback' | 'reward' | 'payment' | 'expiry' | 'adjustment';
@@ -37,7 +43,7 @@ export type WalletFilter = '' | 'added' | 'spent' | 'refunds' | 'cashback' | 're
 export interface WalletTopUp {
   id: UUID; amount: Money; method: string; status: 'created' | 'pending' | 'succeeded' | 'failed' | 'expired'; statusLabel: string; provider: string;
   providerReference: string; failureReason: string; transactionId: UUID | null; paymentId: UUID | null; createdAt: ISODateTime;
-  client?: { provider: string; testMode: boolean; reference: string; instructions: string };
+  client?: ProviderClient;
 }
 export interface WalletSecurity { status: WalletStatus; statusLabel: string; statusReason: string; events: WalletEntry[]; failedTopups: number; protections: string[] }
 
@@ -60,7 +66,7 @@ export interface PaymentDetail extends PaymentRow {
 export interface PaymentIntent {
   reference: string; status: 'pending' | 'succeeded' | 'failed' | 'cancelled'; amount: Money; method: string; methodLabel: string;
   orders: { id: UUID; number: string; status: string }[]; expiresAt: ISODateTime;
-  client?: { provider: string; testMode: boolean; reference: string; instructions: string };
+  client?: ProviderClient;
 }
 export interface PaymentsOverview {
   methods: { code: string; label: string; description: string; where: string; canDefault: boolean; default: boolean; detail: string }[];

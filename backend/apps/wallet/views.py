@@ -216,8 +216,8 @@ class ProviderWebhookView(APIView):
         prov = providers.current()
         if prov is None or prov.name != provider:
             raise DomainError("Unknown provider.", code="not_found", status_code=404)
-        t = providers.handle_event(request.body, request.headers.get("X-Click-Signature", ""))
-        return Response({"received": True, "status": t.status})
+        # Each provider verifies its own signature (Click. HMAC for the sandbox, X-Razorpay-Signature for Razorpay).
+        return Response(providers.handle_webhook(prov, request.body, request.headers))
 
 
 class SecurityView(APIView):

@@ -57,6 +57,8 @@ infrastructure/    Local dev infrastructure (Postgres via docker compose)
   apps/pharma      Pharma: pharmacies, medicines, prescription upload and pharmacist review, refill reminders
   apps/referrals   Refer a friend: invite codes, rewards on the friend's first delivered order, monthly cap
   apps/analytics   Product analytics events (allow-listed names and identifier-only properties) for Business OS
+  apps/geo         Maps: place search, current-location address and road routes (OpenStreetMap engines, no Google)
+  apps/streaming   Click. Live: series, episodes, films and live channels; progress and watchlist
   apps/bookings    Showtime: titles, cinemas, screens and seat layouts, showtimes, seat holds, food & drinks, offers, tickets, reviews
   apps/ai          Buddy: provider-agnostic AI layer + customer-scoped tools (basic mode by default)
   apps/buzz        Click. Buzz: actionable discovery feed built from real offers, shows and stores
