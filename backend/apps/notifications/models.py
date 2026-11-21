@@ -18,6 +18,10 @@ class NotificationCategory(models.TextChoices):
     SYSTEM = "system", "System"
 
 
+# Categories a customer may turn off. Payments, Wallet, Support and System (account / security) always arrive.
+MUTABLE = ("orders", "rides", "deliveries", "bookings", "offers", "rewards")
+
+
 class Notification(BaseModel):
     """In-app notification. Push/SMS/email channels fan out from the same record later."""
 
@@ -26,6 +30,7 @@ class Notification(BaseModel):
     title = models.CharField(max_length=120)
     body = models.CharField(max_length=300, blank=True)
     link_path = models.CharField(max_length=200, blank=True, help_text="In-app route, e.g. /orders/<id>.")
+    priority = models.CharField(max_length=10, choices=[("normal", "Normal"), ("important", "Important"), ("critical", "Critical")], default="normal")
     read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -34,3 +39,10 @@ class Notification(BaseModel):
             models.Index(fields=["customer", "-created_at"], name="notif_customer_recent_idx"),
             models.Index(fields=["customer"], condition=Q(read_at__isnull=True), name="notif_customer_unread_idx"),
         ]
+
+
+class NotificationPreference(BaseModel):
+    """Which notification categories the customer turned off (in-app). Security and money notices can't be turned off."""
+
+    customer = models.OneToOneField(CustomerProfile, on_delete=models.CASCADE, related_name="notification_preference")
+    muted = models.JSONField(default=list, blank=True)

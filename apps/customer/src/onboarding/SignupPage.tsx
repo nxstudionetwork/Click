@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { REFERRAL_KEY, readReferral } from '../pages/ReferralsPage';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ApiError, type AddressInput, type AddressLabel } from '@click/api';
 import { useAuth } from '../auth/AuthProvider';
@@ -68,8 +69,9 @@ export function SignupPage() {
     try {
       const session = await api.auth.completeSignup({
         signupToken: signup!.token, fullName: name.trim(), email: email.trim(),
-        addresses: addresses.map(({ key: _k, ...a }) => a),
+        addresses: addresses.map(({ key: _k, ...a }) => a), ...(readReferral() ? { referralCode: readReferral() } : {}),
       });
+      try { sessionStorage.removeItem(REFERRAL_KEY); } catch { /* ignore */ }
       startSession(session);
       onboarding.clear();
       // Photo is optional: if the upload fails the account still works and it can be added from Settings.

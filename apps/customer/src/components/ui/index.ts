@@ -2,4 +2,5 @@
 export * from '@click/ui';
 export * from './Misc';
 export * from './Sheet';
+export * from './Confirm';
 export * from './PriceTag';

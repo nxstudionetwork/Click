@@ -1,6 +1,7 @@
 import type { Product } from '@click/api';
 import { Button, DietMark, QuantityStepper, SmartImage } from '../../components/ui';
 import { formatMoney } from '../../lib/format';
+import { isCustomisable } from './OptionPicker';
 
 export interface ProductRowProps {
   product: Product;
@@ -15,6 +16,7 @@ export interface ProductRowProps {
 
 export function ProductRow({ product, currency, quantity, canOrder, busy, onOpen, onAdd, onChangeQuantity }: ProductRowProps) {
   const orderable = canOrder && product.isAvailable;
+  const custom = isCustomisable(product);
   return (
     <article
       className={`product ${product.isAvailable ? '' : 'product--unavailable'}`}
@@ -30,12 +32,15 @@ export function ProductRow({ product, currency, quantity, canOrder, busy, onOpen
         <strong>{formatMoney(product.price, currency)}</strong>
         {product.description && <p>{product.description}</p>}
         {!product.isAvailable && <span className="badge badge--warning" style={{ alignSelf: 'flex-start' }}>Sold out</span>}
+        {custom && product.isAvailable && <span className="product__custom">Customisable{quantity > 0 ? ` · ${quantity} in cart` : ''}</span>}
       </div>
       <div className="product__media">
         <SmartImage src={product.imageUrl} alt={product.name} />
         {orderable && (
           <div className="product__action" onClick={(e) => e.stopPropagation()}>
-            {quantity > 0 ? (
+            {custom ? (
+              <Button size="sm" onClick={onOpen} disabled={busy} aria-label={`Customise and add ${product.name}`}>ADD +</Button>
+            ) : quantity > 0 ? (
               <QuantityStepper value={quantity} onChange={onChangeQuantity} busy={busy} label={product.name} />
             ) : (
               <Button size="sm" onClick={onAdd} disabled={busy} aria-label={`Add ${product.name}`}>ADD</Button>

@@ -10,7 +10,7 @@ const TABS: { id: '' | StoreType; label: string }[] = [
   { id: '', label: 'All' },
   { id: 'restaurant', label: 'Food' },
   { id: 'grocery', label: 'Groceries' },
-  { id: 'retail', label: 'Shopping' },
+  { id: 'retail', label: 'Shop' },
 ];
 
 export function OrdersPage() {

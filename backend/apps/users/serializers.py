@@ -23,6 +23,8 @@ class UserSerializer(serializers.ModelSerializer):
         v = " ".join(v.split())
         if len(v) < 2:
             raise serializers.ValidationError("Enter your name.")
+        if not any(ch.isalpha() for ch in v):
+            raise serializers.ValidationError("Use letters in your name.")
         return v
 
     def get_customer_code(self, user) -> str | None:

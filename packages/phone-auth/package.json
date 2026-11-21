@@ -2,7 +2,7 @@
   "name": "@click/phone-auth",
   "version": "0.1.0",
   "private": true,
-  "description": "Provider-neutral phone OTP sign-in for Click apps (Firebase adapter today). Configured from each app's VITE_* env.",
+  "description": "Provider-neutral phone OTP sign-in for Click apps (Click's own backend OTP).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -10,9 +10,6 @@
   "scripts": {
     "typecheck": "tsc -p .",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "firebase": "^12.19.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

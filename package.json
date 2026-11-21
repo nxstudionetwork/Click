@@ -5,6 +5,7 @@
   "scripts": {
     "dev:customer": "npm run dev -w @click/customer",
     "dev:partner": "npm run dev -w @click/partner",
+    "dev:os": "npm run dev -w @click/business-os",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"

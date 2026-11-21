@@ -17,7 +17,8 @@ def place(api, address, method="wallet"):
     return api.post("/api/v1/customer/orders", {"addressId": str(address.id), "paymentMethod": method, "idempotencyKey": str(uuid.uuid4())})
 
 
-def test_wallet_starts_empty_and_is_isolated(api, customer, other_customer):
+def test_wallet_starts_empty_and_is_isolated(api, customer, other_customer, settings):
+    settings.CLICK_PAYMENT_SANDBOX = False  # no payment provider configured → adding money is honestly unavailable
     credit(customer, "100.00")
     api.force_authenticate(other_customer)
     assert api.get("/api/v1/customer/wallet").json()["balance"] == "0.00"

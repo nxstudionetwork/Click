@@ -84,6 +84,11 @@ class Partner(BaseModel):
     business_name = models.CharField(max_length=150, blank=True)
     is_available = models.BooleanField(default=False, help_text="Partner-controlled online/open toggle (later phases).")
     profile_completed_at = models.DateTimeField(null=True, blank=True)
+    capabilities = models.JSONField(
+        null=True, blank=True, default=None,
+        help_text="Capability keys Click has granted (see catalog.py). Empty = the category's default capabilities apply. "
+                  "Staff set an explicit list to grant or revoke; partners can never change it.",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -186,3 +191,101 @@ class PartnerStatusEvent(BaseModel):
 
     class Meta:
         ordering = ["created_at"]
+
+
+# --- Operations (Partner Home) -----------------------------------------------------------------
+# Links from a partner to the customer-facing records it operates. Customers keep ordering from a Store and booking
+# a Venue's shows exactly as before; these tables only say which partner runs them, so Partner Home, the Business OS
+# and the Customer App all read one shared model. Staff create the link (Django admin today, Business OS later).
+
+class PartnerStore(BaseModel):
+    """A storefront (restaurant, grocery, retail) operated by this partner. One store has exactly one operator."""
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="store_links")
+    store = models.OneToOneField("stores.Store", on_delete=models.CASCADE, related_name="partner_link")
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.partner} → {self.store}"
+
+
+class PartnerVenue(BaseModel):
+    """A venue (cinema, theatre, arena) operated by this partner; its shows and bookings appear on Partner Home."""
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="venue_links")
+    venue = models.OneToOneField("bookings.Venue", on_delete=models.CASCADE, related_name="partner_link")
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.partner} → {self.venue}"
+
+
+class PartnerAvailabilityEvent(BaseModel):
+    """Append-only log of every online/open toggle. Online time and Business OS availability reports derive from it."""
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="availability_events")
+    is_available = models.BooleanField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    note = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["partner", "created_at"], name="partners_avail_recent_idx")]
+
+
+class PartnerNotification(BaseModel):
+    """In-app notification for a partner (new work, cancellations, verification). Push channels fan out later."""
+
+    class Category(models.TextChoices):
+        WORK = "work", "New work"
+        UPDATE = "update", "Work update"
+        ACCOUNT = "account", "Account"
+        PAYMENT = "payment", "Payment"
+        SYSTEM = "system", "System"
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="notifications")
+    category = models.CharField(max_length=12, choices=Category.choices)
+    title = models.CharField(max_length=120)
+    body = models.CharField(max_length=300, blank=True)
+    link_path = models.CharField(max_length=200, blank=True, help_text="Partner App route, e.g. /work?view=new.")
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["partner", "-created_at"], name="partners_notif_recent_idx"),
+            models.Index(fields=["partner"], condition=Q(read_at__isnull=True), name="partners_notif_unread_idx"),
+        ]
+
+
+class PartnerDocument(BaseModel):
+    """
+    A verification document the partner provided (keys come from the category's `documents` in catalog.py).
+    Click staff verify or reject it (Business OS / admin). A verified document whose expiry has passed counts as
+    expired: for a required document that blocks operating (e.g. a driver can't go online with an expired licence).
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="documents")
+    key = models.SlugField(max_length=40)
+    number = models.CharField(max_length=40, blank=True, help_text="Document number as printed.")
+    expires_on = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    review_note = models.CharField(max_length=200, blank=True)
+    submitted_at = models.DateTimeField()
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["key"]
+        constraints = [models.UniqueConstraint(fields=["partner", "key"], name="partners_document_unique")]
+
+    def __str__(self) -> str:
+        return f"{self.partner} · {self.key}"

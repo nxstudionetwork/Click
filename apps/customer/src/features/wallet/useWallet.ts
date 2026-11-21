@@ -3,7 +3,8 @@ import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../lib/api';
 
 export const walletKey = ['customer', 'wallet'] as const;
-export function useWallet() {
+/** `enabled` lets summary screens fetch the balance only when the customer asks to see it. */
+export function useWallet(enabled = true) {
   const { status } = useAuth();
-  return useQuery({ queryKey: walletKey, queryFn: api.customer.wallet, enabled: status === 'authenticated' });
+  return useQuery({ queryKey: walletKey, queryFn: api.customer.wallet, enabled: enabled && status === 'authenticated' });
 }

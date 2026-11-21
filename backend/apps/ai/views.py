@@ -1,6 +1,9 @@
 import logging
 
+from django.conf import settings
+
 from rest_framework import serializers
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -8,6 +11,7 @@ from apps.core.api.exceptions import DomainError
 from apps.core.api.permissions import IsCustomer
 
 from .providers import AIContext, AIMessage, AIUnavailable, BuddyReply, get_provider
+from .speech import AUDIO_TYPES, MAX_AUDIO_BYTES, SpeechUnavailable, get_speech_provider, speech_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -58,3 +62,51 @@ class CustomerAssistantView(APIView):
             "actions": reply.actions,
             "mode": getattr(provider, "mode", "provider"),
         })
+
+
+class AssistantCapabilitiesView(APIView):
+    """GET /customer/assistant/capabilities — what Buddy can do on this deployment (the app adapts its UI)."""
+
+    permission_classes = [IsCustomer]
+
+    def get(self, request):
+        try:
+            mode = getattr(get_provider(), "mode", "provider")
+        except AIUnavailable:
+            mode = "unavailable"
+        return Response({"mode": mode, "voice": speech_enabled(), "visualSearch": bool(settings.CLICK_VISION_PROVIDER)})
+
+
+class TranscriptionSerializer(serializers.Serializer):
+    audio = serializers.FileField()
+    language = serializers.RegexField(r"^[a-z]{2}(-[A-Z]{2})?$", required=False, default="en-IN")
+
+    def validate_audio(self, f):
+        if f.size > MAX_AUDIO_BYTES:
+            raise serializers.ValidationError("Recording is too long.")
+        if (f.content_type or "").split(";")[0] not in AUDIO_TYPES:
+            raise serializers.ValidationError("Unsupported audio format.")
+        return f
+
+
+class AssistantTranscribeView(APIView):
+    """POST /customer/assistant/transcribe (multipart `audio`) — speech to text for Buddy GO and voice search."""
+
+    permission_classes = [IsCustomer]
+    parser_classes = [MultiPartParser]
+    throttle_scope = "ai"
+
+    def post(self, request):
+        if not speech_enabled():
+            raise DomainError("Voice isn't available yet. Type your request instead.", code="speech_unavailable", status_code=503)
+        s = TranscriptionSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        audio = s.validated_data["audio"]
+        try:
+            text = get_speech_provider().transcribe(audio.read(), audio.content_type.split(";")[0], s.validated_data["language"])
+        except SpeechUnavailable:
+            raise DomainError("Voice isn't available yet. Type your request instead.", code="speech_unavailable", status_code=503)
+        except Exception:
+            logger.exception("Speech provider failed")
+            raise DomainError("Couldn't hear that clearly. Please try again.", code="speech_error", status_code=502)
+        return Response({"text": text.strip()[:500]})

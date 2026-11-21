@@ -3,22 +3,30 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
-import secrets
-
 from apps.core.models import BaseModel
 
-_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+CUSTOMER_CODE_SEQUENCE = "customers_customer_code_seq"
 
 
 def generate_customer_code() -> str:
-    """Public, non-sequential Click Customer ID shown to customers and support, e.g. CLK-CS-7K2QXM."""
-    return "CLK-CS-" + "".join(secrets.choice(_CODE_ALPHABET) for _ in range(6))
+    """Public Click Customer ID shown to customers and support: CL-CU-000001, CL-CU-000002, … drawn from a database
+    sequence, so two sign-ups can never get the same number. Customers who signed up before this format keep their
+    earlier CLK-CS-XXXXXX ID (IDs are permanent)."""
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT nextval(%s)", [CUSTOMER_CODE_SEQUENCE])
+        return f"CL-CU-{cursor.fetchone()[0]:06d}"
 
 
 class CustomerProfile(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="customer_profile")
     customer_code = models.CharField(max_length=16, unique=True, default=generate_customer_code, editable=False)
     avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True, help_text="Re-encoded WebP, EXIF stripped.")
+    language = models.CharField(max_length=5, default="en", choices=[("en", "English"), ("hi", "हिन्दी"), ("te", "తెలుగు")],
+                                help_text="App language (only languages with translations are offered).")
+    personalized = models.BooleanField(default=True, help_text="Use my orders and searches to personalise Discover, Home and recent searches.")
 
     def __str__(self) -> str:
         return f"Customer<{self.user.email}>"

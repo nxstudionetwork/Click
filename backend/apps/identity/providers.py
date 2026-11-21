@@ -1,7 +1,7 @@
 """
 Pluggable identity verification. A provider turns a client-supplied credential
-(e.g. a Firebase ID token) into a VerifiedIdentity, or raises IdentityError.
-Swapping Firebase for another phone-OTP provider = add a verifier class and
+(Click's phone OTP today) into a VerifiedIdentity, or raises IdentityError.
+Adding another identity provider = add a verifier class and
 register it in settings.CLICK_IDENTITY_PROVIDERS; nothing else changes.
 """
 
@@ -22,9 +22,10 @@ class VerifiedIdentity:
 class IdentityError(Exception):
     """The credential was not valid. `reason` is for logs only, never shown to users."""
 
-    def __init__(self, reason: str):
+    def __init__(self, reason: str, public_code: str = ""):
         super().__init__(reason)
         self.reason = reason
+        self.public_code = public_code  # safe to show: invalid_code / code_expired / too_many_attempts
 
 
 class IdentityVerifier(Protocol):

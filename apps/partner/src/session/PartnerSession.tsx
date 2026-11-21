@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type PartnerState, type Session, type User } from '@click/api';
-import { api, session } from '../lib/api';
+import { api, restoreSession, session } from '../lib/api';
 import { phoneAuth } from '@click/phone-auth';
 import { phoneFlow } from './phoneFlow';
 
@@ -26,6 +26,8 @@ interface PartnerSessionValue {
   /** Replace the cached partner state after an onboarding write. */
   setPartnerState: (state: PartnerState) => void;
   logout: () => Promise<void>;
+  /** DEVELOPMENT ONLY: sign in as a seeded test partner (the endpoint is 404 outside DEBUG). */
+  devSignIn: (code: string) => Promise<PartnerState>;
 }
 
 const Ctx = createContext<PartnerSessionValue | null>(null);
@@ -49,13 +51,13 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
     setStatus(s ? 'signed_in' : 'signed_out');
   }, []);
 
-  // Restore from the Click session cookie. Firebase is only used during OTP; it keeps no session.
+  // Restore from the Click session cookie. Phone OTP keeps no session of its own.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setBootError(null);
       try {
-        const restored = await api.auth.refresh();
+        const restored = await restoreSession(); // shared with the API client's own refresh (one request at a time)
         if (!cancelled) apply(restored);
       } catch (err) {
         if (cancelled) return;
@@ -101,6 +103,15 @@ export function PartnerSessionProvider({ children }: { children: ReactNode }) {
       return state;
     },
     setPartnerState: (state) => queryClient.setQueryData(PARTNER_QUERY_KEY, state),
+    devSignIn: async (code) => {
+      const s = await api.partner.devLogin(code);
+      session.set(s.access);
+      const state = await api.partner.me();
+      queryClient.setQueryData(PARTNER_QUERY_KEY, state);
+      setUser(s.user);
+      setStatus('signed_in');
+      return state;
+    },
     logout: async () => {
       signingOut.current = true;
       try {

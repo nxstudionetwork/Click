@@ -6,7 +6,8 @@ body {
   font-size: var(--fs-md);
   line-height: 1.45;
   color: var(--c-ink);
-  background: var(--c-bg);
+  background: var(--c-page-bg, var(--c-bg));
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, h4, p { margin: 0; }
@@ -16,7 +17,7 @@ h3 { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
 a { color: inherit; text-decoration: none; }
 button, input, textarea, select { font: inherit; color: inherit; }
 img { display: block; max-width: 100%; }
-:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; border-radius: 4px; }
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;

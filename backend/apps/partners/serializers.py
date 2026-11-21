@@ -61,13 +61,23 @@ class PartnerSerializer(serializers.ModelSerializer):
     profile = serializers.SerializerMethodField()
     address = serializers.SerializerMethodField()
     verified_phone = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
+    mode = serializers.SerializerMethodField()
 
     class Meta:
         model = Partner
         fields = [
             "partner_code", "status", "status_label", "is_verified", "onboarding_step", "partner_type", "category",
             "business_name", "is_available", "verified_phone", "profile", "address", "profile_completed_at", "created_at",
+            "capabilities", "mode",
         ]
+
+    def get_capabilities(self, partner) -> list:
+        return services.capabilities_of(partner)
+
+    def get_mode(self, partner) -> str:
+        """The Partner App mode (driver, restaurant, store, ...) that decides navigation and tools. Server-derived."""
+        return services.configuration_for(partner.category)["home"].get("mode", "upcoming")
 
     def get_partner_type(self, partner) -> dict:
         t = partner.partner_type
@@ -80,7 +90,9 @@ class PartnerSerializer(serializers.ModelSerializer):
         return services.onboarding_step(partner)
 
     def get_profile(self, partner) -> dict:
-        p = partner.profile
+        p = getattr(partner, "profile", None)  # partners created by Click staff may not have a profile row yet
+        if p is None:
+            return {"contact_name": "", "email": "", "description": "", "details": {}}
         return {"contact_name": p.contact_name, "email": p.email, "description": p.description, "details": p.details}
 
     def get_address(self, partner):

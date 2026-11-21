@@ -7,17 +7,13 @@ export default defineConfig({
   server: {
     port: 5174,
     // Same-origin in development so the httpOnly refresh cookie just works.
-    proxy: { '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false } },
-  },
-  preview: { port: 4174 },
-  build: {
-    rollupOptions: {
-      output: {
-        // Firebase is only needed on the sign-in path; keep it out of the startup bundle.
-        manualChunks: (id) => (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase') ? 'firebase' : undefined),
-      },
+    proxy: {
+      '/api': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
+      // Uploaded media (always in a subfolder, e.g. /media/buzz/…) is served by Django in development; public/media/*.webp are the app's own images.
+      '^/media/[^/]+/': { target: process.env.CLICK_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
     },
   },
+  preview: { port: 4174 },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -24,3 +24,9 @@ required). Downloaded from images.unsplash.com and re-encoded as WebP at 480px a
 | hotel-night      | photo-1542314831-068cd1dbfeeb        | Hotel at dusk                  |
 | shop-counter     | photo-1556740738-b6a63e27c4df        | Shop owner taking a payment    |
 | shop-owner       | photo-1556742049-0cfed4f6a45d        | Local business serving a buyer |
+| pharmacy-store   | photo-1576602976047-174e57a47881     | Pharmacy store interior        |
+| medicines        | photo-1587854692152-cbe660dbde88     | Medicine capsules              |
+| coach-bus        | photo-1544620347-c4fd4a3d5957        | Coach bus on a mountain road   |
+| travel-planning  | photo-1488646953014-85cb44e25828     | Map, camera and travel guides  |
+| banquet-hall     | photo-1519167758481-83f550bb49b3     | Banquet hall set for an event  |
+| monument         | photo-1564507592333-c60657eea523     | Taj Mahal, Agra                |

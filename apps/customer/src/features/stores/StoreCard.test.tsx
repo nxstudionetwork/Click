@@ -1,8 +1,9 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MOCK_STORES } from '../../mock/temporary-data';
 import { renderWithProviders } from '../../test/utils';
-import { StoreCard } from './StoreCard';
+vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ status: 'anonymous', user: null }) }));
+const { StoreCard } = await import('./StoreCard');
 
 const base = MOCK_STORES[0]!;
 

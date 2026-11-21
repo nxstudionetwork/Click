@@ -9,7 +9,7 @@ from django.test import override_settings
 from apps.identity import services as identity_services
 from apps.identity.models import ExternalIdentity
 from apps.identity.providers import VerifiedIdentity
-from apps.identity.tests import CERT, OTHER_KEY, PROJECT, token
+from conftest import otp_credential
 from apps.partners import services
 from apps.partners.models import Partner, PartnerCategory, PartnerMembership, PartnerStatusEvent, PartnerVerification
 from apps.users.models import User
@@ -29,16 +29,16 @@ def partner_catalog(db):
 
 
 @pytest.fixture(autouse=True)
-def firebase_keys(settings):
-    """Real RS256 verification (shared identity layer) against a test certificate instead of Google's."""
-    settings.FIREBASE_PROJECT_ID = PROJECT
-    with mock.patch("apps.identity.firebase.fetch_certificates", return_value={"k1": CERT}):
-        yield
+def _otp(settings):
+    settings.CLICK_OTP_RESEND_SECONDS = 0
+    settings.CLICK_OTP_MAX_PER_HOUR = 100
+    settings.CLICK_OTP_MAX_PER_IP_HOUR = 1000
 
 
-def sign_in(api, uid="fb-uid-1", phone="+919876543210", **kw):
-    """The Partner App's sign-in: shared identity exchange, then partner sign-up for a new phone."""
-    r = api.post("/api/v1/auth/identity/exchange", {"provider": "firebase", "token": token(uid=uid, phone=phone, **kw)}, **CLIENT)
+def sign_in(api, uid=None, phone="+919876543210", forged=False):
+    """The Partner App's sign-in: Click OTP, shared identity exchange, then partner sign-up for a new phone."""
+    cred = otp_credential(api, phone, wrong=forged, **CLIENT)
+    r = api.post("/api/v1/auth/identity/exchange", {"provider": "phone_otp", "token": cred}, **CLIENT)
     if r.status_code == 200 and r.json()["status"] == "profile_required":
         r = api.post("/api/v1/auth/identity/partner-signup", {"signupToken": r.json()["signupToken"]}, **CLIENT)
     return r
@@ -53,14 +53,14 @@ def authed(api, **kw):
 
 # --- Partner sign-in on the shared identity layer ---------------------------------
 
-def test_new_phone_becomes_phone_only_user_linked_to_firebase_uid(api):
+def test_new_phone_becomes_phone_only_user_linked_to_verified_phone(api):
     r = sign_in(api)
     assert r.status_code == 201
     user = r.json()["user"]
     assert user["phone"] == "+919876543210" and user["email"] is None and user["roles"] == []
     assert r.cookies["click_refresh"]["httponly"]
     link = ExternalIdentity.objects.get()
-    assert (link.provider, link.subject) == ("firebase", "fb-uid-1")
+    assert (link.provider, link.subject) == ("phone_otp", "+919876543210")
     assert link.user.phone_verified and not link.user.has_usable_password()
 
 
@@ -79,7 +79,7 @@ def test_existing_customer_with_verified_phone_is_the_same_person(api):
 
 
 def test_forged_token_is_rejected(api):
-    r = sign_in(api, key=OTHER_KEY)
+    r = sign_in(api, forged=True)
     assert r.status_code == 401 and User.objects.count() == 0
 
 
@@ -89,7 +89,7 @@ def test_tampered_signup_token_is_rejected(api):
 
 
 def test_partner_signup_is_idempotent_and_race_safe():
-    identity = VerifiedIdentity(provider="firebase", subject="race-uid", phone_number="+919111122222")
+    identity = VerifiedIdentity(provider="phone_otp", subject="+919111122222", phone_number="+919111122222")
     a, created_a = identity_services.complete_partner_signup(identity)
     b, created_b = identity_services.complete_partner_signup(identity)
     assert a == b and created_a and not created_b
@@ -119,16 +119,23 @@ def test_catalog_is_public_and_carries_resolved_configuration(api):
     r = api.get("/api/v1/partner/categories")
     assert r.status_code == 200
     types = {t["slug"]: t for t in r.data["types"]}
-    assert {"transport", "food", "retail", "logistics", "services", "entertainment", "hospitality", "local"} <= set(types)
+    # Only the partner types behind customer-facing Click services, named as the Customer App names them.
+    assert list(types) == ["transport", "food", "groceries", "retail", "pharmacy", "logistics", "services", "events",
+                           "entertainment", "hospitality", "experiences", "travel"]
+    assert types["food"]["name"] == "Restaurants" and types["transport"]["name"] == "Rides" and types["retail"]["name"] == "Shops"
+    assert "local" not in types  # retired: not a customer-facing service
     auto = next(c for c in types["transport"]["categories"] if c["slug"] == "auto-driver")
     cfg = auto["configuration"]
     assert cfg["identity"]["individual"] is True
     keys = [f["key"] for f in cfg["fields"]]
     assert "vehicleNumber" in keys  # field keys are camelCase like the rest of the API
     assert next(f for f in cfg["fields"] if f["key"] == "vehicleType")["default"] == "auto"
-    assert [m["label"] for m in cfg["home"]["modules"]][:2] == ["Ride requests", "Active ride"]
-    fleet = next(c for c in types["transport"]["categories"] if c["slug"] == "fleet-operator")
-    assert "vehicleNumber" not in [f["key"] for f in fleet["configuration"]["fields"]]
+    assert cfg["home"]["mode"] == "driver" and cfg["home"]["workspace"] == "rides"
+    assert [(c["key"], c["default"]) for c in cfg["capabilities"]] == [("rides", True), ("parcel_delivery", False)]
+    assert "drivingLicence" not in [d["key"] for d in cfg["documents"]] and "driving_licence" in [d["key"] for d in cfg["documents"]]
+    assert "fleet-operator" not in [c["slug"] for c in types["transport"]["categories"]]  # retired, hidden
+    rider = next(c for c in types["transport"]["categories"] if c["slug"] == "delivery-rider")
+    assert [c["key"] for c in rider["configuration"]["capabilities"] if c["default"]] == ["parcel_delivery"]
 
 
 def test_inactive_category_is_hidden_and_cannot_be_chosen(api):
@@ -147,8 +154,19 @@ PROFILES = {
     ("transport", "driver"): {"businessName": "Ravi Kumar", "details": {"vehicleType": "car", "vehicleNumber": "KA01AB1234", "availability": "full_time"}},
     ("food", "restaurant"): {"businessName": "Spice Route", "contactName": "Meera", "email": "Owner@SpiceRoute.in",
                              "details": {"cuisines": ["south_indian", "biryani"], "foodType": "both", "opensAt": "09:00", "closesAt": "23:00"}},
-    ("retail", "grocery-store"): {"businessName": "Fresh Mart", "contactName": "Anil",
-                                  "details": {"opensAt": "07:00", "closesAt": "22:00", "fulfilment": ["delivery", "pickup"]}},
+    ("groceries", "grocery-store"): {"businessName": "Fresh Mart", "contactName": "Anil",
+                                     "details": {"opensAt": "07:00", "closesAt": "22:00", "fulfilment": ["delivery", "pickup"]}},
+    ("retail", "fashion-store"): {"businessName": "Thread Story", "contactName": "Nisha",
+                                  "details": {"opensAt": "10:00", "closesAt": "21:00", "fulfilment": ["delivery"]}},
+    ("pharmacy", "pharmacy"): {"businessName": "CarePlus Pharmacy", "contactName": "Dr. Rao",
+                               "details": {"drugLicenceNumber": "KA-B-20-123456", "pharmacistName": "S. Rao",
+                                           "pharmacistRegistration": "KSPC 45678", "opensAt": "08:00", "closesAt": "22:00",
+                                           "fulfilment": ["delivery", "pickup"]}},
+    ("events", "event-planner"): {"businessName": "Shubh Events", "contactName": "Kiran", "details": {"workforceSize": 12}},
+    ("experiences", "temple"): {"businessName": "Sri Lakshmi Temple Trust", "contactName": "Trustee",
+                                "details": {"dailyCapacity": 4000, "opensAt": "05:00", "closesAt": "21:00"}},
+    ("travel", "bus-operator"): {"businessName": "Ridgeway Coaches", "contactName": "Manoj",
+                                 "details": {"travelServices": ["bus"], "fleetSize": 18}},
     ("logistics", "parcel-partner"): {"businessName": "Sunil Parcel", "details": {"services": ["same_day"], "dailyCapacity": 40}},
     ("services", "manpower-provider"): {"businessName": "Skilled Hands", "contactName": "Joseph",
                                         "details": {"serviceTypes": ["cleaning", "security"], "workforceSize": 25, "availability": "all_days"}},
@@ -209,7 +227,8 @@ def test_full_onboarding_per_category(api, ptype, category):
     authed(api)
     me = api.get("/api/v1/partner/me").json()["partner"]
     assert me["category"]["slug"] == category and me["partnerCode"] == p["partnerCode"]
-    assert me["category"]["configuration"]["home"]["modules"]
+    assert me["mode"] == me["category"]["configuration"]["home"]["mode"] != "upcoming"
+    assert me["capabilities"] and all({"key", "label"} == set(c) for c in me["capabilities"])
 
 
 def test_individual_partner_uses_name_as_contact_and_email_is_normalised(api):
@@ -377,6 +396,23 @@ def test_user_roles_include_partner_after_onboarding(api):
 
 @override_settings(DEBUG=False)
 def test_error_responses_do_not_leak_internals(api):
-    r = sign_in(api, key=OTHER_KEY)
+    r = sign_in(api, forged=True)
     body = r.json()["error"]
     assert "Signature" not in body["message"] and "Traceback" not in str(body)
+
+
+def test_partner_type_is_locked_once_the_partner_id_exists(api):
+    """A restaurant can't turn itself into a driver from the app: the type is fixed once submitted (staff change it)."""
+    authed(api)
+    complete_onboarding(api)
+    r = api.post("/api/v1/partner/onboarding/category", {"partnerType": "transport", "category": "driver"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "partner_locked"
+    me = api.get("/api/v1/partner/me").json()["partner"]
+    assert me["partnerType"]["slug"] == "food" and me["mode"] == "restaurant"
+    assert [c["key"] for c in me["capabilities"]] == ["food_orders", "delivery"]
+
+
+def test_retired_types_cannot_be_chosen_but_existing_partners_still_resolve(api):
+    authed(api)
+    r = api.post("/api/v1/partner/onboarding/category", {"partnerType": "local", "category": "local-business"})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_category"

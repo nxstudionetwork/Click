@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#5B3DF5" />
-    <meta name="description" content="Click — food, groceries, rides and more, in one place." />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>Click</title>
+    <meta name="theme-color" content="#F8FAFC" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      /* Apply the saved appearance before first paint (see src/appearance.ts). */
+      try {
+        var a = localStorage.getItem('click.appearance') || 'light';
+        if (a === 'system') a = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        if (a === 'dark') document.documentElement.setAttribute('data-appearance', 'dark');
+      } catch (e) {}
+    </script>
+    <meta name="description" content="Click. — Everything you need. One Click. away. Food, rides, groceries, shopping, movies and more." />
+    <link rel="icon" href="/brand/click-icon-48.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/brand/click-icon-192.png" />
+    <title>Click.</title>
   </head>
   <body>
     <div id="root"></div>

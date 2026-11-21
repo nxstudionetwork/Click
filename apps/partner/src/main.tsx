@@ -10,6 +10,9 @@ import './styles/tokens.css';
 import './styles/base.css';
 import '@click/ui/ui.css';
 import './styles/partner.css';
+import './styles/home.css';
+import './styles/restaurant.css';
+import './styles/buzz.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

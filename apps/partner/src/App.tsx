@@ -18,6 +18,22 @@ const LocationPage = lazy(() => import('./pages/onboarding/LocationPage').then((
 const ReviewPage = lazy(() => import('./pages/onboarding/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CardPage = lazy(() => import('./pages/CardPage').then((m) => ({ default: m.CardPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const WorkPage = lazy(() => import('./pages/WorkPage').then((m) => ({ default: m.WorkPage })));
+const EarningsPage = lazy(() => import('./pages/EarningsPage').then((m) => ({ default: m.EarningsPage })));
+const KitchenPage = lazy(() => import('./pages/restaurant/KitchenPage').then((m) => ({ default: m.KitchenPage })));
+const OrdersPage = lazy(() => import('./pages/restaurant/OrdersPage').then((m) => ({ default: m.OrdersPage })));
+const MenuPage = lazy(() => import('./pages/restaurant/MenuPage').then((m) => ({ default: m.MenuPage })));
+const OffersPage = lazy(() => import('./pages/restaurant/OffersPage').then((m) => ({ default: m.OffersPage })));
+const InsightsPage = lazy(() => import('./pages/restaurant/InsightsPage').then((m) => ({ default: m.InsightsPage })));
+const MorePage = lazy(() => import('./pages/restaurant/MorePage').then((m) => ({ default: m.MorePage })));
+const RidesPage = lazy(() => import('./pages/driver/RidesPage').then((m) => ({ default: m.RidesPage })));
+const DriverEarningsPage = lazy(() => import('./pages/driver/DriverEarningsPage').then((m) => ({ default: m.DriverEarningsPage })));
+const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfilePage').then((m) => ({ default: m.DriverProfilePage })));
+const DriverMenuPage = lazy(() => import('./pages/driver/DriverMenuPage').then((m) => ({ default: m.DriverMenuPage })));
+const DriverSafetyPage = lazy(() => import('./pages/driver/DriverMenuPage').then((m) => ({ default: m.DriverSafetyPage })));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage })));
+const BuzzPage = lazy(() => import('./pages/BuzzPage').then((m) => ({ default: m.BuzzPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 
 const SPLASH_MIN_MS = 1800;
 
@@ -49,6 +65,26 @@ function Step({ step, element }: { step: OnboardingStep; element: ReactNode }) {
 
 function Onboarded({ element }: { element: ReactNode }) {
   return <SignedIn>{(current) => (current === 'complete' ? element : <Navigate to={STEP_ROUTE[current]} replace />)}</SignedIn>;
+}
+
+/** Restaurant tools only for restaurant partners (the API refuses everyone else too; this just avoids dead screens). */
+function RestaurantOnly({ element }: { element: ReactNode }) {
+  return <Onboarded element={<RestaurantGate>{element}</RestaurantGate>} />;
+}
+
+function RestaurantGate({ children }: { children: ReactNode }) {
+  const { partner } = usePartnerSession();
+  return partner.state?.partner?.mode === 'restaurant' ? <>{children}</> : <Navigate to="/home" replace />;
+}
+
+/** Driver tools only for ride partners (the API refuses everyone else too). */
+function DriverOnly({ element }: { element: ReactNode }) {
+  return <Onboarded element={<DriverGate>{element}</DriverGate>} />;
+}
+
+function DriverGate({ children }: { children: ReactNode }) {
+  const { partner } = usePartnerSession();
+  return partner.state?.partner?.mode === 'driver' ? <>{children}</> : <Navigate to="/home" replace />;
 }
 
 function SignedOutOnly({ element }: { element: ReactNode }) {
@@ -96,6 +132,22 @@ export function App() {
             <Route path="onboarding/review" element={<Step step="review" element={<ReviewPage />} />} />
             <Route path="card" element={<Onboarded element={<CardPage />} />} />
             <Route path="home" element={<Onboarded element={<HomePage />} />} />
+            <Route path="work" element={<Onboarded element={<WorkPage />} />} />
+            <Route path="earnings" element={<Onboarded element={<EarningsPage />} />} />
+            <Route path="restaurant/kitchen" element={<RestaurantOnly element={<KitchenPage />} />} />
+            <Route path="restaurant/orders" element={<RestaurantOnly element={<OrdersPage />} />} />
+            <Route path="restaurant/menu" element={<RestaurantOnly element={<MenuPage />} />} />
+            <Route path="restaurant/offers" element={<RestaurantOnly element={<OffersPage />} />} />
+            <Route path="restaurant/insights" element={<RestaurantOnly element={<InsightsPage />} />} />
+            <Route path="more" element={<RestaurantOnly element={<MorePage />} />} />
+            <Route path="driver/rides" element={<DriverOnly element={<RidesPage />} />} />
+            <Route path="driver/earnings" element={<DriverOnly element={<DriverEarningsPage />} />} />
+            <Route path="driver/profile" element={<DriverOnly element={<DriverProfilePage />} />} />
+            <Route path="driver/menu" element={<DriverOnly element={<DriverMenuPage />} />} />
+            <Route path="driver/safety" element={<DriverOnly element={<DriverSafetyPage />} />} />
+            <Route path="buzz" element={<Onboarded element={<BuzzPage />} />} />
+            <Route path="documents" element={<Onboarded element={<DocumentsPage />} />} />
+            <Route path="notifications" element={<Onboarded element={<NotificationsPage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

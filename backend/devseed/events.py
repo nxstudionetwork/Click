@@ -76,14 +76,18 @@ def seed_events(log) -> None:
         v, _ = Venue.objects.update_or_create(slug=slugify(name), defaults=dict(name=name, kind=kind, city="Bengaluru", locality=locality, address=address))
         venues.append(v)
 
-    tz = timezone.get_current_timezone()
-    today = timezone.localdate()
+    from zoneinfo import ZoneInfo
+
+    from django.conf import settings
+
+    tz = ZoneInfo(settings.CLICK_LOCAL_TIMEZONE)  # showtimes are local (the server runs on UTC)
+    today = timezone.localtime(timezone.now(), tz).date()
     soon = timezone.now() + timedelta(minutes=45)
 
     def upsert(title, kind, status, genres, langs, cert, minutes, rating, votes, tagline, cast):
         event, _ = Event.objects.update_or_create(slug=slugify(title)[:170], defaults=dict(
             title=title, kind=kind, status=status, genres=genres, languages=langs, certification=cert, duration_minutes=minutes,
-            rating_average=D(rating), rating_count=votes, tagline=tagline, cast=cast,
+            tagline=tagline, cast=cast,  # ratings are earned from attended-show reviews (devseed.showtime), never seeded
             description=f"{tagline} A {genres.lower()} {'film' if kind == 'movie' else 'event'} in {langs}. (Development mock data.)",
             release_date=today + timedelta(days=14 + len(title) % 30) if status == "coming_soon" else today - timedelta(days=len(title) % 25),
         ))
@@ -92,8 +96,7 @@ def seed_events(log) -> None:
     shows = 0
     for idx, (title, status, genres, langs, cert, minutes, rating, votes, tagline, cast) in enumerate(MOVIES):
         event = upsert(title, "movie", status, genres, langs, cert, minutes, rating, votes, tagline, cast)
-        if status != "now_showing":
-            continue
+        continue  # cinema showtimes come from devseed.showtime (real screens, formats, languages, local time)
         lang = langs.split(",")[0].strip()
         for day in range(3):
             for vi, venue in enumerate(venues[:2]):
@@ -117,4 +120,7 @@ def seed_events(log) -> None:
             _ensure_show(event, venues[vidx], starts, language=lang.split(",")[0], format="Live", rows=8, seats_per_row=16, premium_rows=2,
                          price=D(price), premium_price=D(premium))
             shows += 1
-    log(f"events: {len(MOVIES)} movies, {len(LIVE_EVENTS)} live events, {len(VENUES)} venues; upcoming shows ensured ({shows} slots)")
+    log(f"events: {len(MOVIES)} movies, {len(LIVE_EVENTS)} live events, {len(VENUES)} venues; upcoming live shows ensured ({shows} slots)")
+    from .showtime import seed_showtime
+
+    seed_showtime(log)

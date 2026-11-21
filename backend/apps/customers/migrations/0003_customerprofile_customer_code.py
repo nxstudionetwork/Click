@@ -1,6 +1,15 @@
+import secrets
+
 from django.db import migrations, models
 
-from apps.customers.models import generate_customer_code
+_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def generate_customer_code() -> str:
+    """Frozen copy of the original (pre-sequence) generator. Migrations must not import live model code: the
+    current generator uses a database sequence that only exists from migration 0005, so importing it here broke
+    every fresh database (tests, CI, new installs)."""
+    return "CLK-CS-" + "".join(secrets.choice(_ALPHABET) for _ in range(6))
 
 
 def backfill(apps, schema_editor):
@@ -16,8 +25,6 @@ def backfill(apps, schema_editor):
 
 
 def apps_code():
-    from apps.customers.models import generate_customer_code
-
     return generate_customer_code()
 
 

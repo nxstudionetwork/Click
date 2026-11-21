@@ -1,4 +1,3 @@
-import re
 
 from django.db import transaction
 from rest_framework import serializers
@@ -7,7 +6,6 @@ from apps.core.api.exceptions import DomainError
 
 from .models import MAX_ADDRESSES, Address
 
-PHONE_RE = re.compile(r"^\+?[0-9 \-]{7,20}$")
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -20,9 +18,12 @@ class AddressSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
     def validate_phone(self, value):
-        if not PHONE_RE.match(value):
-            raise serializers.ValidationError("Enter a valid phone number.")
-        return value
+        from apps.identity.phone import MESSAGE, parse_indian_mobile
+
+        phone = parse_indian_mobile(value)
+        if not phone:
+            raise serializers.ValidationError(MESSAGE)
+        return phone
 
     def validate_country(self, value):
         return value.upper()

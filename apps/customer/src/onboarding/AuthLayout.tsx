@@ -8,7 +8,6 @@ import { VisualCarousel } from './Visuals';
 export function AuthLayout({ children, back, step, visual = true }: { children: ReactNode; back?: { to: string; label: string; onClick?: () => void }; step?: { at: number; of: number }; visual?: boolean }) {
   return (
     <div className={`auth-shell ${visual ? '' : 'auth-shell--plain'}`}>
-      {import.meta.env.DEV && <div className="mock-banner auth-shell__banner">Development build · DEVELOPMENT MOCK DATA</div>}
       {visual && <div className="auth-shell__visual"><VisualCarousel /></div>}
       <main className="auth-shell__panel" id="main">
         <div className="auth-panel">

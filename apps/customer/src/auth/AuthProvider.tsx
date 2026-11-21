@@ -11,8 +11,6 @@ interface AuthValue {
   login: (email: string, password: string) => Promise<void>;
   register: (input: { email: string; password: string; fullName: string }) => Promise<void>;
   logout: () => Promise<void>;
-  /** DEVELOPMENT ONLY. */
-  devLogin: () => Promise<void>;
   /** Starts a Click session returned by phone sign-in (identity exchange/signup). */
   startSession: (session: Session) => void;
   /** Replace the cached user after a profile update. */
@@ -45,13 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     login: async (email, password) => apply(await api.auth.login({ email, password })),
     register: async (input) => apply(await api.auth.register(input)),
+    // Ends the Click. session on the server (revokes the refresh cookie) and drops every cached customer
+    // record from memory. Phone OTP keeps no session of its own: right after
+    // verification. The account itself is untouched; this is not deletion.
     logout: async () => {
       await api.auth.logout().catch(() => undefined);
       apply(null);
-      queryClient.removeQueries({ queryKey: ['customer'] });
+      queryClient.clear();
     },
     refreshUser: setUser,
-    devLogin: async () => apply(await api.auth.devLogin()),
     startSession: (s) => apply(s),
   }), [status, user, apply, queryClient]);
 

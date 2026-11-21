@@ -1,11 +1,13 @@
 import { StrictMode } from 'react';
+import { LanguageProvider } from './i18n';
+import { track } from './lib/analytics';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError } from '@click/api';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
-import { ToastProvider } from './components/ui';
+import { ConfirmProvider, ToastProvider } from './components/ui';
 import { LocationProvider } from './location/LocationProvider';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -14,6 +16,22 @@ import './styles/ui.css';
 import './styles/layout.css';
 import './styles/features.css';
 import './styles/onboarding.css';
+import './styles/home.css';
+import './styles/explore.css';
+import './styles/profile.css';
+import './styles/service.css';
+import './styles/ride.css';
+import './styles/shop.css';
+import './styles/showtime.css';
+import './styles/groceries.css';
+import './styles/parcel.css';
+import './styles/pros.css';
+import './styles/events.css';
+import './styles/hotels.css';
+import './styles/travel.css';
+import './styles/bookings.css';
+import './styles/buddy.css';
+import './styles/money.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,16 +43,22 @@ const queryClient = new QueryClient({
   },
 });
 
+track('app_opened');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <LanguageProvider>
           <LocationProvider>
             <ToastProvider>
-              <App />
+              <ConfirmProvider>
+                <App />
+              </ConfirmProvider>
             </ToastProvider>
           </LocationProvider>
+          </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

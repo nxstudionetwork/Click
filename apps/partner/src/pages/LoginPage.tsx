@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Icon, Logo } from '@click/ui';
 import { StoryReel } from '../components/StoryReel';
@@ -7,6 +7,7 @@ import { COUNTRIES, PhoneField, validateNational } from '../components/PhoneFiel
 import { ECOSYSTEM_STORY } from '../config/visuals';
 import { phoneFlow } from '../session/phoneFlow';
 import { usePartnerSession } from '../session/PartnerSession';
+import { DevPartnerLogin } from '../dev/DevPartnerLogin';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ export function LoginPage() {
   const [digits, setDigits] = useState(() => phoneFlow.get()?.phone.replace(country.dial, '') ?? '');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const recaptchaRef = useRef<HTMLDivElement>(null);
   const configured = isPhoneAuthConfigured();
 
   async function submit(e: FormEvent) {
@@ -26,7 +26,7 @@ export function LoginPage() {
     setPending(true);
     try {
       const phone = toE164(country, digits);
-      const verification = await phoneAuth.start(phone, recaptchaRef.current!);
+      const verification = await phoneAuth.start(phone);
       phoneFlow.start(phone, verification);
       navigate('/verify');
     } catch (err) {
@@ -59,7 +59,7 @@ export function LoginPage() {
           {!configured && (
             <div className="notice notice--warning" role="alert">
               <Icon name="alert" size={18} />
-              <span>Phone sign-in isn’t set up for this environment yet. Add the Firebase settings to enable it.</span>
+              <span>Phone sign-in isn’t available right now. Please try again shortly.</span>
             </div>
           )}
           <PhoneField country={country} value={digits} onChange={(v) => { setDigits(v); if (error) setError(null); }} error={error} disabled={pending} />
@@ -73,8 +73,8 @@ export function LoginPage() {
             <li><Icon name="shield" size={16} /> Your number is verified securely by SMS</li>
             <li><Icon name="store" size={16} /> One Partner account for your business</li>
           </ul>
-          <div ref={recaptchaRef} className="recaptcha-slot" />
         </form>
+        {import.meta.env.DEV && <div className="auth__form auth__dev"><DevPartnerLogin /></div>}
       </main>
     </div>
   );

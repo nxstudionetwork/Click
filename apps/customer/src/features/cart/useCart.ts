@@ -7,7 +7,7 @@ export const cartKey = ['customer', 'cart'] as const;
 
 export function useCart() {
   const { status } = useAuth();
-  return useQuery({ queryKey: cartKey, queryFn: api.customer.cart.get, enabled: status === 'authenticated' });
+  return useQuery({ queryKey: cartKey, queryFn: () => api.customer.cart.get(), enabled: status === 'authenticated' });
 }
 
 /** All cart mutations return the full server cart, which replaces the cache. */

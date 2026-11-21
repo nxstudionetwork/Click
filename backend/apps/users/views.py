@@ -131,8 +131,13 @@ class LogoutView(AuthView):
         raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE["name"])
         if raw:
             try:
-                RefreshToken(raw).blacklist()
-            except TokenError:
+                token = RefreshToken(raw)
+                user = User.objects.filter(id=token["user_id"]).first()
+                token.blacklist()
+                from apps.identity.signins import record
+
+                record(request, "signed_out", user=user)
+            except (TokenError, KeyError):
                 pass
         response = Response(status=status.HTTP_204_NO_CONTENT)
         _clear_refresh_cookie(response)
@@ -176,6 +181,9 @@ class DevLoginView(AuthView):
         if not user:
             raise DomainError("Test customer not found. Run `python manage.py seed_dev_data`.", code="dev_customer_missing", status_code=409)
         audit.warning("auth.dev_login", extra={"user_id": str(user.id)})
+        from apps.identity.signins import record
+
+        record(request, "signed_in", user=user, method="dev_login")
         return _session_response(user)
 
 
@@ -185,36 +193,17 @@ class AvatarView(APIView):
     from rest_framework.parsers import MultiPartParser
 
     parser_classes = [MultiPartParser]
-    MAX_BYTES = 5 * 1024 * 1024
 
     def post(self, request):
-        import uuid
-        from io import BytesIO
-
-        from django.core.files.base import ContentFile
-        from PIL import Image, ImageOps, UnidentifiedImageError
+        from .images import encode_avatar
 
         profile = getattr(request.user, "customer_profile", None)
-        upload = request.FILES.get("image")
-        if profile is None or upload is None:
+        if profile is None:
             raise DomainError("Choose an image to upload.", code="image_required")
-        if upload.size > self.MAX_BYTES:
-            raise DomainError("Images must be 5 MB or smaller.", code="image_too_large")
-        try:
-            img = Image.open(upload)
-            if img.format not in {"JPEG", "PNG", "WEBP"}:
-                raise DomainError("Use a JPG, PNG or WebP image.", code="image_type")
-            if img.width * img.height > 40_000_000:
-                raise DomainError("That image is too large.", code="image_too_large")
-            img = ImageOps.exif_transpose(img).convert("RGB")  # re-encoding drops EXIF (location etc.)
-        except (UnidentifiedImageError, OSError):
-            raise DomainError("That file isn’t a valid image.", code="image_invalid")
-        img = ImageOps.fit(img, (512, 512), Image.LANCZOS)
-        buf = BytesIO()
-        img.save(buf, "WEBP", quality=82)
+        content = encode_avatar(request.FILES.get("image"))
         if profile.avatar:
             profile.avatar.delete(save=False)
-        profile.avatar.save(f"{uuid.uuid4().hex}.webp", ContentFile(buf.getvalue()), save=True)
+        profile.avatar.save(content.name, content, save=True)
         return Response(UserSerializer(request.user).data, status=status.HTTP_201_CREATED)
 
     def delete(self, request):

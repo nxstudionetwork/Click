@@ -108,8 +108,9 @@ def test_delivered_order_earns_points_once_and_notifies(auth_api, products, addr
         order = transition_order(order, s)
     rewards = auth_api.get("/api/v1/customer/rewards").json()
     assert rewards["balance"] == 24 and rewards["history"][0]["kind"] == "earn"
+    assert order.payments.get().status == "captured"  # cash on delivery is collected when the order is delivered
     from apps.rewards.services import award_for_delivered_order
 
     assert award_for_delivered_order(order) is None  # idempotent
     titles = [n["title"] for n in auth_api.get("/api/v1/customer/notifications").json()["results"]]
-    assert "You earned 24 Click points" in titles and any("Delivered" in t for t in titles)
+    assert "You earned 24 Click. points" in titles and any("Delivered" in t for t in titles)

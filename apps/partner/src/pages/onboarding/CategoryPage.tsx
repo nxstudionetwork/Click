@@ -4,6 +4,7 @@ import { Button, ErrorState, Icon, Skeleton } from '@click/ui';
 import type { PartnerType } from '@click/api';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 import { StoryReel } from '../../components/StoryReel';
+import { Photo } from '../../components/Photo';
 import { iconFor, visualFor } from '../../config/visuals';
 import { api } from '../../lib/api';
 import { apiMessage } from '../../lib/format';
@@ -58,8 +59,8 @@ export function CategoryPage() {
   return (
     <OnboardingLayout
       step="category"
-      title="What do you provide through Click?"
-      subtitle="Choose your partner type and category. This sets up your Partner profile and the tools you’ll see."
+      title="What do you provide on Click?"
+      subtitle="Choose the service or business type you want to offer to Click customers."
       aside={type ? <TypePreview type={type} categoryName={category?.name} categoryDescription={category?.description} /> : (
         <div className="preview preview--empty">
           <StoryReel scenes={visualFor(undefined).scenes} label="Partners on Click" sizes="40vw" />
@@ -69,30 +70,55 @@ export function CategoryPage() {
       footer={(
         <>
           {error && <p className="field__error" role="alert">{error}</p>}
-          <Button block onClick={() => void save()} loading={saving} disabled={!category}>
-            {category ? `Continue as ${category.name}` : 'Choose a category'}
+          {category && (
+            <p className="small muted cap-preview" aria-live="polite">
+              With Click you’ll be set up for:{' '}
+              {category.configuration.capabilities.filter((c) => c.default).map((c) => c.label).join(' · ') || 'your partner workspace'}
+            </p>
+          )}
+          <Button block onClick={() => void save()} loading={saving} disabled={!category}
+            aria-describedby={category ? undefined : 'continue-hint'}>
+            {category ? 'Continue →' : 'Continue'}
           </Button>
+          {!category && (
+            <p id="continue-hint" className="small muted center">
+              {type ? `Choose what kind of ${type.name.toLowerCase()} partner you are.` : 'Choose what you provide to continue.'}
+            </p>
+          )}
         </>
       )}
     >
       {catalog.isPending && (
         <div className="type-grid" aria-busy="true">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} height={112} radius={18} />)}</div>
       )}
-      {catalog.isError && <ErrorState error={new Error(apiMessage(catalog.error))} onRetry={() => void catalog.refetch()} />}
+      {catalog.isError && (
+        <div role="alert">
+          <ErrorState error={new Error('Couldn’t load partner types.')} onRetry={() => void catalog.refetch()} />
+          <p className="small muted center">{apiMessage(catalog.error)}</p>
+        </div>
+      )}
+      {catalog.isSuccess && types.length === 0 && (
+        <ErrorState error={new Error('Couldn’t load partner types.')} onRetry={() => void catalog.refetch()} />
+      )}
       {catalog.isSuccess && (
         <>
           <fieldset className="type-fieldset">
-            <legend className="section-label">Partner type</legend>
+            <legend className="section-label">I provide</legend>
             <div className="type-grid">
               {types.map((t) => {
                 const checked = t.slug === typeSlug;
                 return (
                   <label key={t.slug} className={`type-card ${checked ? 'is-checked' : ''}`} style={{ ['--accent' as string]: visualFor(t.slug).accent }}>
-                    <input type="radio" name="partner-type" value={t.slug} checked={checked}
+                    <input type="radio" name="partner-type" value={t.slug} checked={checked} aria-describedby={`td-${t.slug}`}
                       onChange={() => { setTypeSlug(t.slug); setCategorySlug(undefined); setError(null); }} />
-                    <span className="type-card__icon" aria-hidden="true"><Icon name={iconFor(t.icon)} size={24} /></span>
-                    <span className="type-card__name">{t.name}</span>
-                    <span className="type-card__desc">{t.description}</span>
+                    <span className="type-card__media" aria-hidden="true">
+                      <Photo photo={visualFor(t.slug).scenes[0]!.photo} alt="" sizes="(min-width: 560px) 220px, 96px" />
+                      <span className="type-card__icon"><Icon name={iconFor(t.icon)} size={22} /></span>
+                    </span>
+                    <span className="type-card__body">
+                      <span className="type-card__name">{t.name}</span>
+                      <span className="type-card__desc" id={`td-${t.slug}`}>{t.description}</span>
+                    </span>
                     <span className="type-card__check" aria-hidden="true"><Icon name="check" size={14} /></span>
                   </label>
                 );
@@ -106,7 +132,7 @@ export function CategoryPage() {
                 <TypePreview type={type} categoryName={category?.name} categoryDescription={category?.description} />
               </div>
               <fieldset className="type-fieldset" key={type.slug}>
-                <legend className="section-label">Partner category · {type.name}</legend>
+                <legend className="section-label">What kind of {type.name.toLowerCase()} partner are you?</legend>
                 <div className="cat-grid">
                   {type.categories.map((c) => {
                     const checked = c.slug === categorySlug;

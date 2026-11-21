@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Third party
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
@@ -82,6 +83,37 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.activity",
     "apps.partners",
+    "apps.buzz",
+    "apps.rides",
+    "apps.shop",
+    "apps.groceries",
+    "apps.parcels",
+    "apps.professionals",
+    "apps.eventhub",
+    "apps.hotels",
+    "apps.travel",
+    "apps.experiences",
+    "apps.offers",
+    "apps.search",
+    "apps.reviews",
+    "apps.invoices",
+    "apps.giftcards",
+    "apps.discover",
+    "apps.pharma",
+    "apps.referrals",
+    "apps.analytics",
+    "apps.geo",
+    "apps.streaming",
+    # Business OS foundation
+    "apps.organization",
+    "apps.people",
+    "apps.access",
+    "apps.audit",
+    "apps.workflows",
+    "apps.workspace",
+    "apps.documents",
+    "apps.finance",
+    "apps.procurement",
 ]
 
 MIDDLEWARE = [
@@ -122,6 +154,10 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+# Separate test databases for parallel test runs (CI jobs, several developers on one machine): they would otherwise
+# share `test_<name>` and block each other.
+if os.environ.get("CLICK_TEST_DB_NAME"):
+    DATABASES["default"]["TEST"] = {"NAME": os.environ["CLICK_TEST_DB_NAME"]}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"
@@ -169,6 +205,13 @@ REST_FRAMEWORK = {
         "partner_onboarding": os.environ.get("THROTTLE_PARTNER_ONBOARDING", "60/min"),
         "order_placement": os.environ.get("THROTTLE_ORDERS", "20/min"),
         "ai": os.environ.get("THROTTLE_AI", "20/min"),
+        "quote": os.environ.get("THROTTLE_QUOTE", "60/min"),  # ride fare quotes
+        "search": os.environ.get("THROTTLE_SEARCH", "120/min"),
+        "reviews": os.environ.get("THROTTLE_REVIEWS", "20/min"),  # writing / reporting reviews  # Shopping search
+        "uploads": os.environ.get("THROTTLE_UPLOADS", "30/min"),  # customer / partner photo uploads
+        "buzz": os.environ.get("THROTTLE_BUZZ", "120/min"),  # Buzz likes, saves, views, reports
+        "geo": os.environ.get("THROTTLE_GEO", "90/min"),  # place search, current-location address, route preview
+        "os_auth": os.environ.get("THROTTLE_OS_AUTH", "20/min"),  # Business OS sign-in steps
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -195,7 +238,7 @@ AUTH_REFRESH_COOKIE = {
     "domain": os.environ.get("AUTH_COOKIE_DOMAIN") or None,
 }
 
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173" if DEBUG else "")
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5177" if DEBUG else "")
 CORS_ALLOW_CREDENTIALS = True
 from corsheaders.defaults import default_headers  # noqa: E402
 
@@ -221,27 +264,109 @@ CLICK_DEV_LOGIN_ENABLED = DEBUG and env_bool("CLICK_DEV_LOGIN", True)
 CLICK_DEV_TEST_CUSTOMER_EMAIL = "test.customer@click.local"
 
 # --- Customer identity ------------------------------------------------
-# Phone sign-in is verified by a pluggable identity provider; Click then issues its own session.
-# To change provider later: add a verifier in apps/identity and point this mapping at it.
+# Phone sign-in: Click's own OTP (apps/identity/otp.py) proves the phone; Click then issues its own session.
+# Another identity provider can be added as a verifier here without changing the app's screens.
 CLICK_IDENTITY_PROVIDERS = {
-    "firebase": "apps.identity.firebase.FirebaseIdTokenVerifier",
+    "phone_otp": "apps.identity.otp.PhoneOtpVerifier",
 }
-# Firebase project whose ID tokens are accepted (public identifier, not a secret). No service-account key is needed:
-# tokens are verified against Google's public certificates.
-FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "clickstartup26")
-# Local Firebase Auth Emulator (e.g. "127.0.0.1:9099"). Honoured ONLY when DEBUG is on.
-FIREBASE_AUTH_EMULATOR_HOST = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "") if DEBUG else ""
+# Who delivers the code: "" = none (sign-in unavailable until the SMS provider is configured), "console" = development
+# only (code printed in the API log), or a dotted path to your SMS sender class (see apps/identity/sms.py).
+CLICK_SMS_PROVIDER = os.environ.get("CLICK_SMS_PROVIDER", "console" if (DEBUG or TESTING) else "")
+# Online checkout payments not confirmed by the provider within this time are cancelled (stock released).
+CLICK_ONLINE_PAYMENT_TTL_MINUTES = int(os.environ.get("CLICK_ONLINE_PAYMENT_TTL_MINUTES", "15"))
+CLICK_OTP_TTL_SECONDS = int(os.environ.get("CLICK_OTP_TTL_SECONDS", "300"))
+CLICK_OTP_RESEND_SECONDS = int(os.environ.get("CLICK_OTP_RESEND_SECONDS", "30"))
+CLICK_OTP_MAX_ATTEMPTS = int(os.environ.get("CLICK_OTP_MAX_ATTEMPTS", "5"))
+CLICK_OTP_MAX_PER_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_HOUR", "5"))
+CLICK_OTP_MAX_PER_IP_HOUR = int(os.environ.get("CLICK_OTP_MAX_PER_IP_HOUR", "30"))
 # Legacy email/password endpoints: development/test accounts only. Customers sign in with phone OTP.
 CLICK_PASSWORD_AUTH_ENABLED = env_bool("CLICK_PASSWORD_AUTH", DEBUG or TESTING)
 CLICK_DEFAULT_CURRENCY = os.environ.get("CLICK_DEFAULT_CURRENCY", "INR")
 CLICK_TAX_RATE = Decimal(os.environ.get("CLICK_TAX_RATE", "0.05"))
+# Local time for customer-facing dates (Showtime days, "Tonight"); the server itself stays on UTC.
+CLICK_LOCAL_TIMEZONE = os.environ.get("CLICK_LOCAL_TIMEZONE", "Asia/Kolkata")
+# Shopping price-discovery sections ("Under ₹499" ...), comma-separated rupee thresholds.
+CLICK_SHOP_PRICE_BANDS = [int(x) for x in os.environ.get("CLICK_SHOP_PRICE_BANDS", "499,999,1999").split(",") if x.strip()]
 # GST on platform convenience fees (bookings).
 CLICK_SERVICE_FEE_TAX_RATE = Decimal(os.environ.get("CLICK_SERVICE_FEE_TAX_RATE", "0.18"))
 CLICK_REWARD_POINTS_PER_100 = int(os.environ.get("CLICK_REWARD_POINTS_PER_100", "10"))
 CLICK_REWARD_EXPIRY_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRY_DAYS", "365"))
+CLICK_REWARD_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_REWARD_EXPIRING_SOON_DAYS", "30"))
+# Loyalty tiers by points earned in the last 365 days, with the earning multiplier each tier gets (business rules).
+CLICK_REWARD_TIERS = [("bronze", "Bronze", 0, "1.0"), ("silver", "Silver", 2000, "1.1"), ("gold", "Gold", 5000, "1.25"), ("platinum", "Platinum", 12000, "1.5")]
+
+# Click. Wallet business limits (configuration, not regulatory values) and promo-credit rules.
+CLICK_WALLET_MIN_TOPUP = os.environ.get("CLICK_WALLET_MIN_TOPUP", "100")
+CLICK_WALLET_MAX_TOPUP = os.environ.get("CLICK_WALLET_MAX_TOPUP", "10000")
+CLICK_WALLET_DAILY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_DAILY_TOPUP_LIMIT", "20000")
+CLICK_WALLET_MONTHLY_TOPUP_LIMIT = os.environ.get("CLICK_WALLET_MONTHLY_TOPUP_LIMIT", "50000")
+CLICK_WALLET_MAX_BALANCE = os.environ.get("CLICK_WALLET_MAX_BALANCE", "100000")
+CLICK_WALLET_PROMO_REFUND_DAYS = int(os.environ.get("CLICK_WALLET_PROMO_REFUND_DAYS", "30"))
+CLICK_WALLET_EXPIRING_SOON_DAYS = int(os.environ.get("CLICK_WALLET_EXPIRING_SOON_DAYS", "7"))
+CLICK_WALLET_DEBIT_NOTIFY_FROM = os.environ.get("CLICK_WALLET_DEBIT_NOTIFY_FROM", "1")
+
+# Payment provider for wallet top-ups. "sandbox" (test mode, no real money) is allowed only when CLICK_PAYMENT_SANDBOX is on.
+CLICK_PAYMENT_PROVIDER = os.environ.get("CLICK_PAYMENT_PROVIDER", "")
+CLICK_PAYMENT_SANDBOX = os.environ.get("CLICK_PAYMENT_SANDBOX", "1" if DEBUG else "0") == "1"
+CLICK_PAYMENT_WEBHOOK_SECRET = os.environ.get("CLICK_PAYMENT_WEBHOOK_SECRET", "")
+
+# Official Click. support contacts (shown in Help & Support).
+# Emergency services number shown in Safety Center (India: 112, the national emergency number).
+# Referrals: points to the referrer / the new customer when the new customer's first order is delivered; monthly cap.
+CLICK_REFERRAL_REFERRER_POINTS = int(os.environ.get("CLICK_REFERRAL_REFERRER_POINTS", "200"))
+CLICK_REFERRAL_REFEREE_POINTS = int(os.environ.get("CLICK_REFERRAL_REFEREE_POINTS", "100"))
+CLICK_REFERRAL_MONTHLY_CAP = int(os.environ.get("CLICK_REFERRAL_MONTHLY_CAP", "10"))
+CLICK_EMERGENCY_NUMBER = os.environ.get("CLICK_EMERGENCY_NUMBER", "112")
+# Maps (apps.geo). Open-source OpenStreetMap engines, no Google. Development uses the public Photon and OSRM servers
+# (fair use); production must set self-hosted or contracted URLs, otherwise search uses Click's own places and fares use
+# the labelled straight-line estimate. Tests never call out.
+_DEV_MAPS = DEBUG and not TESTING
+CLICK_GEOCODER_URL = os.environ.get("CLICK_GEOCODER_URL", "https://photon.komoot.io" if _DEV_MAPS else "")
+CLICK_ROUTER_URL = os.environ.get("CLICK_ROUTER_URL", "https://router.project-osrm.org" if _DEV_MAPS else "")
+CLICK_SUPPORT_EMAIL = os.environ.get("CLICK_SUPPORT_EMAIL", "click.startup2026@gmail.com")
+CLICK_SUPPORT_PHONE = os.environ.get("CLICK_SUPPORT_PHONE", "9089xxxxx")
+CLICK_SUPPORT_HOURS = os.environ.get("CLICK_SUPPORT_HOURS", "")
+CLICK_SUPPORT_TICKETS_PER_HOUR = int(os.environ.get("CLICK_SUPPORT_TICKETS_PER_HOUR", "5"))
 # Dotted path to an apps.ai.providers.AIProvider implementation. Default: Buddy basic mode
 # (built-in, answers only from real Click data). Set to empty to disable AI.
 CLICK_AI_PROVIDER = os.environ.get("CLICK_AI_PROVIDER", "apps.ai.buddy.ClickBasicBuddy")
+# Speech-to-text for Buddy GO / voice search (dotted path to an apps.ai.speech.SpeechProvider). Empty = voice off.
+CLICK_SPEECH_PROVIDER = os.environ.get("CLICK_SPEECH_PROVIDER", "")
+# Image recognition for camera search. Empty = off (QR scanning still works on-device in the app).
+CLICK_VISION_PROVIDER = os.environ.get("CLICK_VISION_PROVIDER", "")
+
+# --- Click Business OS -----------------------------------------------
+# Separate refresh cookie from the customer/partner apps, scoped to the OS auth endpoints.
+CLICK_OS_REFRESH_COOKIE = {
+    "name": "click_os_refresh",
+    "path": "/api/v1/os/auth/",
+    "secure": not DEBUG,
+    "samesite": os.environ.get("AUTH_COOKIE_SAMESITE", "Lax"),
+    "domain": os.environ.get("AUTH_COOKIE_DOMAIN") or None,
+}
+CLICK_OS_IDLE_MINUTES = int(os.environ.get("CLICK_OS_IDLE_MINUTES", "60"))  # signed out after this long without activity
+CLICK_OS_SESSION_MAX_HOURS = int(os.environ.get("CLICK_OS_SESSION_MAX_HOURS", "12"))  # absolute session length
+CLICK_OS_MAX_FAILED_LOGINS = int(os.environ.get("CLICK_OS_MAX_FAILED_LOGINS", "5"))
+CLICK_OS_LOCKOUT_MINUTES = int(os.environ.get("CLICK_OS_LOCKOUT_MINUTES", "15"))
+# Sensitive permissions (payroll, identity admin, sensitive audit …) and roles marked requires_mfa only take effect
+# with MFA on. Always on outside development.
+CLICK_OS_SENSITIVE_REQUIRES_MFA = env_bool("CLICK_OS_SENSITIVE_REQUIRES_MFA", not DEBUG) or not (DEBUG or TESTING)
+# Sign-in methods offered after the identifier step. Only list what is configured ("otp", "sso" plug in later).
+CLICK_OS_AUTH_METHODS = env_list("CLICK_OS_AUTH_METHODS", "password")
+# Extra notification channels beyond in-app, e.g. "apps.workspace.notify.EmailChannel".
+CLICK_OS_NOTIFICATION_CHANNELS = env_list("CLICK_OS_NOTIFICATION_CHANNELS", "")
+# Business AI provider (apps.workspace.ai.BusinessAIProvider). Basic = answers only from permission-checked tools.
+CLICK_OS_AI_PROVIDER = os.environ.get("CLICK_OS_AI_PROVIDER", "apps.workspace.ai.BasicBusinessAI")
+# DEVELOPMENT ONLY persona sign-in on the OS login screen (seeded by `manage.py seed_os_dev`). Off unless DEBUG.
+CLICK_OS_DEV_LOGIN = DEBUG and env_bool("CLICK_OS_DEV_LOGIN", True)
+# Approvals at or above this amount (currency) are flagged "high value" unless the policy sets its own threshold.
+CLICK_OS_HIGH_VALUE_AMOUNT = os.environ.get("CLICK_OS_HIGH_VALUE_AMOUNT", "100000")
+# Where "Contact support" in Business OS Help points (internal IT / Business OS support).
+CLICK_OS_SUPPORT_EMAIL = os.environ.get("CLICK_OS_SUPPORT_EMAIL", "")
+# Payroll provider for People & HR payroll inputs (dotted path). Empty = not connected; inputs can still be exported.
+CLICK_PAYROLL_PROVIDER = os.environ.get("CLICK_PAYROLL_PROVIDER", "")
+# Business OS ID namespace, deliberately different from the Click apps (customers CL-CU-…, partners CLK-PT-…, orders CLK-…).
+CLICK_OS_EMPLOYEE_ID_PREFIX = os.environ.get("CLICK_OS_EMPLOYEE_ID_PREFIX", "EMP")
 
 LOGGING = {
     "version": 1,
